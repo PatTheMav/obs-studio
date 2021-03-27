@@ -2,11 +2,11 @@
 if(BUILD_TESTS)
 	add_subdirectory(test-input)
 
-	if(WIN32)
+	if(OS_WINDOWS)
 		add_subdirectory(win)
 	endif()
 
-	if(APPLE AND UNIX)
+	if(OS_POSIX)
 		add_subdirectory(osx)
 	endif()
 endif()
