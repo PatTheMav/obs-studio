@@ -1,26 +1,91 @@
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libdshowcapture/dshowcapture.hpp")
-	message(STATUS "libdshowcapture submodule not found!  Please fetch submodules.  win-dshow plugin disabled.")
+	message(FATAL_ERROR "OBS:   libdshowcapture submodule not found!  Please fetch submodules. win-dshow plugin disabled.")
 	return()
+endif()
+
+option(ENABLE_VIRTUALCAM "Enable building with VirtualCam (Windows)" ON)
+
+if(NOT ENABLE_VIRTUALCAM)
+    message(STATUS "OBS: Windows Virtualcam not enabled")
+endif()
+
+if(ENABLE_VIRTUALCAM AND NOT VIRTUALCAM_GUID)
+	set(VIRTUALCAM_GUID "" CACHE STRING "Virtualcam GUID" FORCE)
+	mark_as_advanced(VIRTUALCAM_GUID)
 endif()
 
 project(win-dshow)
 
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil)
-include_directories(${FFMPEG_INCLUDE_DIRS})
 
-set(win-dshow_HEADERS
-	encode-dstr.hpp
-	ffmpeg-decode.h)
+add_library(win-dshow MODULE)
+add_library(OBS::dshow ALIAS win-dshow)
+
+target_sources(win-dshow
+	PRIVATE
+		encode-dstr.hpp
+		win-dshow.cpp
+		win-dshow-encoder.cpp
+		dshow-plugin.cpp
+		ffmpeg-decode.c
+		ffmpeg-decode.h)
+
+add_library(libdshowcapture INTERFACE)
+add_library(OBS::libdshowcapture ALIAS libdshowcapture)
+
+target_sources(libdshowcapture
+	INTERFACE
+		libdshowcapture/dshowcapture.hpp
+		libdshowcapture/source/capture-filter.cpp
+		libdshowcapture/source/capture-filter.hpp
+		libdshowcapture/source/output-filter.cpp
+		libdshowcapture/source/output-filter.hpp
+		libdshowcapture/source/dshowcapture.cpp
+		libdshowcapture/source/dshowencode.cpp
+		libdshowcapture/source/device.cpp
+		libdshowcapture/source/device.hpp
+		libdshowcapture/source/encoder.cpp
+		libdshowcapture/source/encoder.hpp
+		libdshowcapture/source/dshow-base.cpp
+		libdshowcapture/source/dshow-base.hpp
+		libdshowcapture/source/dshow-demux.cpp
+		libdshowcapture/source/dshow-demux.hpp
+		libdshowcapture/source/dshow-device-defs.hpp
+		libdshowcapture/source/dshow-enum.cpp
+		libdshowcapture/source/dshow-enum.hpp
+		libdshowcapture/source/dshow-formats.cpp
+		libdshowcapture/source/dshow-formats.hpp
+		libdshowcapture/source/dshow-media-type.cpp
+		libdshowcapture/source/dshow-encoded-device.cpp
+		libdshowcapture/source/dshow-media-type.hpp
+		libdshowcapture/source/log.cpp
+		libdshowcapture/source/log.hpp
+		libdshowcapture/source/external/IVideoCaptureFilter.h)
+
+target_include_directories(libdshowcapture
+	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/libdshowcapture)
 
 set(MODULE_DESCRIPTION "OBS DirectShow module")
 
-set(VIRTUALCAM_GUID "" CACHE STRING "VirtualCam GUID")
+configure_file(
+	${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+	win-dshow.rc)
 
-set(VIRTUALCAM_ENABLED FALSE)
+target_sources(win-dshow
+	PRIVATE win-dshow.rc)
+
+target_compile_definitions(win-dshow
+	PRIVATE
+		UNICODE
+		_UNICODE
+		_CRT_SECURE_NO_WARNINGS
+		_CRT_NONSTDC_NO_WARNINGS)
+
+set(VIRTUALCAM_AVAILABLE OFF)
 if(VIRTUALCAM_GUID STREQUAL "")
-	message(STATUS "VirtualCam GUID not set! VirtualCam disabled.")
+	message(WARNING "OBS:   VirtualCam GUID not set; feature disabled")
 else()
-	set(INVALID_GUID TRUE)
+	set(INVALID_GUID ON)
 
 	string(REPLACE "-" ";" GUID_VALS ${VIRTUALCAM_GUID})
 
@@ -55,96 +120,71 @@ else()
 				string(SUBSTRING ${GUID_VALS_DATA5} 6 2 GUID_VAL09)
 				string(SUBSTRING ${GUID_VALS_DATA5} 8 2 GUID_VAL10)
 				string(SUBSTRING ${GUID_VALS_DATA5} 10 2 GUID_VAL11)
-				set(VIRTUALCAM_ENABLED TRUE)
-				set(INVALID_GUID FALSE)
+				set(VIRTUALCAM_AVAILABLE ON)
+				set(INVALID_GUID OFF)
 			endif()
 		endif()
 	endif()
 endif()
 
 if(INVALID_GUID)
-	message(WARNING "Invalid VirtualCam GUID! VirtualCam disabled.")
+	message(WARNING "OBS:   invalid VirtualCam GUID supplied; feature disabled")
 endif()
 
-if(VIRTUALCAM_ENABLED)
-	add_definitions(-DVIRTUALCAM_ENABLED)
-endif()
-
-configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in win-dshow.rc)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/virtualcam-guid.h.in ${CMAKE_CURRENT_BINARY_DIR}/virtualcam-guid.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-set(win-dshow_SOURCES
-	win-dshow.cpp
-	win-dshow-encoder.cpp
-	dshow-plugin.cpp
-	ffmpeg-decode.c
-	win-dshow.rc)
-
-if(VIRTUALCAM_ENABLED)
-	set(virtualcam-output_SOURCES
-		tiny-nv12-scale.c
-		shared-memory-queue.c
-		virtualcam.c)
-	set(virtualcam-output_HEADERS
-		tiny-nv12-scale.h
-		shared-memory-queue.h)
-endif()
-
-set(libdshowcapture_SOURCES
-	libdshowcapture/source/capture-filter.cpp
-	libdshowcapture/source/output-filter.cpp
-	libdshowcapture/source/dshowcapture.cpp
-	libdshowcapture/source/dshowencode.cpp
-	libdshowcapture/source/device.cpp
-	libdshowcapture/source/encoder.cpp
-	libdshowcapture/source/dshow-base.cpp
-	libdshowcapture/source/dshow-demux.cpp
-	libdshowcapture/source/dshow-enum.cpp
-	libdshowcapture/source/dshow-formats.cpp
-	libdshowcapture/source/dshow-media-type.cpp
-	libdshowcapture/source/dshow-encoded-device.cpp
-	libdshowcapture/source/log.cpp)
-
-set(libdshowcapture_HEADERS
-	libdshowcapture/dshowcapture.hpp
-	libdshowcapture/source/external/IVideoCaptureFilter.h
-	libdshowcapture/source/capture-filter.hpp
-	libdshowcapture/source/output-filter.hpp
-	libdshowcapture/source/device.hpp
-	libdshowcapture/source/encoder.hpp
-	libdshowcapture/source/dshow-base.hpp
-	libdshowcapture/source/dshow-demux.hpp
-	libdshowcapture/source/dshow-device-defs.hpp
-	libdshowcapture/source/dshow-enum.hpp
-	libdshowcapture/source/dshow-formats.hpp
-	libdshowcapture/source/dshow-media-type.hpp
-	libdshowcapture/source/log.hpp)
-
-add_library(win-dshow MODULE
-	${win-dshow_SOURCES}
-	${win-dshow_HEADERS}
-	${virtualcam-output_SOURCES}
-	${virtualcam-output_HEADERS}
-	${libdshowcapture_SOURCES}
-	${libdshowcapture_HEADERS})
 target_link_libraries(win-dshow
-	libobs
-	strmiids
-	ksuser
-	wmcodecdspuuid
-	w32-pthreads
-	${FFMPEG_LIBRARIES})
+	PRIVATE
+		OBS::libobs
+		OBS::w32-pthreads
+		OBS::libdshowcapture
+		strmiids
+		ksuser
+		wmcodecdspuuid
+		FFmpeg::avcodec
+		FFmpeg::avutil)
+
+file(GLOB _LIBOBS_SOURCE_FILES
+	${CMAKE_CURRENT_SOURCE_DIR}/libdshowcapture/*.c
+	${CMAKE_CURRENT_SOURCE_DIR}/libdshowcapture/*.cpp)
+file(GLOB _LIBOBS_HEADER_FILES
+	${CMAKE_CURRENT_SOURCE_DIR}/libdshowcapture/*.h
+	${CMAKE_CURRENT_SOURCE_DIR}/libdshowcapture/*.hpp)
+
+source_group("libdshowcapture\\Source Files" FILES ${_LIBOBS_SOURCE_FILES})
+source_group("libdshowcapture\\Header Files" FILES ${_LIBOBS_HEADER_FILES})
+
 set_target_properties(win-dshow PROPERTIES FOLDER "plugins/win-dshow")
 
-source_group("libdshowcapture\\Source Files" FILES ${libdshowcapture_SOURCES})
-source_group("libdshowcapture\\Header Files" FILES ${libdshowcapture_HEADERS})
+setup_plugin_target(win-dshow)
 
-install_obs_plugin_with_data(win-dshow data)
+if(ENABLE_VIRTUALCAM AND VIRTUALCAM_AVAILABLE)
+	target_sources(win-dshow
+		PRIVATE
+			tiny-nv12-scale.c
+			tiny-nv12-scale.h
+			shared-memory-queue.c
+			shared-memory-queue.h
+			virtualcam.c)
 
-if(VIRTUALCAM_ENABLED)
-	configure_file(virtualcam-install.bat.in "${CMAKE_CURRENT_BINARY_DIR}/data/virtualcam-install.bat")
-	configure_file(virtualcam-uninstall.bat.in "${CMAKE_CURRENT_BINARY_DIR}/data/virtualcam-uninstall.bat")
-	install_obs_data_from_abs_path(win-dshow "${CMAKE_CURRENT_BINARY_DIR}/data" "obs-plugins/win-dshow")
+	target_compile_definitions(win-dshow
+		PRIVATE VIRTUALCAM_AVAILABLE)
+
+	target_include_directories(win-dshow
+		PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/config>")
+
+	configure_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/virtualcam-guid.h.in
+		${CMAKE_CURRENT_BINARY_DIR}/config/virtualcam-guid.h)
+
+	target_sources(win-dshow
+		PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/config/virtualcam-guid.h)
+
+	configure_file(
+		virtualcam-install.bat.in
+		"${CMAKE_CURRENT_BINARY_DIR}/data/virtualcam-install.bat")
+
+	configure_file(
+		virtualcam-uninstall.bat.in
+		"${CMAKE_CURRENT_BINARY_DIR}/data/virtualcam-uninstall.bat")
+
 	add_subdirectory(virtualcam-module)
 endif()
