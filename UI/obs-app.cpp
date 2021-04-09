@@ -1975,11 +1975,12 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 
 #if __APPLE__
 	InstallNSApplicationSubclass();
-    
-    if(!isInBundle()) {
-        blog(LOG_ERROR, "OBS cannot be run as a standalone binary on macOS - run the Application bundle instead.");
-        return ret;
-    }
+
+	if (!isInBundle()) {
+		blog(LOG_ERROR,
+		     "OBS cannot be run as a standalone binary on macOS - run the Application bundle instead.");
+		return ret;
+	}
 #endif
 
 	OBSApp program(argc, argv, profilerNameStore.get());

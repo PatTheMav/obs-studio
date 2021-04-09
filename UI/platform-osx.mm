@@ -36,16 +36,15 @@ bool isInBundle()
 
 bool GetDataFilePath(const char *data, string &output)
 {
-    NSRunningApplication *app =
-        [NSRunningApplication currentApplication];
-    NSURL *bundleURL = [app bundleURL];
-    NSString *path = [NSString
-        stringWithFormat:@"Contents/Resources/%@",
-                 [NSString stringWithUTF8String:data]];
-    NSURL *dataURL = [bundleURL URLByAppendingPathComponent:path];
-    output = [[dataURL path] UTF8String];
+	NSRunningApplication *app = [NSRunningApplication currentApplication];
+	NSURL *bundleURL = [app bundleURL];
+	NSString *path = [NSString
+		stringWithFormat:@"Contents/Resources/%@",
+				 [NSString stringWithUTF8String:data]];
+	NSURL *dataURL = [bundleURL URLByAppendingPathComponent:path];
+	output = [[dataURL path] UTF8String];
 
-    return !access(output.c_str(), R_OK);
+	return !access(output.c_str(), R_OK);
 }
 
 #pragma deprecated(InitApplicationBundle)
