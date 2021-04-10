@@ -1748,7 +1748,7 @@ void OBSBasic::OBSInit()
 	}
 
 	/* load audio monitoring */
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	const char *device_name =
 		config_get_string(basicConfig, "Audio", "MonitoringDeviceName");
 	const char *device_id =
@@ -2119,7 +2119,7 @@ void OBSBasic::ReceivedIntroJson(const QString &text)
 		int minor = 0;
 
 		sscanf(version.c_str(), "%d.%d", &major, &minor);
-#if OBS_RELEASE_CANDIDATE > 0
+#ifdef OBS_RELEASE_CANDIDATE && OBS_RELEASE_CANDIDATE > 0
 		if (major == OBS_RELEASE_CANDIDATE_MAJOR &&
 		    minor == OBS_RELEASE_CANDIDATE_MINOR &&
 		    rc == OBS_RELEASE_CANDIDATE) {
@@ -2137,7 +2137,7 @@ void OBSBasic::ReceivedIntroJson(const QString &text)
 		return;
 	}
 
-#if OBS_RELEASE_CANDIDATE > 0
+#ifdef OBS_RELEASE_CANDIDATE && OBS_RELEASE_CANDIDATE > 0
 	uint32_t lastVersion = config_get_int(App()->GlobalConfig(), "General",
 					      "LastRCVersion");
 #else
@@ -2147,7 +2147,7 @@ void OBSBasic::ReceivedIntroJson(const QString &text)
 
 	int current_version_increment = -1;
 
-#if OBS_RELEASE_CANDIDATE > 0
+#ifdef OBS_RELEASE_CANDIDATE && OBS_RELEASE_CANDIDATE > 0
 	if (lastVersion < OBS_RELEASE_CANDIDATE_VER) {
 #else
 	if ((lastVersion & ~0xFFFF) < (LIBOBS_API_VER & ~0xFFFF)) {
@@ -2634,7 +2634,7 @@ OBSBasic::~OBSBasic()
 
 	config_set_int(App()->GlobalConfig(), "General", "LastVersion",
 		       LIBOBS_API_VER);
-#if OBS_RELEASE_CANDIDATE > 0
+#if defined(OBS_RELEASE_CANDIDATE) && OBS_RELEASE_CANDIDATE > 0
 	config_set_int(App()->GlobalConfig(), "General", "LastRCVersion",
 		       OBS_RELEASE_CANDIDATE_VER);
 #endif
@@ -3533,7 +3533,7 @@ bool OBSBasic::QueryRemoveSource(obs_source_t *source)
 
 #define UPDATE_CHECK_INTERVAL (60 * 60 * 24 * 4) /* 4 days */
 
-#ifdef UPDATE_SPARKLE
+#if defined(ENABLE_SPARKLE_UPDATER)
 void init_sparkle_updater(bool update_to_undeployed);
 void trigger_sparkle_update();
 #endif
@@ -3546,7 +3546,7 @@ void OBSBasic::TimedCheckForUpdates()
 			     "EnableAutoUpdates"))
 		return;
 
-#ifdef UPDATE_SPARKLE
+#if defined(ENABLE_SPARKLE_UPDATER)
 	init_sparkle_updater(config_get_bool(App()->GlobalConfig(), "General",
 					     "UpdateToUndeployed"));
 #elif _WIN32
@@ -3571,7 +3571,7 @@ void OBSBasic::TimedCheckForUpdates()
 
 void OBSBasic::CheckForUpdates(bool manualUpdate)
 {
-#ifdef UPDATE_SPARKLE
+#if defined(ENABLE_SPARKLE_UPDATER)
 	trigger_sparkle_update();
 #elif _WIN32
 	ui->actionCheckForUpdates->setEnabled(false);
