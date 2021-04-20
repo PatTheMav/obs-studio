@@ -12,7 +12,7 @@ on:
 env:
   CEF_BUILD_VERSION_MAC: '4183'
   CEF_BUILD_VERSION_LINUX: '4280'
-  CEF_BUILD_VERSION_WIN: '3770'
+  CEF_BUILD_VERSION_WIN: '75.1.16+g16a67c4+chromium-75.0.3770.100'
   QT_VERSION_MAC: '5.15.2'
   QT_VERSION_WIN: '5.15.2'
   DEPS_VERSION_MAC: '2021-02-28'
@@ -23,6 +23,7 @@ env:
   TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
   RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
   RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
+  BUILD_FOR_DISTRIBUTION: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
 
 jobs:
   clang_check:
@@ -174,7 +175,7 @@ jobs:
         run: |
           LEGACY_BROWSER="$(test "${{ env.CEF_BUILD_VERSION_MAC }}" -le 3770 && echo "ON" || echo "OFF")"
           cmake -S . -B CI_BUILD -G Ninja \
-            -DBUILD_FOR_DISTRIBUTION=ON \
+            -DBUILD_FOR_DISTRIBUTION=${BUILD_FOR_DISTRIBUTION} \
             -DCEF_ROOT_DIR="${{ github.workspace }}/CI_DEPS/cef_binary_${{ env.CEF_BUILD_VERSION_MAC }}_macosx64" \
             -DVLC_PATH="${{ github.workspace }}/CI_DEPS/vlc-${{ env.VLC_VERSION_MAC }}" \
             -DCMAKE_PREFIX_PATH="/tmp/obsdeps;${{ github.workspace }}/CI_DEPS/sparkle" \
@@ -187,7 +188,7 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.MIN_MACOS_VERSION }} \
             -DOBS_BUNDLE_CODESIGN_IDENTITY="${SIGN_IDENTITY:--}" \
             -DOBS_CODESIGN_LINKER=OFF \
-            -DOBS_BUILD_NUMBER='${{ env.GITHUB_RUN_ID }}' \
+            -DOBS_BUILD_NUMBER=${GITHUB_RUN_ID} \
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/CI_INSTALL"
 
           cmake --build CI_BUILD
@@ -316,7 +317,7 @@ jobs:
       - name: 'Build OBS'
         run: |
           cmake -S . -B CI_BUILD -G Ninja \
-            -DBUILD_FOR_DISTRIBUTION=ON \
+            -DBUILD_FOR_DISTRIBUTION=${{ env.BUILD_FOR_DISTRIBUTION }} \
             -DCEF_ROOT_DIR="${{ github.workspace }}/CI_DEPS/cef_binary_${{ env.CEF_BUILD_VERSION_LINUX }}_linux64" \
             -DENABLE_UNIT_TESTS=ON \
             -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' \
@@ -324,7 +325,7 @@ jobs:
             -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' \
             -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' \
             -DLINUX_PORTABLE=ON \
-            -DOBS_BUILD_NUMBER='${{ env.GITHUB_RUN_ID }}' \
+            -DOBS_BUILD_NUMBER=${GITHUB_RUN_ID} \
             -DENABLE_PIPEWIRE=OFF \
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/CI_INSTALL"
 
@@ -364,125 +365,128 @@ jobs:
           name: 'obs-linux'
           path: ./CI_NIGHTLY/${{ env.FILE_NAME }}.deb
 
-  # windows_build:
-  #   name: '02 - Windows (Latest, 64bit+32bit)'
-  #   runs-on: [windows-latest]
-  #   needs: [clang_check]
-  #   if: always()
-  #   strategy:
-  #     matrix:
-  #       win_arch: [64, 32]
-  #   env:
-  #     CMAKE_GENERATOR: "Visual Studio 16 2019"
-  #     CMAKE_SYSTEM_VERSION: "10.0.18363.657"
-  #     VIRTUALCAM-GUID: "A3FCE0F5-3493-419F-958A-ABA1250EC20B"
-  #   steps:
-  #     - name: 'Add msbuild to PATH'
-  #       uses: microsoft/setup-msbuild@v1.0.2
+  windows_build:
+    name: '02 - Windows (Latest)'
+    runs-on: [windows-latest]
+    needs: [clang_check]
+    if: always()
+    strategy:
+      matrix:
+        arch: [64, 32]
+    env:
+      CMAKE_GENERATOR: "Visual Studio 16 2019"
+      CMAKE_SYSTEM_VERSION: "10.0.18363.657"
+      VIRTUALCAM-GUID: "A3FCE0F5-3493-419F-958A-ABA1250EC20B"
+    steps:
+      - name: 'Add msbuild to PATH'
+        uses: microsoft/setup-msbuild@v1.0.2
 
-  #     - name: 'Checkout'
-  #       uses: actions/checkout@v2.3.3
-  #       with:
-  #         submodules: 'recursive'
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        with:
+          submodules: 'recursive'
 
-  #     - name: 'Check for Github Labels'
-  #       if: github.event_name == 'pull_request'
-  #       shell: bash
-  #       run: |
-  #         LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
-  #         LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
-  #         if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
-  #           echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
-  #         else
-  #           echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
-  #         fi
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
 
-  #     - name: 'Setup build environment'
-  #       shell: bash
-  #       run: |
-  #         git fetch --prune --unshallow -q
-  #         echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
-  #         echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-  #         echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: 'Setup build environment'
+        shell: bash
+        run: |
+          git fetch --prune --unshallow -q
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
 
-  #     - name: 'Restore VLC dependency from cache'
-  #       id: vlc-cache
-  #       uses: actions/cache@v2.1.2
-  #       env:
-  #         CACHE_NAME: 'windows-vlc-cache'
-  #       with:
-  #         path: ${{ github.workspace }}/CI_DEPS/vlc
-  #         key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.VLC_VERSION }}
+      - name: 'Restore VLC dependency from cache'
+        id: vlc-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'windows-vlc-cache'
+        with:
+          path: ${{ github.workspace }}/CI_DEPS/vlc
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.VLC_VERSION }}
 
-  #     - name: 'Install dependencies'
-  #       env:
-  #         INSTALL_VLC: ${{ !steps.vlc-cache.outputs.cache-hit }}
-  #       run: |
-  #         echo "  + Installing dependencies v${{ env.DEPS_VERSION_WIN }}"
-  #         curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.DEPS_VERSION_WIN }}.zip -f --retry 5 -C -
-  #         7z x dependencies${{ env.DEPS_VERSION_WIN }}.zip -o"${{ github.workspace }}/CI_DEPS/deps"
+      - name: 'Install dependencies'
+        env:
+          INSTALL_VLC: ${{ !steps.vlc-cache.outputs.cache-hit }}
+        run: |
+          echo "  + Installing dependencies v${{ env.DEPS_VERSION_WIN }}"
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.DEPS_VERSION_WIN }}.zip -f --retry 5 -C -
+          7z x dependencies${{ env.DEPS_VERSION_WIN }}.zip -o"${{ github.workspace }}\CI_DEPS/deps"
 
-  #         echo "  + Installing Qt v${{ env.QT_VERSION_WIN }}"
-  #         curl -kLO https://cdn-fastly.obsproject.com/downloads/Qt_${{ env.QT_VERSION_WIN }}.7z -f --retry 5 -C -
-  #         7z x Qt_${{ env.QT_VERSION_WIN }}.7z -o"${{ github.workspace }}/CI_DEPS/QT"
+          echo "  + Installing Qt v${{ env.QT_VERSION_WIN }}"
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/Qt_${{ env.QT_VERSION_WIN }}.7z -f --retry 5 -C -
+          7z x Qt_${{ env.QT_VERSION_WIN }}.7z -o"${{ github.workspace }}\CI_DEPS\Qt"
 
-  #         echo "  + Installing Chromium Embedded Framework (CEF) v${{ env.CEF_BUILD_VERSION_WIN }}"
-  #         curl -kL https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.CEF_VERSION }}_windows64_minimal.zip -f --retry 5 -o cef.zip
-  #         7z x cef.zip -o"${{ github.workspace }}/CI_DEPS"
+          echo "  + Installing Chromium Embedded Framework (CEF) v${{ env.CEF_BUILD_VERSION_WIN }}"
+          curl -kL https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.CEF_BUILD_VERSION_WIN }}_windows${{ matrix.arch }}_minimal.zip -f --retry 5 -o cef.zip
+          7z x cef.zip -o"${{ github.workspace }}/CI_DEPS"
 
-  #         if ($env:INSTALL_VLC -eq "true") {
-  #           echo "  + Installing VLC v${{ env.VLC_VERSION_WIN }}"
-  #           curl -kL https://cdn-fastly.obsproject.com/downloads/vlc.zip -f --retry 5 -o vlc.zip
-  #           7z x vlc.zip -o"${{ github.workspace }}/CI_DEPS/vlc"
-  #         }
+          if ($env:INSTALL_VLC -eq "true") {
+            echo "  + Installing VLC v${{ env.VLC_VERSION_WIN }}"
+            curl -kL https://cdn-fastly.obsproject.com/downloads/vlc.zip -f --retry 5 -o vlc.zip
+            7z x vlc.zip -o"${{ github.workspace }}\CI_DEPS\vlc"
+          }
 
-  #         mkdir ${{ github.workspace }}/build
-  #         mkdir ${{ github.workspace }}/build${{ matrix.win_arch }}
-  #         mkdir ${{ github.workspace }}/nightly
+          mkdir ${{ github.workspace }}\build
+          mkdir ${{ github.workspace }}\build${{ matrix.arch }}
 
-  #     - name: 'Build OBS'
-  #       run: |
-  #         if ("${{ matrix.win_arch" -eq "64") {
-  #           $env:BUILD_ARCH="x64"
-  #         } else {
-  #           $env:BUILD_ARCH="Win32"
-  #         }
-  #         cmake -S . -B build${{ matrix.win_arch }} \
-  #           -G"${{ env.CMAKE_GENERATOR }}" \
-  #           -A"$env:BUILD_ARCH" \
-  #           -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
-  #           -DCEF_ROOT_DIR="${{ github.workspace }}/CI_DEPS/cef_binary_${{ env.CEF_VERSION }}_windows${{ matrix.win_arch }}_minimal" \
-  #           -DVLC_PATH="${{ github.workspace }}/CI_BUILD/vlc" \
-  #           -DCMAKE_PREFIX_PATH="${{ github.workspace }}/CI_BUILD/deps/win${{ matrix.win_arch }};${{ github.workspace }}/CI_BUILD/deps/win${{ matrix.win_arch }}/bin" \
-  #           -DBUILD_FOR_DISTRIBUTION=ON \
-  #           -DCOMPILE_D3D12_HOOK=ON \
-  #           -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' \
-  #           -DTWITCH_HASH='${{ env.TWITCH_HASH }}' \
-  #           -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' \
-  #           -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' \
-  #           -DCOPIED_DEPENDENCIES=FALSE \
-  #           -DCOPY_DEPENDENCIES=TRUE \
-  #           -DVIRTUALCAM_GUID=${{ env.VIRTUALCAM-GUID }} \
-  #           -DOBS_BUILD_NUMBER='${{ env.GITHUB_RUN_NUMBER }}' \
-  #           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/CI_INSTALL"
+      - name: 'Build OBS'
+        run: |
+          if ("${{ matrix.arch }}" -eq "64") {
+            $env:BUILD_ARCH="x64"
+            $env:QT_FOLDER="${{ github.workspace }}/CI_DEPS/Qt/${{ env.QT_VERSION_WIN }}/msvc2019_64"
+          } else {
+            $env:BUILD_ARCH="Win32"
+            $env:QT_FOLDER="${{ github.workspace }}/CI_DEPS/Qt/${{ env.QT_VERSION_WIN }}/msvc2019"
+          }
 
-  #         msbuild /m /p:Configuration=RelWithDebInfo .\build${{ matrix.win_arch }}\obs-studio.sln
+          $env:DEPS_FOLDER="${{ github.workspace }}/CI_DEPS/deps/win${{ matrix.arch }}"
+          $env:CMAKE_PREFIX_PATH="${env:DEPS_FOLDER};${env:DEPS_FOLDER}/bin;${env:QT_FOLDER}"
 
-  #     - name: 'Create build artifact'
-  #       if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
-  #       run: |
-  #         $env:FILE_DATE=(Get-Date -UFormat "%F")
-  #         $env:FILE_NAME="${env:FILE_DATE}-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-win${{ matrix.win_arch }}.zip"
-  #         echo "FILE_NAME=${env:FILE_NAME}" >> ${env:GITHUB_ENV}
-  #         robocopy .\build${{ matrix.win_arch }}\rundir\RelWithDebInfo .\build\ /E /XF .gitignore
-  #         7z a ${env:FILE_NAME} .\build\*
+          cmake -S . -B build${{ matrix.arch }} `
+            -G "${{ env.CMAKE_GENERATOR }}" `
+            -A"$env:BUILD_ARCH" `
+            -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" `
+            -DCEF_ROOT_DIR="${{ github.workspace }}/CI_DEPS/cef_binary_${{ env.CEF_BUILD_VERSION_WIN }}_windows${{ matrix.arch }}_minimal" `
+            -DVLC_PATH="${{ github.workspace }}/CI_DEPS/vlc" `
+            -DBUILD_FOR_DISTRIBUTION=${{ env.BUILD_FOR_DISTRIBUTION }} `
+            -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' `
+            -DTWITCH_HASH='${{ env.TWITCH_HASH }}' `
+            -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' `
+            -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' `
+            -DCOPIED_DEPENDENCIES=FALSE `
+            -DCOPY_DEPENDENCIES=TRUE `
+            -DVIRTUALCAM_GUID=${{ env.VIRTUALCAM-GUID }} `
+            -DOBS_BUILD_NUMBER="$env:GITHUB_RUN_ID" `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/CI_INSTALL"
 
-  #     - name: 'Upload build artifact'
-  #       if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: 'obs-win${{ matrix.win_arch }}'
-  #         path: '*-win${{ matrix.win_arch }}.zip'
+          msbuild /m /p:Configuration=RelWithDebInfo .\build${{ matrix.arch }}\obs-studio.sln
+
+      - name: 'Create build artifact'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        run: |
+          $env:FILE_DATE=(Get-Date -UFormat "%F")
+          $env:FILE_NAME="${env:FILE_DATE}-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-win${{ matrix.arch }}.zip"
+          echo "FILE_NAME=${env:FILE_NAME}" >> ${env:GITHUB_ENV}
+          robocopy .\build${{ matrix.arch }}\rundir\RelWithDebInfo .\build\ /E /XF .gitignore
+          7z a ${env:FILE_NAME} .\build\*
+
+      - name: 'Upload build artifact'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        uses: actions/upload-artifact@v2
+        with:
+          name: 'obs-win${{ matrix.arch }}'
+          path: '*-win${{ matrix.arch }}.zip'
 
   # linux_package:
   #   name: '03 - Create Linux Flatpack Bundle'
