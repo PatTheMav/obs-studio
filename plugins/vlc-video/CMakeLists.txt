@@ -1,51 +1,45 @@
 project(vlc-video)
 
-if(DISABLE_VLC)
-	message(STATUS "VLC video plugin disabled")
+option(ENABLE_VLC "Build OBS with VLC plugin support" ON)
+if(NOT ENABLE_VLC)
+	message(STATUS "OBS: VLC Video plugin not enabled")
 	return()
 endif()
 
-if(ENABLE_VLC)
-	find_package(LibVLC REQUIRED)
-else()
-	find_package(LibVLC)
-	if(NOT LibVLC_FOUND)
-		message(STATUS "VLC video plugin disabled")
-		return()
-	endif()
-endif()
+find_package(LibVLC REQUIRED)
 
-include_directories(${LIBVLC_INCLUDE_DIRS})
-add_definitions(${LIBVLC_DEFINITIONS})
+add_library(vlc-video MODULE)
+add_library(OBS::vlc-video ALIAS vlc-video)
 
-if(MSVC)
-	set(vlc-video_PLATFORM_DEPS
-		w32-pthreads)
-endif()
+target_sources(vlc-video
+	PRIVATE
+		vlc-video-plugin.c
+		vlc-video-plugin.h
+		vlc-video-source.c)
 
-set(vlc-video_HEADERS
-	vlc-video-plugin.h
-	)
-
-set(vlc-video_SOURCES
-	vlc-video-plugin.c
-	vlc-video-source.c
-	)
-
-if(WIN32)
-	set(MODULE_DESCRIPTION "OBS VLC module")
-	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in vlc-video.rc)
-	list(APPEND vlc-video_SOURCES
-		vlc-video.rc)
-endif()
-
-add_library(vlc-video MODULE
-	${vlc-video_SOURCES}
-	${vlc-video_HEADERS})
-# instead of linking vlc we load at runtime.
 target_link_libraries(vlc-video
-	libobs
-	${vlc-video_PLATFORM_DEPS})
-set_target_properties(vlc-video PROPERTIES FOLDER "plugins")
+	PRIVATE
+		OBS::libobs
+		VLC::LibVLC)
 
-install_obs_plugin_with_data(vlc-video data)
+if(OS_WINDOWS)
+	if(MSVC)
+		target_link_libraries(vlc-video
+			PRIVATE OBS::w32-pthreads)
+	endif()
+
+	set(MODULE_DESCRIPTION "OBS VLC Plugin")
+	configure_file(
+		${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+		vlc-video.rc)
+
+	target_sources(vlc-video
+		PRIVATE vlc-video.rc)
+
+endif()
+
+set_target_properties(vlc-video PROPERTIES
+	FOLDER "plugins"
+	PREFIX "")
+
+setup_plugin_target(vlc-video)
