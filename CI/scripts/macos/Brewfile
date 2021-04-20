@@ -1,5 +1,4 @@
-tap "akeru-inc/tap"
 brew "cmake"
+brew "ninja"
 brew "freetype"
 brew "cmocka"
-brew "akeru-inc/tap/xcnotary"
