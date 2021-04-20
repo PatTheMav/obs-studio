@@ -1,59 +1,42 @@
 project(mac-virtualcam)
 
-find_library(AVFOUNDATION AVFoundation)
-find_library(APPKIT AppKit)
 find_library(COCOA Cocoa)
-find_library(COREFOUNDATION CoreFoundation)
-find_library(COREMEDIA CoreMedia)
-find_library(COREVIDEO CoreVideo)
-find_library(COCOA Cocoa)
-find_library(COREMEDIAIO CoreMediaIO)
-find_library(IOSURFACE IOSurface)
-find_library(IOKIT IOKit)
 
-include_directories(${AVFOUNDATION}
-					${APPKIT}
-					${COCOA}
-					${COREFOUNDATION}
-					${COREMEDIA}
-					${COREVIDEO}
-					${COREMEDIAIO}
-					${COCOA}
-					${IOSURFACE}
-					"${CMAKE_SOURCE_DIR}/UI/obs-frontend-api"
-					../common)
+mark_as_advanced(COCOA)
 
-set(mac-virtualcam_HEADERS
-	Defines.h
-	OBSDALMachServer.h
-	../common/MachProtocol.h)
+add_library(mac-virtualcam MODULE)
+add_library(OBS::virtualcam ALIAS mac-virtualcam)
 
-set(mac-virtualcam_SOURCES
-	plugin-main.mm
-	OBSDALMachServer.mm)
+target_sources(mac-virtualcam
+	PRIVATE
+		Defines.h
+		plugin-main.mm
+		OBSDALMachServer.mm
+		OBSDALMachServer.h
+		../common/MachProtocol.h)
 
-add_library(mac-virtualcam MODULE
-	${mac-virtualcam_SOURCES}
-	${mac-virtualcam_HEADERS})
+target_include_directories(mac-virtualcam
+	PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/../common")
 
 target_link_libraries(mac-virtualcam
-	libobs
-	obs-frontend-api
-	Qt5::Core
-	Qt5::Widgets
-	${AVFOUNDATION}
-	${APPKIT}
-	${COCOA}
-	${COREFOUNDATION}
-	${COREMEDIA}
-	${COREVIDEO}
-	${COREMEDIAIO}
-	${IOSURFACE}
-	${IOKIT})
+	PRIVATE
+		OBS::libobs
+		OBS::frontend-api
+		${COCOA})
+
+target_compile_features(mac-virtualcam
+	PRIVATE
+		cxx_deleted_functions
+		cxx_rvalue_references)
+
+target_compile_options(mac-virtualcam
+	PRIVATE
+		-fobjc-arc
+		-fobjc-weak)
 
 set_target_properties(mac-virtualcam PROPERTIES
 	FOLDER "plugins"
-	COMPILE_FLAGS "-std=gnu++14 -stdlib=libc++ -fobjc-arc -fobjc-weak"
-)
+	PREFIX ""
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/../../")
 
-install_obs_plugin_with_data(mac-virtualcam data)
+setup_plugin_target(mac-virtualcam)
