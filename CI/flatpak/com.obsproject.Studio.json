@@ -140,7 +140,8 @@
       "no-autogen": true,
       "cleanup": [
         "/bin",
-        "/include"
+        "/include",
+        "*.a"
       ],
       "sources": [
         {
@@ -253,14 +254,13 @@
       "config-opts": [
         "-DCMAKE_BUILD_TYPE=Release",
         "-DENABLE_WAYLAND=ON",
-        "-DBUILD_BROWSER=ON",
+        "-DENABLE_BROWSER_SOURCE=ON",
         "-DCEF_ROOT_DIR=/app/cef",
-        "-DUNIX_STRUCTURE=ON",
         "-DUSE_XDG=ON",
-        "-DDISABLE_ALSA=ON",
+        "-DENABLE_ALSA=OFF",
         "-DENABLE_PULSEAUDIO=ON",
-        "-DWITH_RTMPS=ON",
-        "-DBUILD_BROWSER=OFF"
+        "-DENABLE_RTMPS=ON",
+        "-DENABLE_VLC=OFF"
       ],
       "sources": [
         {

@@ -51,8 +51,9 @@ jobs:
     env:
       MIN_MACOS_VERSION: '10.13'
       SPARKLE_VERSION: '1.23.0'
-      BLOCKED_FORMULAS: 'openssl@1.0.2t python@2.7.17 speexdsp curl php'
+      BLOCKED_FORMULAS: 'speexdsp curl php'
       SIGN_IDENTITY: ''
+      HAVE_CODESIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY != '' && secrets.MACOS_SIGNING_CERT != '' }}
     defaults:
       run:
         shell: bash
@@ -83,10 +84,6 @@ jobs:
           REMOVE_FORMULAS=""
           for FORMULA in ${{ env.BLOCKED_FORMULAS }}; do
             if [ -d "/usr/local/opt/${FORMULA}" ]; then
-              if [ "${FORMULA}" = "openssl@1.0.2t" ]; then brew untap local/openssl
-              elif [ "${FORMULA}" = "python@2.7.17" ]; then brew untap local/python2
-              fi
-
               REMOVE_FORMULAS="${REMOVE_FORMULAS}${FORMULA} "
             fi
           done
@@ -166,8 +163,17 @@ jobs:
             mkdir -p build/libcef_dll
           fi
 
+      - name: 'Install Apple Developer Certificate'
+        #if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true'
+        if: github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true'
+        uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
+        with:
+          p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
+          p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+
       - name: 'Set Signing Identity'
-        if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
+        #if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true'
+        if: github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true'
         run: |
           echo "SIGN_IDENTITY=${{ secrets.MACOS_SIGNING_IDENTITY }}" >> $GITHUB_ENV
 
@@ -209,6 +215,8 @@ jobs:
           DMG_NAME=$(/usr/bin/find ${{ github.workspace }}/CI_BUILD -type f -name "OBS-*.dmg" -depth 1)
           /usr/bin/codesign --force --sign "${SIGN_IDENTITY:--}" "${DMG_NAME}"
 
+          mkdir -p "${{ github.workspace }}/CI_NIGHTLY/"
+
           mv "${DMG_NAME}" "${{ github.workspace }}/CI_NIGHTLY/${FILE_NAME}"
       - name: 'Upload build Artifact'
         if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
@@ -219,8 +227,8 @@ jobs:
             ${{ github.workspace }}/CI_NIGHTLY/${{ env.FILE_NAME }}
 
   linux_build:
-    name: '02 - Linux (Ubuntu, 18.04)'
-    runs-on: [ubuntu-18.04]
+    name: '02 - Linux (Ubuntu, 20.04)'
+    runs-on: [ubuntu-latest]
     if: always()
     needs: [clang_check]
     defaults:
@@ -287,6 +295,8 @@ jobs:
            libxcb-xinerama0-dev \
            libxcomposite-dev \
            libxinerama-dev \
+           libx11-xcb-dev \
+           libxcb-xfixes0-dev \
            libmbedtls-dev \
            pkg-config \
            python3-dev \
@@ -295,8 +305,6 @@ jobs:
            libqt5svg5-dev \
            swig \
            libcmocka-dev \
-           linux-generic \
-           v4l2loopback-dkms
 
       - name: 'Restore Chromium Embedded Framework from cache'
         id: cef-cache
@@ -344,6 +352,7 @@ jobs:
 
           cmake --build CI_BUILD -t package
           DEB_NAME=$(/usr/bin/find ${{ github.workspace }}/CI_BUILD -maxdepth 1 -type f -name "obs*.deb")
+          mkdir -p "${{ github.workspace }}/CI_NIGHTLY/"
           mv ${DEB_NAME} "${{ github.workspace }}/CI_NIGHTLY/${FILE_NAME}.deb"
 
           cmake --build CI_BUILD -t install
@@ -355,14 +364,14 @@ jobs:
         if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
         uses: actions/upload-artifact@v2
         with:
-          name: 'obs-linux'
+          name: 'obs-linux-tar'
           path: ./CI_NIGHTLY/${{ env.FILE_NAME }}.tar.gz
 
       - name: 'Upload build artifact (deb)'
         if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
         uses: actions/upload-artifact@v2
         with:
-          name: 'obs-linux'
+          name: 'obs-linux-deb'
           path: ./CI_NIGHTLY/${{ env.FILE_NAME }}.deb
 
   windows_build:
@@ -489,10 +498,10 @@ jobs:
           path: '*-win${{ matrix.arch }}.zip'
 
   linux_package:
-    name: '03 - Create Linux Flatpack Bundle'
+    name: '02 - Flatpack Bundle'
     runs-on: [ubuntu-latest]
-    needs: [linux_build]
-    if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
+    needs: [clang_check]
+    if: always()
     defaults:
       run:
         shell: bash
@@ -500,19 +509,39 @@ jobs:
       image: bilelmoussaoui/flatpak-github-actions:kde-5.15
       options: --privileged
     steps:
-    - name: 'Checkout'
-      uses: actions/checkout@v2.3.3
-      with:
-        submodules: 'recursive'
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
 
-    - name: Build Flatpak Manifest
-      uses: bilelmoussaoui/flatpak-github-actions@v2
-      with:
-        bundle: obs-studio-${{ github.sha }}.flatpak
-        manifest-path: CI/flatpak/com.obsproject.Studio.json
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        with:
+          submodules: 'recursive'
+
+      - name: 'Setup build environment'
+        run: |
+          git fetch --prune --unshallow -q
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+
+      - name: Build Flatpak Manifest
+        uses: bilelmoussaoui/flatpak-github-actions/flatpak-builder@v3
+        with:
+          bundle: obs-studio-${{ github.sha }}.flatpak
+          manifest-path: CI/flatpak/com.obsproject.Studio.json
+          cache-key: flatpak-builder-${{ github.sha }}
 
   windows_package:
-    name: '03 - Create Windows Installer'
+    name: '03 - Windows Installer'
     runs-on: [ubuntu-latest]
     needs: [windows_build]
     if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
@@ -532,55 +561,60 @@ jobs:
       - name: 'Do nothing for now'
         run: echo "Under construction"
 
-  # macos_release:
-  #   name: '04 - Create macOS disk image'
-  #   runs-on: [macos-latest]
-  #   needs: [macos_build]
-  #   if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && secrets.MACOS_SIGNING_IDENTITY != null
-  #   defaults:
-  #     run:
-  #       shell: bash
-  #   steps:
-  #     - name: 'Download artifact'
-  #       uses: actions/download-artifact@v2
-  #       with:
-  #         name: 'obs-macos'
+  macos_release:
+    name: '03 - macOS notarized image'
+    runs-on: [macos-latest]
+    needs: [macos_build]
+    env:
+      HAVE_CODESIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY != '' && secrets.MACOS_SIGNING_CERT != '' }}
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: 'Check Codesigning identity'
+        run: test "${HAVE_CODESIGN_IDENTITY}" = "true"
 
-  #     - name: 'Install Apple Developer Certificate'
-  #       uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
-  #       with:
-  #         p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
-  #         p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+      - name: 'Download artifact'
+        uses: actions/download-artifact@v2
+        with:
+          name: 'obs-macos'
 
-  #     - name: 'Install prerequisite XCNotary'
-  #       run: brew install akeru-inc/tap/xcnotary
+      - name: 'Install Apple Developer Certificate'
+        uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
+        with:
+          p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
+          p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
 
-  #     - name: 'Create disk image for distribution'
-  #       run: |
-  #         FILE_DATE=$(date +%Y-%m-%d)
-  #         FILE_NAME=$FILE_DATE-${{ env.OBS_GIT_TAG }}-macOS.dmg
-  #         echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
+      - name: 'Install prerequisite XCNotary'
+        run: brew install akeru-inc/tap/xcnotary
 
-  #         DMG_NAME=$(basename $(/usr/bin/find . -type f -name "OBS-*.dmg" -depth 1))
-  #         VOLUME_NAME=$(basnename "${DMG_NAME%.*}")
+      - name: 'Create disk image for distribution'
+        run: |
+          FILE_DATE=$(date +%Y-%m-%d)
+          FILE_NAME=$FILE_DATE-${{ env.OBS_GIT_TAG }}-macOS.dmg
+          echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
 
-  #         xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u "${{ secrets.MACOS_NOTARIZATION_USERNAME }}" -p "${{ secrets.MACOS_NOTARIZATION_PASSWORD }}"
+          DMG_NAME=$(basename $(/usr/bin/find . -type f -name "*.dmg" -depth 1))
 
-  #         hdiutil attach -mountroot "${{ github.workspace }}" -readonly -noverify -noautoopen -quiet "${DMG_NAME}"
-  #         xcnotary precheck "${{ github.workspace }}/${VOLUME_NAME}/OBS.app"
+          xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u "${{ secrets.MACOS_NOTARIZATION_USERNAME }}" -p "${{ secrets.MACOS_NOTARIZATION_PASSWORD }}"
 
-  #         if [ "$?" -eq 0 ]; then
-  #           xcnotary notarize "$DMG_NAME" --developer-account "${{ secrets.MACOS_NOTARIZATION_USERNAME }}" --developer-password-keychain-item "AC_PASSWORD" --provider "${{ secrets.ASC_PROVIDER_SHORTNAME }}"
-  #           hdiutil detach "${{ github.workspace }}/${VOLUME_NAME}"
-  #         else
-  #           hdiutil detach "${{ github.workspace }}/${VOLUME_NAME}"
-  #           return 1
-  #         fi
+          hdiutil attach -readonly -noverify -noautoopen -quiet "${DMG_NAME}"
+          VOLUME_NAME=$(hdiutil info -plist | grep "/Volumes/" | sed 's/<string>\/Volumes\/\([^<]*\)<\/string>/\1/' | sed -e 's/^[[:space:]]*//')
+          xcnotary precheck "/Volumes/${VOLUME_NAME}/OBS.app"
 
-  #         mv "${DMG_NAME}" "${{ github.workspace }}/CI_RELEASE/${FILE_NAME}"
+          if [ "$?" -eq 0 ]; then
+            xcnotary notarize "$DMG_NAME" --developer-account "${{ secrets.MACOS_NOTARIZATION_USERNAME }}" --developer-password-keychain-item "AC_PASSWORD" --provider "${{ secrets.ASC_PROVIDER_SHORTNAME }}"
+            hdiutil detach "/Volumes/${VOLUME_NAME}"
+            mkdir -p "${{ github.workspace }}/CI_RELEASE/"
+            mv "${DMG_NAME}" "${{ github.workspace }}/CI_RELEASE/${FILE_NAME}"
+          else
+            hdiutil detach "/Volumes/${VOLUME_NAME}"
+            exit 1
+          fi
 
-  #     - name: 'Publish macOS disk image'
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: 'obs-macos-release'
-  #         path: ${{ github.workspace }}/CI_RELEASE/${FILE_NAME}
+      - name: 'Publish macOS disk image'
+        uses: actions/upload-artifact@v2
+        with:
+          name: 'obs-macos-release'
+          path: ${{ github.workspace }}/CI_RELEASE/${{ env.FILE_NAME }}
