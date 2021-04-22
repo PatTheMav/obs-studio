@@ -132,6 +132,14 @@ endfunction()
 function(setup_obs_app target)
 	setup_binary_target(${target})
 
+	# detect outdated obs-browser submodule
+	if(NOT TARGET OBS::browser AND TARGET obs-browser)
+		target_compile_features(obs-browser-page
+			PRIVATE cxx_std_17)
+
+		add_library(OBS::browser ALIAS obs-browser)
+	endif()
+
 	if(TARGET OBS::browser)
 		setup_target_browser(${target})
 	endif()
@@ -260,7 +268,7 @@ endif()
 function(_install_obs_plugin_with_data target source)
 	setup_plugin_target(${target})
 
-	if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
+	if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${source}" AND NOT OS_MACOS)
 		install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${source}"
 			DESTINATION "${OBS_DATA_DESTINATION}/${destination}"
 			USE_SOURCE_PERMISSIONS)

@@ -133,6 +133,11 @@ function(setup_obs_app target)
 		BUNDLE DESTINATION "."
 			COMPONENT obs_app)
 
+	# detect outdated obs-browser submodule
+	if(TARGET obs-browser-page OR TARGET obs-browser-page_gpu)
+		add_library(OBS::browser ALIAS obs-browser)
+	endif()
+
 	if(TARGET OBS::browser)
 		setup_target_browser(${target})
 	endif()
@@ -163,9 +168,14 @@ function(setup_target_browser target)
 
 	if(NOT BROWSER_LEGACY)
 		foreach(_SUFFIX IN ITEMS "_gpu" "_plugin" "_renderer" "")
-			if(TARGET OBS::browser-helper${_SUFFIX})
-				# add_dependencies(${target} OBS::browser-helper${_SUFFIX})
+			# detect outdated obs-browser submodule
+			if(TARGET obs-browser-page${_SUFFIX})
+				add_executable(OBS::browser-helper${_SUFFIX} ALIAS obs-browser-page${_SUFFIX})
+				target_compile_features(obs-browser-page${_SUFFIX}
+					PRIVATE cxx_std_17)
+			endif()
 
+			if(TARGET OBS::browser-helper${_SUFFIX})
 				add_custom_command(TARGET ${target} POST_BUILD
 					COMMAND "${CMAKE_COMMAND}" -E copy_directory
 						"$<TARGET_BUNDLE_DIR:OBS::browser-helper${_SUFFIX}>"
