@@ -498,7 +498,7 @@ jobs:
           path: '*-win${{ matrix.arch }}.zip'
 
   linux_package:
-    name: '02 - Flatpack Bundle'
+    name: '02 - Flatpak Bundle'
     runs-on: [ubuntu-latest]
     needs: [clang_check]
     if: always()
