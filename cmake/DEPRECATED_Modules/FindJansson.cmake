@@ -19,9 +19,14 @@ endif()
 find_path(Jansson_INCLUDE_DIR
 	NAMES jansson.h
 	HINTS
-		ENV JANSSON_PATH
-		${JANSSON_PATH}
-		${CMAKE_SOURCE_DIR}/${JANSSON_PATH}
+		ENV JanssonPath${_lib_suffix}
+		ENV JanssonPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${JanssonPath${_lib_suffix}}
+		${JanssonPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_JANSSON_INCLUDE_DIRS}
 	PATHS
 		/usr/include /usr/local/include /opt/local/include /sw/include)
@@ -29,9 +34,14 @@ find_path(Jansson_INCLUDE_DIR
 find_library(Jansson_LIB
 	NAMES ${_JANSSON_LIBRARIES} jansson libjansson
 	HINTS
-		ENV JANSSON_PATH
-		${JANSSON_PATH}
-		${CMAKE_SOURCE_DIR}/${JANSSON_PATH}
+		ENV JanssonPath${_lib_suffix}
+		ENV JanssonPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${JanssonPath${_lib_suffix}}
+		${JanssonPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_JANSSON_LIBRARY_DIRS}
 	PATHS
 		/usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -71,19 +81,4 @@ if(JANSSON_FOUND)
 	set(JANSSON_INCLUDE_DIRS ${Jansson_INCLUDE_DIR})
 	set(JANSSON_LIBRARIES ${Jansson_LIB})
 	set(JANSSON_VERSION ${_JANSSON_VERSION_STRING})
-
-	if(NOT TARGET Jansson::Jansson)
-		if(IS_ABSOLUTE "${JANSSON_LIBRARIES}")
-			add_library(Jansson::Jansson UNKNOWN IMPORTED GLOBAL)
-			set_target_properties(Jansson::Jansson PROPERTIES IMPORTED_LOCATION
-				"${JANSSON_LIBRARIES}")
-		else()
-			add_library(Jansson::Jansson INTERFACE IMPORTED GLOBAL)
-			set_target_properties(Jansson::Jansson PROPERTIES IMPORTED_LIBNAME
-				"${JANSSON_LIBRARIES}")
-		endif()
-
-		set_target_properties(Jansson::Jansson PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-			"${JANSSON_INCLUDE_DIRS}")
-	endif()
 endif()

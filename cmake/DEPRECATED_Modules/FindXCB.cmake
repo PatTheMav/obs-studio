@@ -216,7 +216,7 @@ macro(_XCB_HANDLE_COMPONENT _comp)
     endif()
 endmacro()
 
-if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+IF (NOT WIN32)
     # Use pkg-config to get the directories and then use these values
     # in the FIND_PATH() and FIND_LIBRARY() calls
     find_package(PkgConfig)
@@ -239,26 +239,4 @@ if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 
     # compatibility for old variable naming
     set(XCB_INCLUDE_DIR ${XCB_INCLUDE_DIRS})
-endif()
-
-if(XCB_FOUND AND NOT TARGET XCB::XCB)
-    foreach(component ${comps})
-        if(NOT TARGET XCB::${component})
-            string(TOUPPER ${component} component_u)
-            if(XCB_${component_u}_FOUND)
-                if(IS_ABSOLUTE "${XCB_${component_u}_LIBRARY}")
-                    add_library(XCB::${component} UNKNOWN IMPORTED)
-                    set_target_properties(XCB::${component} PROPERTIES IMPORTED_LOCATION
-                        "${XCB_${component_u}_LIBRARY}")
-                else()
-                    add_library(XCB::${component} INTERFACE IMPORTED)
-                    set_target_properties(XCB::${component} PROPERTIES IMPORTED_LIBNAME
-                        "${XCB_${component_u}_LIBRARY}")
-                endif()
-
-                set_target_properties(XCB::${component} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                    "${XCB_${component_u}_INCLUDE_DIR}")
-            endif()
-        endif()
-    endforeach()
-endif()
+ENDIF (NOT WIN32)

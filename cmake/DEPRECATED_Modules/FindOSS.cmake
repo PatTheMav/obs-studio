@@ -31,9 +31,3 @@ else (OSS_FOUND)
 endif (OSS_FOUND)
 
 mark_as_advanced(OSS_FOUND OSS_INCLUDE_DIR OSS_HEADER_NAME)
-
-if(OSS_FOUND AND NOT TARGET OSS::OSS)
-        add_library(OSS::OSS INTERFACE IMPORTED)
-        set_target_properties(OSS::OSS PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                "${OSS_INCLUDE_DIR}")
-endif()

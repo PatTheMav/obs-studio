@@ -19,9 +19,14 @@ endif()
 find_path(VLC_INCLUDE_DIR
 	NAMES libvlc.h
 	HINTS
-		ENV VLC_PATH
-		${VLC_PATH}
-		${CMAKE_SOURCE_DIR}/${VLC_PATH}
+		ENV VLCPath${_lib_suffix}
+		ENV VLCPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${VLCPath${_lib_suffix}}
+		${VLCPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_VLC_INCLUDE_DIRS}
 	PATHS
 		/usr/include /usr/local/include /opt/local/include /sw/include
@@ -31,9 +36,14 @@ find_path(VLC_INCLUDE_DIR
 find_library(VLC_LIB
 	NAMES ${_VLC_LIBRARIES} VLC libVLC
 	HINTS
-		ENV VLC_PATH
-		${VLC_PATH}
-		${CMAKE_SOURCE_DIR}/${VLC_PATH}
+		ENV VLCPath${_lib_suffix}
+		ENV VLCPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${VLCPath${_lib_suffix}}
+		${VLCPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_VLC_LIBRARY_DIRS}
 	PATHS
 		/usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -53,10 +63,4 @@ mark_as_advanced(VLC_INCLUDE_DIR VLC_LIB)
 if(LIBVLC_FOUND)
 	set(LIBVLC_LIBRARIES ${VLC_LIB})
 	set(LIBVLC_INCLUDE_DIRS ${VLC_INCLUDE_DIR})
-
-	if(NOT TARGET VLC::LibVLC)
-		add_library(VLC::LibVLC INTERFACE IMPORTED)
-		set_target_properties(VLC::LibVLC PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-			"${LIBVLC_INCLUDE_DIRS}")
-	endif()
 endif()

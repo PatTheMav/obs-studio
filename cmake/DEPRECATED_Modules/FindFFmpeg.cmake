@@ -40,9 +40,14 @@ function(find_ffmpeg_library component header)
 		NAMES
 			"lib${component}/${header}" "lib${component}/version.h"
 		HINTS
-			ENV FFMPEG_PATH
-			${FFMPEG_PATH}
-			${CMAKE_SOURCE_DIR}/${FFMPEG_PATH}
+			ENV FFmpegPath${_lib_suffix}
+			ENV FFmpegPath
+			ENV DepsPath${_lib_suffix}
+			ENV DepsPath
+			${FFmpegPath${_lib_suffix}}
+			${FFmpegPath}
+			${DepsPath${_lib_suffix}}
+			${DepsPath}
 			${PC_FFMPEG_${component}_INCLUDE_DIRS}
 		PATHS
 			/usr/include /usr/local/include /opt/local/include /sw/include
@@ -52,9 +57,14 @@ function(find_ffmpeg_library component header)
 		NAMES
 			"${component}" "lib${component}"
 		HINTS
-			ENV FFMPEG_PATH
-			${FFMPEG_PATH}
-			${CMAKE_SOURCE_DIR}/${FFMPEG_PATH}
+			ENV FFmpegPath${_lib_suffix}
+			ENV FFmpegPath
+			ENV DepsPath${_lib_suffix}
+			ENV DepsPath
+			${FFmpegPath${_lib_suffix}}
+			${FFmpegPath}
+			${DepsPath${_lib_suffix}}
+			${DepsPath}
 			${PC_FFMPEG_${component}_LIBRARY_DIRS}
 		PATHS
 			/usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -143,25 +153,3 @@ find_package_handle_standard_args(FFmpeg
 	REQUIRED_VARS FFMPEG_${_first_comp}_LIBRARIES FFMPEG_${_first_comp}_INCLUDE_DIRS
 	VERSION_VAR FFMPEG_${_first_comp}_VERSION_STRING
 	HANDLE_COMPONENTS)
-
-if(FFMPEG_FOUND)
-	foreach(component ${FFmpeg_FIND_COMPONENTS})
-		if(NOT TARGET FFmpeg::${component})
-			string(TOUPPER ${component} component_u)
-			if(FFMPEG_${component_u}_FOUND)
-				if(IS_ABSOLUTE "${FFMPEG_${component_u}_LIBRARIES}")
-					add_library(FFmpeg::${component} UNKNOWN IMPORTED)
-					set_target_properties(FFmpeg::${component} PROPERTIES IMPORTED_LOCATION
-						"${FFMPEG_${component_u}_LIBRARIES}")
-				else()
-					add_library(FFmpeg::${component} INTERFACE IMPORTED)
-					set_target_properties(FFmpeg::${component} PROPERTIES IMPORTED_LIBNAME
-						"${FFMPEG_${component_u}_LIBRARIES}")
-				endif()
-
-				set_target_properties(FFmpeg::${component} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-					"${FFMPEG_${component_u}_INCLUDE_DIRS}")
-			endif()
-		endif()
-	endforeach()
-endif()

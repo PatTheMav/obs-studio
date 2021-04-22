@@ -26,9 +26,14 @@ endif()
 find_path(MBEDTLS_INCLUDE_DIR
 	NAMES mbedtls/ssl.h
 	HINTS
-		ENV MBEDTLS_PATH
-		${MBEDTLS_PATH}
-		${CMAKE_SOURCE_DIR}/${MBEDTLS_PATH}
+		ENV mbedtlsPath${_lib_suffix}
+		ENV mbedtlsPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${mbedtlsPath${_lib_suffix}}
+		${mbedtlsPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_MBEDTLS_INCLUDE_DIRS}
 	PATHS
 		/usr/include /usr/local/include /opt/local/include /sw/include
@@ -38,9 +43,14 @@ find_path(MBEDTLS_INCLUDE_DIR
 find_library(MBEDTLS_LIB
 	NAMES ${_MBEDTLS_LIBRARIES} mbedtls libmbedtls
 	HINTS
-		ENV MBEDTLS_PATH
-		${MBEDTLS_PATH}
-		${CMAKE_SOURCE_DIR}/${MBEDTLS_PATH}
+		ENV mbedtlsPath${_lib_suffix}
+		ENV mbedtlsPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${mbedtlsPath${_lib_suffix}}
+		${mbedtlsPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_MBEDTLS_LIBRARY_DIRS}
 	PATHS
 		/usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -55,9 +65,14 @@ find_library(MBEDTLS_LIB
 find_library(MBEDCRYPTO_LIB
 	NAMES ${_MBEDCRYPTO_LIBRARIES} mbedcrypto libmbedcrypto
 	HINTS
-		ENV MBEDCRYPTO_PATH
-		${MBEDCRYPTO_PATH}
-		${CMAKE_SOURCE_DIR}/${MBEDCRYPTO_PATH}
+		ENV mbedcryptoPath${_lib_suffix}
+		ENV mbedcryptoPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${mbedcryptoPath${_lib_suffix}}
+		${mbedcryptoPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_MBEDCRYPTO_LIBRARY_DIRS}
 	PATHS
 		/usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -72,9 +87,14 @@ find_library(MBEDCRYPTO_LIB
 find_library(MBEDX509_LIB
 	NAMES ${_MBEDX509_LIBRARIES} mbedx509 libmbedx509
 	HINTS
-		ENV MBEDX509_PATH
-		${MBEDX509_PATH}
-		${CMAKE_SOURCE_DIR}/${MBEDX509_PATH}
+		ENV mbedx509Path${_lib_suffix}
+		ENV mbedx509Path
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${mbedx509Path${_lib_suffix}}
+		${mbedx509Path}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_MBEDX509_LIBRARY_DIRS}
 	PATHS
 		/usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -102,53 +122,12 @@ if(MBEDTLS_LIB AND MBEDCRYPTO_LIB AND MBEDX509_LIB)
 	set(MBEDTLS_INCLUDE_DIRS ${MBEDTLS_INCLUDE_DIR})
 	set(MBEDTLS_LIBRARIES ${MBEDTLS_LIB} ${MBEDCRYPTO_LIB} ${MBEDX509_LIB})
 
-	foreach(component TLS CRYPTO X509)
-		if(NOT TARGET Mbedtls::${component} AND MBED${component}_LIB)
-			if(IS_ABSOLUTE "${MBED${component}_LIB}")
-				add_library(Mbedtls::${component} UNKNOWN IMPORTED)
-				set_target_properties(Mbedtls::${component} PROPERTIES IMPORTED_LOCATION
-					"${MBED${component}_LIB}")
-			else()
-				add_library(Mbedtls::${component} INTERFACE IMPORTED)
-				set_target_properties(Mbedtls::${component} PROPERTIES IMPORTED_LIBNAME
-					"${MBED${component}_LIB}")
-			endif()
-
-			set_target_properties(Mbedtls::${component} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-				"${MBED${component}_INCLUDE_DIR}")
-		endif()
-	endforeach()
-
-	if(NOT TARGET Mbedtls::Mbedtls)
-		add_library(Mbedtls::Mbedtls INTERFACE IMPORTED)
-		target_link_libraries(Mbedtls::Mbedtls
-			INTERFACE
-				Mbedtls::TLS
-				Mbedtls::CRYPTO
-				Mbedtls::X509)
-	endif()
-
 # Otherwise, if we find MBEDTLS_LIB, and it has both CRYPTO and x509
 # within the single lib (i.e. a windows build environment), then also
 # feel free to go ahead.
 elseif(MBEDTLS_LIB AND MBEDTLS_INCLUDES_CRYPTO AND MBEDTLS_INCLUDES_X509)
 	set(MBEDTLS_INCLUDE_DIRS ${MBEDTLS_INCLUDE_DIR})
 	set(MBEDTLS_LIBRARIES ${MBEDTLS_LIB})
-
-	if(NOT TARGET Mbedtls::Mbedtls)
-		if(IS_ABSOLUTE "${MBED${component}_LIB}")
-			add_library(Mbedtls::${component} UNKNOWN IMPORTED)
-			set_target_properties(Mbedtls::${component} PROPERTIES IMPORTED_LOCATION
-				"${MBEDTLS_LIBRARIES}")
-		else()
-			add_library(Mbedtls::${component} INTERFACE IMPORTED)
-			set_target_properties(Mbedtls::${component} PROPERTIES IMPORTED_LIBNAME
-				"${MBEDTLS_LIBRARIES}")
-		endif()
-
-		set_target_properties(Mbedtls::${component} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-			"${MBEDTLS_INCLUDE_DIRS}")
-	endif()
 endif()
 
 # Now we've accounted for the 3-vs-1 library case:

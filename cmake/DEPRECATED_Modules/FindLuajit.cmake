@@ -17,9 +17,14 @@ ENDIF()
 FIND_PATH(LUAJIT_INCLUDE_DIR
 	NAMES lua.h lualib.h
 	HINTS
-		ENV LUAJIT_PATH
-		${LUAJIT_PATH}
-		${CMAKE_SOURCE_DIR}/${LUAJIT_PATH}
+		ENV LuajitPath${_LIB_SUFFIX}
+		ENV LuajitPath
+		ENV DepsPath${_LIB_SUFFIX}
+		ENV DepsPath
+		${LuajitPath${_LIB_SUFFIX}}
+		${LuajitPath}
+		${DepsPath${_LIB_SUFFIX}}
+		${DepsPath}
 		${_LUAJIT_INCLUDE_DIRS}
 	PATHS
 		/usr/include
@@ -48,9 +53,14 @@ FIND_PATH(LUAJIT_INCLUDE_DIR
 find_library(LUAJIT_LIB
 	NAMES ${_LUAJIT_LIBRARIES} luajit luajit-51 luajit-5.1 lua51
 	HINTS
-		ENV LUAJIT_PATH
-		${LUAJIT_PATH}
-		${CMAKE_SOURCE_DIR}/${LUAJIT_PATH}
+		ENV LuajitPath${_lib_suffix}
+		ENV LuajitPath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${LuajitPath${_lib_suffix}}
+		${LuajitPath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_LUAJIT_LIBRARY_DIRS}
 	PATHS
 		/usr/lib
@@ -75,19 +85,4 @@ mark_as_advanced(LUAJIT_INCLUDE_DIR LUAJIT_LIB)
 if(LUAJIT_FOUND)
 	set(LUAJIT_INCLUDE_DIRS ${LUAJIT_INCLUDE_DIR})
 	set(LUAJIT_LIBRARIES ${LUAJIT_LIB})
-
-	if(NOT TARGET Luajit::Luajit)
-		if(IS_ABSOLUTE "${LUAJIT_LIBRARIES}")
-			add_library(Luajit::Luajit UNKNOWN IMPORTED)
-			set_target_properties(Luajit::Luajit PROPERTIES IMPORTED_LOCATION
-				"${LUAJIT_LIBRARIES}")
-		else()
-			add_library(Luajit::Luajit INTERFACE IMPORTED)
-			set_target_properties(Luajit::Luajit PROPERTIES IMPORTED_LIBNAME
-				"${LUAJIT_LIBRARIES}")
-		endif()
-
-		set_target_properties(Luajit::Luajit PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-			"${LUAJIT_INCLUDE_DIRS}")
-	endif()
 endif()

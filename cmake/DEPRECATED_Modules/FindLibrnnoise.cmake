@@ -22,9 +22,14 @@ endif()
 find_path(RNNOISE_INCLUDE_DIR
 	NAMES rnnoise.h
 	HINTS
-		ENV RNNOISE_PATH
-		${RNNOISE_PATH}
-		${CMAKE_SOURCE_DIR}/${RNNOISE_PATH}
+		ENV rnnoisePath${_lib_suffix}
+		ENV rnnoisePath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${rnnoisePath${_lib_suffix}}
+		${rnnoisePath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_RNNOISE_INCLUDE_DIRS}
 	PATHS
 		/usr/include /usr/local/include /opt/local/include /sw/include
@@ -34,9 +39,14 @@ find_path(RNNOISE_INCLUDE_DIR
 find_library(RNNOISE_LIB
 	NAMES ${_RNNOISE_LIBRARIES} rnnoise
 	HINTS
-		ENV RNNOISE_PATH
-		${RNNOISE_PATH}
-		${CMAKE_SOURCE_DIR}/${RNNOISE_PATH}
+		ENV rnnoisePath${_lib_suffix}
+		ENV rnnoisePath
+		ENV DepsPath${_lib_suffix}
+		ENV DepsPath
+		${rnnoisePath${_lib_suffix}}
+		${rnnoisePath}
+		${DepsPath${_lib_suffix}}
+		${DepsPath}
 		${_RNNOISE_LIBRARY_DIRS}
 	PATHS
 		/usr/lib /usr/local/lib /opt/local/lib /sw/lib
@@ -55,19 +65,4 @@ mark_as_advanced(RNNOISE_INCLUDE_DIR RNNOISE_LIB)
 if(LIBRNNOISE_FOUND)
 	set(LIBRNNOISE_INCLUDE_DIRS ${RNNOISE_INCLUDE_DIR})
 	set(LIBRNNOISE_LIBRARIES ${RNNOISE_LIB})
-
-	if(NOT TARGET Librnnoise::Librnnoise)
-		if(IS_ABSOLUTE "${LIBRNNOISE_LIBRARIES}")
-			add_library(Librnnoise::Librnnoise UNKNOWN IMPORTED)
-			set_target_properties(Librnnoise::Librnnoise PROPERTIES IMPORTED_LOCATION
-				"${LIBRNNOISE_LIBRARIES}")
-		else()
-			add_library(Librnnoise::Librnnoise INTERFACE IMPORTED)
-			set_target_properties(Librnnoise::Librnnoise PROPERTIES IMPORTED_LIBNAME
-				"${LIBRNNOISE_LIBRARIES}")
-		endif()
-
-		set_target_properties(Librnnoise::Librnnoise PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-			"${LIBRNNOISE_INCLUDE_DIRS}")
-	endif()
 endif()
