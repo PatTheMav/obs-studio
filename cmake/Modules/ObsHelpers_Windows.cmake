@@ -97,6 +97,43 @@ endfunction()
 
 # Helper function to set up OBS app target
 function(setup_obs_app target)
+    # detect outdated obs-browser submodule
+    if(NOT TARGET OBS::browser AND TARGET obs-browser)
+        target_link_libraries(obs-browser-page
+            PRIVATE optimized CEF::Wrapper)
+
+        if(TARGET CEF::Wrapper_Debug)
+            target_link_libraries(obs-browser-page
+                PRIVATE debug CEF::Wrapper_Debug)
+        endif()
+
+        if(MSVC)
+            target_compile_options(obs-browser
+                PRIVATE $<IF:$<CONFIG:DEBUG>,/MTd,/MT>)
+
+            target_compile_options(obs-browser-page
+                PRIVATE $<IF:$<CONFIG:DEBUG>,/MTd,/MT>)
+        endif()
+
+        target_link_libraries(obs-browser
+            PRIVATE
+                optimized CEF::Wrapper
+                CEF::Library)
+
+        if(TARGET CEF::Wrapper_Debug)
+            target_link_libraries(obs-browser
+                PRIVATE debug CEF::Wrapper_Debug)
+        endif()
+
+        target_link_options(obs-browser
+            PRIVATE "LINKER:/IGNORE:4099")
+
+        target_link_options(obs-browser-page
+            PRIVATE
+                "LINKER:/IGNORE:4099"
+                "LINKER:/SUBSYSTEM:WINDOWS")
+    endif()
+
     _setup_obs_app(${ARGV})
 
     if(MSVC)
