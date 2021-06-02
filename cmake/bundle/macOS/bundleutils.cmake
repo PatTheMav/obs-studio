@@ -43,7 +43,7 @@ if(DEFINED ENV{VERBOSE})
 endif()
 
 if(DEFINED ENV{QUIET})
-  set(_QUET_FLAG "OUTPUT_QUIET")
+  set(_QUIET_FLAG "OUTPUT_QUIET")
 endif()
 
 list(REMOVE_DUPLICATES _FIXUP_BUNDLES)
@@ -53,7 +53,7 @@ execute_process(
   COMMAND
     /bin/sh -c
     "${_BUNDLER_COMMAND} -a \"${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}\" -cd -of -q -f ${_FIXUP_BUNDLES} ${_VERBOSE_FLAG}"
-    ${_QUET_FLAG})
+    ${_QUIET_FLAG})
 
 # Find all dylibs, frameworks and other code elements inside bundle
 file(GLOB _OTHER_BINARIES
@@ -92,7 +92,7 @@ execute_process(
   COMMAND
     /bin/sh -c
     "cd \"${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}/Contents/Frameworks\" && ln -fs libobs.framework/Versions/Current/libobs libobs.0.dylib && ln -fsv libobs.framework/Versions/Current/libobs libobs.dylib"
-    ${_QUET_FLAG})
+    ${_QUIET_FLAG})
 
 # Python potentially leaves __pycache__ directories inside the bundle which will
 # break codesigning
@@ -110,33 +110,40 @@ if(EXISTS
     COMMAND
       /bin/sh -c
       "plutil -insert OBSFeedsURL -string https://obsproject.com/osx_update/feeds.xml \"${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}/Contents/Info.plist\""
-      ${_QUET_FLAG})
+      ${_QUIET_FLAG})
   execute_process(
     COMMAND
       /bin/sh -c
       "plutil -insert SUFeedURL -string https://obsproject.com/osx_update/stable/updates.xml \"${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}/Contents/Info.plist\""
-      ${_QUET_FLAG})
+      ${_QUIET_FLAG})
   execute_process(
     COMMAND
       /bin/sh -c
       "plutil -insert SUPublicDSAKeyFile -string OBSPublicDSAKey.pem \"${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}/Contents/Info.plist\""
-      ${_QUET_FLAG})
+      ${_QUIET_FLAG})
 
+  execute_process(
+    COMMAND
+      /usr/bin/codesign --remove-signature
+      "${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}/Contents/Frameworks/Sparkle.framework/Versions/A/Resources/Autoupdate.app"
+      ${_VERBOSE_FLAG} ${_QUIET_FLAG})
   execute_process(
     COMMAND
       /usr/bin/codesign --force --sign "${_CODESIGN_IDENTITY}" --deep --options
       runtime
       "${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}/Contents/Frameworks/Sparkle.framework/Versions/A/Resources/Autoupdate.app"
-      ${_VERBOSE_FLAG} ${_QUET_FLAG})
+      ${_VERBOSE_FLAG} ${_QUIET_FLAG})
 endif()
 foreach(_DEPENDENCY IN LISTS _OTHER_BINARIES _DYLIBS _FRAMEWORKS _OBS_PLUGINS
                              _OBS_SCRIPTING_PLUGINS _QT_PLUGINS)
   if(NOT IS_SYMLINK "${_DEPENDENCY}")
+    execute_process(COMMAND /usr/bin/codesign --remove-signature
+                            "${_DEPENDENCY}" ${_VERBOSE_FLAG} ${_QUIET_FLAG})
     execute_process(
       COMMAND
         /usr/bin/codesign --force --sign "${_CODESIGN_IDENTITY}" --options
         runtime --entitlements "${_CODESIGN_ENTITLEMENTS}" "${_DEPENDENCY}"
-        ${_VERBOSE_FLAG} ${_QUET_FLAG})
+        ${_VERBOSE_FLAG} ${_QUIET_FLAG})
   endif()
 endforeach()
 
@@ -144,6 +151,10 @@ endforeach()
 message(STATUS "OBS: Codesign main app")
 execute_process(
   COMMAND
+    /usr/bin/codesign --remove-signature
+    "${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}" ${_VERBOSE_FLAG} ${_QUIET_FLAG})
+execute_process(
+  COMMAND
     /usr/bin/codesign --force --sign "${_CODESIGN_IDENTITY}" --options runtime
     --entitlements "${_CODESIGN_ENTITLEMENTS}"
-    "${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}" ${_VERBOSE_FLAG} ${_QUET_FLAG})
+    "${CMAKE_INSTALL_PREFIX}/${_BUNDLENAME}" ${_VERBOSE_FLAG} ${_QUIET_FLAG})

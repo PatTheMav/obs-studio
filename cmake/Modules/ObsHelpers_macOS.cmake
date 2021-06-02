@@ -253,14 +253,24 @@ function(setup_target_browser target)
             "$<TARGET_BUNDLE_CONTENT_DIR:obs>/Frameworks/$<TARGET_FILE_NAME:OBS::browser-helper${_SUFFIX}>.app"
           VERBATIM)
 
-        add_custom_command(
-          TARGET ${target}
-          POST_BUILD
-          COMMAND
-            /bin/sh -c
-            "codesign --force --sign \"${OBS_BUNDLE_CODESIGN_IDENTITY}\" $<$<BOOL:${OBS_CODESIGN_LINKER}>:--options linker-signed >\"$<TARGET_BUNDLE_CONTENT_DIR:obs>/Frameworks/$<TARGET_FILE_NAME:OBS::browser-helper${_SUFFIX}>.app\""
-          COMMENT "Codesigning Browser Helper ${_HELPER_OUTPUT_NAME}"
-          VERBATIM)
+        if(NOT OBS_CODESIGN_LINKER)
+          add_custom_command(
+            TARGET ${target}
+            POST_BUILD
+            COMMAND
+              /bin/sh -c
+              "codesign --remove-signature \"$<TARGET_BUNDLE_CONTENT_DIR:obs>/Frameworks/$<TARGET_FILE_NAME:OBS::browser-helper${_SUFFIX}>.app\""
+            VERBATIM)
+
+          add_custom_command(
+            TARGET ${target}
+            POST_BUILD
+            COMMAND
+              /bin/sh -c
+              "codesign --force --sign \"${OBS_BUNDLE_CODESIGN_IDENTITY}\" \"$<TARGET_BUNDLE_CONTENT_DIR:obs>/Frameworks/$<TARGET_FILE_NAME:OBS::browser-helper${_SUFFIX}>.app\""
+            COMMENT "Codesigning Browser Helper ${_HELPER_OUTPUT_NAME}"
+            VERBATIM)
+        endif()
       endif()
     endforeach()
   else()
@@ -275,14 +285,24 @@ function(setup_target_browser target)
           "$<TARGET_BUNDLE_CONTENT_DIR:obs>/PlugIns/$<TARGET_FILE_BASE_NAME:obs-browser>/Contents/MacOS/$<TARGET_FILE_NAME:obs-browser-helper>"
         VERBATIM)
 
-      add_custom_command(
-        TARGET ${target}
-        POST_BUILD
-        COMMAND
-          /bin/sh -c
-          "codesign --force --sign \"${OBS_BUNDLE_CODESIGN_IDENTITY}\" $<$<BOOL:${OBS_CODESIGN_LINKER}>:--options linker-signed >\"$<TARGET_BUNDLE_CONTENT_DIR:obs>/PlugIns/$<TARGET_FILE_BASE_NAME:obs-browser>/Contents/MacOS/$<TARGET_FILE_NAME:obs-browser-helper>\""
-        COMMENT "Codesigning obs-browser-helper"
-        VERBATIM)
+      if(NOT OBS_CODESIGN_LINKER)
+        add_custom_command(
+          TARGET ${target}
+          POST_BUILD
+          COMMAND
+            /bin/sh -c
+            "codesign --remove-signature \"$<TARGET_BUNDLE_CONTENT_DIR:obs>/PlugIns/$<TARGET_FILE_BASE_NAME:obs-browser>/Contents/MacOS/$<TARGET_FILE_NAME:obs-browser-helper>\""
+          VERBATIM)
+
+        add_custom_command(
+          TARGET ${target}
+          POST_BUILD
+          COMMAND
+            /bin/sh -c
+            "codesign --force --sign \"${OBS_BUNDLE_CODESIGN_IDENTITY}\" \"$<TARGET_BUNDLE_CONTENT_DIR:obs>/PlugIns/$<TARGET_FILE_BASE_NAME:obs-browser>/Contents/MacOS/$<TARGET_FILE_NAME:obs-browser-helper>\""
+          COMMENT "Codesigning obs-browser-helper"
+          VERBATIM)
+      endif()
     endif()
   endif()
 endfunction()
@@ -334,6 +354,19 @@ function(setup_obs_modules target)
           "${CMAKE_COMMAND}" -E copy
           "$<TARGET_FILE_DIR:${_MODULE}>/${_MODULE}.py"
           "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/PlugIns/${_MODULE}.py"
+        VERBATIM)
+
+      add_custom_command(
+        TARGET ${target}
+        POST_BUILD
+        COMMAND
+          /bin/sh -c
+          "codesign --remove-signature \"$<TARGET_BUNDLE_CONTENT_DIR:${target}>/PlugIns/${_MODULE}.py\""
+        VERBATIM)
+
+      add_custom_command(
+        TARGET ${target}
+        POST_BUILD
         COMMAND
           /bin/sh -c
           "codesign --force --sign \"${OBS_BUNDLE_CODESIGN_IDENTITY}\" $<$<BOOL:${OBS_CODESIGN_LINKER}>:--options linker-signed >\"$<TARGET_BUNDLE_CONTENT_DIR:${target}>/PlugIns/${_MODULE}.py\""
