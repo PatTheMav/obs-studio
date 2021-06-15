@@ -8,6 +8,11 @@ endif()
 # Add additional search paths for dylibbundler
 list(APPEND _FIXUP_BUNDLES "-s \"${CMAKE_INSTALL_PREFIX}/lib\"")
 list(APPEND _FIXUP_BUNDLES "-s \"${CMAKE_INSTALL_PREFIX}/Frameworks\"")
+list(APPEND _FIXUP_BUNDLES "-s \"${CMAKE_INSTALL_PREFIX}/Frameworks\"")
+
+foreach(_PREFIX_PATH IN LISTS _DEPENDENCY_PREFIX)
+  list(APPEND _FIXUP_BUNDLES "-s \"${_PREFIX_PATH}/lib\"")
+endforeach()
 
 # Unlinked modules need to be supplied manually to dylibbundler Find all modules
 # (plugin and standalone)

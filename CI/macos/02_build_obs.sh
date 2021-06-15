@@ -55,7 +55,7 @@ _configure_obs() {
     cmake -S . -B ${BUILD_DIR} -G Ninja \
         -DCEF_ROOT_DIR="${DEPS_BUILD_DIR}/cef_binary_${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}_macos_${ARCH:-x86_64}" \
         -DVLC_PATH="${DEPS_BUILD_DIR}/vlc-${VLC_VERSION:-${CI_VLC_VERSION}}" \
-        -DCMAKE_PREFIX_PATH="/tmp/obsdeps;${DEPS_BUILD_DIR}/sparkle" \
+        -DCMAKE_PREFIX_PATH="${DEPS_BUILD_DIR}/obs-deps;${DEPS_BUILD_DIR}/sparkle" \
         -DBROWSER_LEGACY=$(test "${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}" -le 3770 && echo "ON" || echo "OFF") \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-${CI_MACOSX_DEPLOYMENT_TARGET}} \
         -DCMAKE_OSX_ARCHITECTURES=${CMAKE_ARCHS} \

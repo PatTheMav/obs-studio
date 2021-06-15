@@ -15,19 +15,22 @@ install_obs-deps() {
     status "Setup for pre-built macOS OBS dependencies v${1}"
     ensure_dir "${DEPS_BUILD_DIR}"
     step "Download..."
-    ${CURLCMD:-curl} https://github.com/obsproject/obs-deps/releases/download/${1}/macos-deps-${1}.tar.gz
+    check_and_fetch "https://github.com/obsproject/obs-deps/releases/download/${1}/macos-deps-${1}-universal.tar.xz" "${2}"
+    mkdir -p obs-deps
     step "Unpack..."
-    /usr/bin/tar -xf "./macos-deps-${1}.tar.gz" -C /tmp
+    /usr/bin/tar -xf "./macos-deps-${1}.tar.gz" -C ./obs-deps
+    /usr/bin/xattr -r -d com.apple.quarantine ./obs-deps
 }
 
 install_qt-deps() {
     status "Setup for pre-built dependency Qt v${1}"
     ensure_dir "${DEPS_BUILD_DIR}"
     step "Download..."
-    ${CURLCMD:-curl} https://github.com/obsproject/obs-deps/releases/download/${2}/macos-qt-${1}-${2}.tar.gz
+    check_and_fetch "https://github.com/obsproject/obs-deps/releases/download/${1}/macos-deps-qt-${1}-universal.tar.xz" "${2}"
+    mkdir -p obs-deps
     step "Unpack..."
-    /usr/bin/tar -xf ./macos-qt-${1}-${2}.tar.gz -C /tmp
-    /usr/bin/xattr -r -d com.apple.quarantine /tmp/obsdeps
+    /usr/bin/tar -xf "./macos-qt-${1}-${2}.tar.gz" -C ./obs-deps
+    /usr/bin/xattr -r -d com.apple.quarantine ./obs-deps
 }
 
 install_vlc() {
@@ -62,7 +65,7 @@ install_sparkle() {
 
     if [ -z "${_SKIP}" ]; then
         step "Download..."
-        ${CURLCMD:-curl} https://github.com/sparkle-project/Sparkle/releases/download/${1}/Sparkle-${1}.tar.xz
+        check_and_fetch "https://github.com/sparkle-project/Sparkle/releases/download/${1}/Sparkle-${1}.tar.xz" "${2}"
         step "Unpack..."
         ensure_dir "${DEPS_BUILD_DIR}/sparkle"
         /usr/bin/tar -xf ../Sparkle-${1}.tar.xz
@@ -117,11 +120,11 @@ install_dependencies() {
     trap "caught_error 'install_dependencies'" ERR
 
     BUILD_DEPS=(
-        "obs-deps ${MACOS_DEPS_VERSION:-${CI_DEPS_VERSION}}"
-        "qt-deps ${QT_VERSION:-${CI_QT_VERSION}} ${MACOS_DEPS_VERSION:-${CI_DEPS_VERSION}}"
-        "cef ${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}"
-        "vlc ${VLC_VERSION:-${CI_VLC_VERSION}}"
-        "sparkle ${SPARKLE_VERSION:-${CI_SPARKLE_VERSION}}"
+        "obs-deps ${MACOS_DEPS_VERSION:-${CI_DEPS_VERSION}} ${MACOS_DEPS_HASH:-${CI_MACOS_DEPS_HASH}}"
+        "qt-deps ${MACOS_DEPS_VERSION:-${CI_DEPS_VERSION}} ${QT_HASH:-${CI_QT_HASH}}"
+        "cef ${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}} ${CEF_HASH:-${CI_CEF_HASH}}"
+        "vlc ${VLC_VERSION:-${CI_VLC_VERSION}} ${VLC_HASH:-${CI_VLC_HASH}}"
+        "sparkle ${SPARKLE_VERSION:-${CI_SPARKLE_VERSION}} ${SPARKLE_HASH:-${CI_SPARKLE_HASH}}"
     )
 
     install_homebrew_deps
@@ -130,7 +133,7 @@ install_dependencies() {
         set -- ${DEPENDENCY}
         trap "caught_error ${DEPENDENCY}" ERR
         FUNC_NAME="install_${1}"
-        ${FUNC_NAME} ${2} ${3}
+        ${FUNC_NAME} ${2} ${3} ${4}
     done
 }
 

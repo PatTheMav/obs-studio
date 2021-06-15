@@ -393,6 +393,7 @@ endfunction()
 function(setup_obs_bundle)
   install(
     CODE "
+    set(_DEPENDENCY_PREFIX \"${CMAKE_PREFIX_PATH}\")
 		set(_BUILD_FOR_DISTRIBUTION \"${BUILD_FOR_DISTRIBUTION}\")
 		set(_BUNDLENAME \"$<TARGET_FILE_BASE_NAME:obs>.app\")
 		set(_BUNDLER_COMMAND \"${CMAKE_SOURCE_DIR}/cmake/bundle/macos/dylibbundler\")
