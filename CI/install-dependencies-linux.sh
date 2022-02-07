@@ -45,7 +45,9 @@ sudo apt-get install -y \
         qtbase5-dev \
         qtbase5-private-dev \
         libqt5svg5-dev \
-        swig
+        swig \
+        libxcb-shape0-dev \
+        libxcb-xfixes0-dev
 
 # build cef
 wget --quiet --retry-connrefused --waitretry=1 https://cdn-fastly.obsproject.com/downloads/cef_binary_${LINUX_CEF_BUILD_VERSION}_linux64.tar.bz2
