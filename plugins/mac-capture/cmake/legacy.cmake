@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 3.22...3.25)
-
-legacy_check()
+project(mac-capture)
 
 find_library(COREAUDIO CoreAudio)
 find_library(AUDIOUNIT AudioUnit)
@@ -30,12 +28,12 @@ target_link_libraries(mac-capture PRIVATE OBS::libobs ${COREAUDIO} ${AUDIOUNIT} 
                                           ${IOSURF} ${COCOA})
 
 if(SCREENCAPTUREKIT)
-  target_link_libraries(mac-capture PRIVATE OBS::libobs ${COREVIDEO} ${COREMEDIA}
-                                            "$<LINK_LIBRARY:WEAK_FRAMEWORK,${SCREENCAPTUREKIT}>")
+  target_link_libraries(mac-capture PRIVATE OBS::libobs ${COREVIDEO} ${COREMEDIA})
+
+  target_link_options(mac-capture PRIVATE SHELL:-weak_framework ScreenCaptureKit)
+  target_link_options(libobs PRIVATE SHELL:-weak_framework ScreenCaptureKit)
 endif()
 
-set_target_properties_obs(mac-capture PROPERTIES FOLDER plugins PREFIX "")
+set_target_properties(mac-capture PROPERTIES FOLDER "plugins" PREFIX "")
 
-if(CMAKE_VERSION VERSION_LESS_EQUAL 3.25.0)
-  set_property(TARGET mac-capture PROPERTY XCODE_LINK_BUILD_PHASE_MODE BUILT_ONLY)
-endif()
+setup_plugin_target(mac-capture)
