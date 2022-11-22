@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 3.22...3.25)
-
-legacy_check()
+project(mac-videotoolbox)
 
 find_library(AVFOUNDATION AVFoundation)
 find_library(COCOA Cocoa)
@@ -26,4 +24,6 @@ target_link_libraries(
           ${VIDEOTOOLBOX}
           ${COREMEDIA})
 
-set_target_properties_obs(mac-videotoolbox PROPERTIES FOLDER plugins PREFIX "")
+set_target_properties(mac-videotoolbox PROPERTIES FOLDER "plugins" PREFIX "")
+
+setup_plugin_target(mac-videotoolbox)
