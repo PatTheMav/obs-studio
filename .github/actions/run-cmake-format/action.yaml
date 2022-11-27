@@ -1,0 +1,35 @@
+name: Run cmake-format
+description: Runs cmake-format and checks for any changes introduced by it
+inputs:
+  failCondition:
+    description: Should checks result in error response
+    required: false
+    default: 'never'
+  workingDirectory:
+    description: Working directory for checks
+    required: false
+    default: ${{ github.workspace }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner
+      shell: bash
+      run: |
+        if [[ '${{ runner.os }}' == 'windows-'* ]]; then
+          echo "run-cmake-format requires a macOS or Linux runner."
+          exit 1
+        fi
+    - name: Install Dependencies
+      run: brew install --quiet zsh
+      shell: bash
+    - run: |
+        git fetch origin --no-tags --no-recurse-submodules -q
+        local -a changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD))
+        if (( ${changes[(I)*.cmake|*CMakeLists.txt]} )) {
+          pip3 install cmakelang
+          ./.github/scripts/run-cmake-format --fail-${{ inputs.failCondition }} --check
+        }
+      id: result
+      name: run-cmake-format
+      shell: zsh {0}
+      working-directory: ${{ github.workspace }}
