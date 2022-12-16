@@ -775,7 +775,6 @@ static void process_video_sync(obs_pipewire_stream *obs_pw_stream)
 {
 	obs_pipewire *obs_pw = obs_pw_stream->obs_pw;
 	struct spa_meta_cursor *cursor;
-	uint32_t drm_format;
 	struct spa_meta_header *header;
 	struct spa_meta_region *region;
 	struct spa_meta_videotransform *video_transform;
@@ -1319,6 +1318,8 @@ uint32_t obs_pipewire_stream_get_width(obs_pipewire_stream *obs_pw_stream)
 		return has_crop ? obs_pw_stream->crop.height
 				: obs_pw_stream->format.info.raw.size.height;
 	}
+
+	return 0;
 }
 
 uint32_t obs_pipewire_stream_get_height(obs_pipewire_stream *obs_pw_stream)
@@ -1344,6 +1345,8 @@ uint32_t obs_pipewire_stream_get_height(obs_pipewire_stream *obs_pw_stream)
 		return has_crop ? obs_pw_stream->crop.width
 				: obs_pw_stream->format.info.raw.size.width;
 	}
+
+	return 0;
 }
 
 void obs_pipewire_stream_video_render(obs_pipewire_stream *obs_pw_stream,
