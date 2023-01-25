@@ -1,19 +1,12 @@
-cmake_minimum_required(VERSION 3.22...3.25)
-
-legacy_check()
+project(rtmp-services)
 
 option(ENABLE_SERVICE_UPDATES "Checks for service updates" OFF)
 
 set(RTMP_SERVICES_URL
     "https://obsproject.com/obs2_update/rtmp-services"
     CACHE STRING "Default services package URL" FORCE)
+
 mark_as_advanced(RTMP_SERVICES_URL)
-
-if(NOT TARGET OBS::file-updater)
-  add_subdirectory("${CMAKE_SOURCE_DIR}/deps/file-updater" "${CMAKE_BINARY_DIR}/deps/file-updater")
-endif()
-
-find_package(jansson REQUIRED)
 
 add_library(rtmp-services MODULE)
 add_library(OBS::rtmp-services ALIAS rtmp-services)
@@ -39,12 +32,21 @@ target_compile_definitions(
   rtmp-services PRIVATE RTMP_SERVICES_URL="${RTMP_SERVICES_URL}"
                         $<$<BOOL:${ENABLE_SERVICE_UPDATES}>:ENABLE_SERVICE_UPDATES>)
 
-target_link_libraries(rtmp-services PRIVATE OBS::libobs OBS::file-updater jansson::jansson)
+target_include_directories(rtmp-services PRIVATE ${CMAKE_BINARY_DIR}/config)
+
+target_link_libraries(rtmp-services PRIVATE OBS::libobs OBS::file-updater Jansson::Jansson)
 
 if(OS_WINDOWS)
-  configure_file(cmake/windows/obs-module.rc.in rtmp-services.rc)
+  set(MODULE_DESCRIPTION "OBS RTMP Services")
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in rtmp-services.rc)
+
   target_sources(rtmp-services PRIVATE rtmp-services.rc)
-  target_link_options(rtmp-services PRIVATE /IGNORE:4098)
+
+  if(MSVC)
+    target_link_options(rtmp-services PRIVATE "LINKER:/IGNORE:4098")
+  endif()
 endif()
 
-set_target_properties_obs(rtmp-services PROPERTIES FOLDER plugins PREFIX "")
+set_target_properties(rtmp-services PROPERTIES FOLDER "plugins" PREFIX "")
+
+setup_plugin_target(rtmp-services)

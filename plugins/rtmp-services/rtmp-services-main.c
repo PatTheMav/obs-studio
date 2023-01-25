@@ -6,7 +6,6 @@
 #include <file-updater/file-updater.h>
 
 #include "rtmp-format-ver.h"
-#include "lookup-config.h"
 
 #include "service-specific/showroom.h"
 #include "service-specific/dacast.h"
@@ -18,8 +17,8 @@ MODULE_EXPORT const char *obs_module_description(void)
 	return "OBS core RTMP services";
 }
 
-#define RTMP_SERVICES_LOG_STR "[rtmp-services plugin] "
-#define RTMP_SERVICES_VER_STR "rtmp-services plugin (libobs " OBS_VERSION ")"
+static const char *rtmp_services_log_str = "[rtmp-services plugin] ";
+static const char *rtmp_services_url = RTMP_SERVICES_URL;
 
 extern struct obs_service_info rtmp_common_service;
 extern struct obs_service_info rtmp_custom_service;
@@ -45,7 +44,7 @@ static bool confirm_service_file(void *param, struct file_download_data *file)
 		format_version = (int)obs_data_get_int(data, "format_version");
 		obs_data_release(data);
 
-		if (format_version != RTMP_SERVICES_FORMAT_VERSION)
+		if (format_version != rtmp_services_format_version)
 			return false;
 	}
 
@@ -88,11 +87,11 @@ bool obs_module_load(void)
 	char *local_dir = obs_module_file("");
 	char *cache_dir = obs_module_config_path("");
 	char update_url[128];
-	snprintf(update_url, sizeof(update_url), "%s/v%d", RTMP_SERVICES_URL,
-		 RTMP_SERVICES_FORMAT_VERSION);
+	snprintf(update_url, sizeof(update_url), "%s/v%d", rtmp_services_url,
+		 rtmp_services_format_version);
 
 	if (cache_dir) {
-		update_info = update_info_create(RTMP_SERVICES_LOG_STR,
+		update_info = update_info_create(rtmp_services_log_str,
 						 module_name.array, update_url,
 						 local_dir, cache_dir,
 						 confirm_service_file, NULL);
