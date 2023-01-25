@@ -681,7 +681,7 @@ HRESULT STDMETHODCALLTYPE DeckLinkDeviceInstance::VideoInputFormatChanged(
 
 ULONG STDMETHODCALLTYPE DeckLinkDeviceInstance::AddRef(void)
 {
-	return os_atomic_inc_long(&refCount);
+	return (ULONG)os_atomic_inc_long(&refCount);
 }
 
 HRESULT STDMETHODCALLTYPE DeckLinkDeviceInstance::QueryInterface(REFIID iid,
@@ -714,5 +714,5 @@ ULONG STDMETHODCALLTYPE DeckLinkDeviceInstance::Release(void)
 		return 0;
 	}
 
-	return newRefCount;
+	return (ULONG)newRefCount;
 }
