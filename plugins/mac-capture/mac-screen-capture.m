@@ -254,8 +254,10 @@ static inline void screen_stream_video_update(struct screen_capture *sc,
 		}
 
 		if (needs_to_update_properties) {
-			[sc->stream_properties setWidth:sc->frame.size.width];
-			[sc->stream_properties setHeight:sc->frame.size.height];
+			[sc->stream_properties
+				setWidth:(size_t)sc->frame.size.width];
+			[sc->stream_properties
+				setHeight:(size_t)sc->frame.size.height];
 
 			[sc->disp
 				updateConfiguration:sc->stream_properties
@@ -320,9 +322,9 @@ static inline void screen_stream_audio_update(struct screen_capture *sc,
 				       audio_description->mBytesPerFrame /
 				       audio_description->mChannelsPerFrame);
 	audio_data.speakers = audio_description->mChannelsPerFrame;
-	audio_data.samples_per_sec = audio_description->mSampleRate;
+	audio_data.samples_per_sec = (uint32_t)audio_description->mSampleRate;
 	audio_data.timestamp =
-		CMTimeGetSeconds(presentation_time) * NSEC_PER_SEC;
+		(uint64_t)CMTimeGetSeconds(presentation_time) * NSEC_PER_SEC;
 	audio_data.format = AUDIO_FORMAT_FLOAT_PLANAR;
 	obs_source_output_audio(sc->source, &audio_data);
 }
@@ -353,12 +355,12 @@ static bool init_screen_stream(struct screen_capture *sc)
 	};
 
 	void (^set_display_mode)(struct screen_capture *, SCDisplay *) = ^void(
-		struct screen_capture *sc, SCDisplay *target_display) {
+		struct screen_capture *_sc, SCDisplay *target_display) {
 		CGDisplayModeRef display_mode =
 			CGDisplayCopyDisplayMode(target_display.displayID);
-		[sc->stream_properties
+		[_sc->stream_properties
 			setWidth:CGDisplayModeGetPixelWidth(display_mode)];
-		[sc->stream_properties
+		[_sc->stream_properties
 			setHeight:CGDisplayModeGetPixelHeight(display_mode)];
 		CGDisplayModeRelease(display_mode);
 	};
@@ -398,9 +400,10 @@ static bool init_screen_stream(struct screen_capture *sc)
 
 		if (target_window) {
 			[sc->stream_properties
-				setWidth:target_window.frame.size.width];
+				setWidth:(size_t)target_window.frame.size.width];
 			[sc->stream_properties
-				setHeight:target_window.frame.size.height];
+				setHeight:(size_t)target_window.frame.size
+						  .height];
 		}
 
 	} break;
@@ -441,7 +444,9 @@ static bool init_screen_stream(struct screen_capture *sc)
 	[sc->stream_properties setQueueDepth:8];
 	[sc->stream_properties setShowsCursor:!sc->hide_cursor];
 	[sc->stream_properties setColorSpaceName:kCGColorSpaceDisplayP3];
-	[sc->stream_properties setPixelFormat:'l10r'];
+	FourCharCode l10r_type = 0;
+	l10r_type = 'l' | '1' << 8 | '0' << 16 | 'r' << 24;
+	[sc->stream_properties setPixelFormat:l10r_type];
 
 	if (@available(macOS 13.0, *)) {
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
@@ -500,12 +505,12 @@ static bool init_screen_stream(struct screen_capture *sc)
 
 	__block BOOL did_stream_start = false;
 	[sc->disp startCaptureWithCompletionHandler:^(
-			  NSError *_Nullable error) {
-		did_stream_start = (BOOL)(error == nil);
+			  NSError *_Nullable _error) {
+		did_stream_start = (BOOL)(_error == nil);
 		if (!did_stream_start) {
 			MACCAP_ERR(
 				"init_screen_stream: Failed to start capture with error %s\n",
-				[[error localizedFailureReason]
+				[[_error localizedFailureReason]
 					cStringUsingEncoding:
 						NSUTF8StringEncoding]);
 			// Clean up disp so it isn't stopped
@@ -660,14 +665,14 @@ static uint32_t screen_capture_getwidth(void *data)
 {
 	struct screen_capture *sc = data;
 
-	return sc->frame.size.width;
+	return (uint32_t)sc->frame.size.width;
 }
 
 static uint32_t screen_capture_getheight(void *data)
 {
 	struct screen_capture *sc = data;
 
-	return sc->frame.size.height;
+	return (uint32_t)sc->frame.size.height;
 }
 
 static void screen_capture_defaults(obs_data_t *settings)
@@ -775,16 +780,16 @@ static bool build_display_list(struct screen_capture *sc,
 			indexOfObjectPassingTest:^BOOL(
 				NSScreen *_Nonnull screen,
 				NSUInteger index __attribute__((unused)),
-				BOOL *_Nonnull stop) {
+				BOOL *_Nonnull _stop) {
 				NSNumber *screen_num =
 					screen.deviceDescription
 						[@"NSScreenNumber"];
 				CGDirectDisplayID screen_display_id =
 					(CGDirectDisplayID)screen_num.intValue;
-				*stop = (screen_display_id ==
-					 display.displayID);
+				*_stop = (screen_display_id ==
+					  display.displayID);
 
-				return *stop;
+				return *_stop;
 			}];
 		NSScreen *screen =
 			[NSScreen.screens objectAtIndex:screen_index];
