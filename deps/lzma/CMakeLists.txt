@@ -1,6 +1,6 @@
-project(lzma)
+cmake_minimum_required(VERSION 3.24...3.25)
 
-add_library(lzma STATIC)
+add_library(lzma STATIC EXCLUDE_FROM_ALL )
 add_library(OBS::lzma ALIAS lzma)
 
 target_sources(lzma PRIVATE config.h)
@@ -89,24 +89,20 @@ target_compile_definitions(lzma PRIVATE HAVE_CONFIG_H
 
 target_include_directories(
   lzma
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-          ${CMAKE_CURRENT_SOURCE_DIR}/common
-          ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/check
-          ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/common
-          ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/delta
-          ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/lz
-          ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/lzma
-          ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/rangecoder
-          ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/simple
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/liblzma/api)
+  PRIVATE common
+          liblzma/check
+          liblzma/common
+          liblzma/delta
+          liblzma/lz
+          liblzma/lzma
+          liblzma/rangecoder
+          liblzma/simple
+  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/liblzma/api")
 
 if(OS_WINDOWS)
-  if(MSVC)
-    target_compile_options(lzma PRIVATE "$<IF:$<CONFIG:Debug>,/MTd,/MT>" /Zl
-                                        /wd4244 /wd4267)
-  endif()
-
+  target_compile_options(lzma PRIVATE $<IF:$<CONFIG:Debug>,/MTd,/MT> /Zl
+                                      /wd4244 /wd4267)
   target_compile_definitions(lzma PRIVATE inline=_inline restrict=__restrict)
 endif()
 
-set_target_properties(lzma PROPERTIES FOLDER "deps")
+set_target_properties(lzma PROPERTIES FOLDER deps)
