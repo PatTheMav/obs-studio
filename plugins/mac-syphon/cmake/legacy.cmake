@@ -1,23 +1,20 @@
-cmake_minimum_required(VERSION 3.22...3.25)
+project(mac-syphon)
 
-legacy_check()
-
-option(ENABLE_SYPHON "Enable Syphon sharing support" OFF)
-if(NOT ENABLE_SYPHON)
-  target_disable(mac-syphon)
-  target_disable_feature(mac-syphon "Syphon sharing support")
-  return()
-else()
-  target_enable_feature(mac-syphon "Syphon sharing support")
-endif()
+find_package(OpenGL REQUIRED)
 
 find_library(COCOA Cocoa)
 find_library(IOSURF IOSurface)
 find_library(SCRIPTINGBRIDGE ScriptingBridge)
+
 mark_as_advanced(COCOA IOSURF SCRIPTINGBRIDGE)
 
-add_library(syphon-framework STATIC EXCLUDE_FROM_ALL )
+add_library(mac-syphon MODULE)
+add_library(OBS::syphon ALIAS mac-syphon)
+
+add_library(syphon-framework STATIC)
 add_library(Syphon::Framework ALIAS syphon-framework)
+
+target_sources(mac-syphon PRIVATE syphon.m plugin-main.c)
 
 target_sources(
   syphon-framework
@@ -61,26 +58,22 @@ target_sources(
           syphon-framework/SyphonServerDirectory.m
           syphon-framework/SyphonServerDirectory.h)
 
-target_compile_options(
-  syphon-framework
-  PRIVATE -include "${CMAKE_CURRENT_SOURCE_DIR}/syphon-framework/Syphon_Prefix.pch"
-          -Wno-deprecated-declarations)
-
-target_compile_definitions(syphon-framework PUBLIC "SYPHON_UNIQUE_CLASS_NAME_PREFIX=OBS_")
+target_link_libraries(mac-syphon PRIVATE OBS::libobs Syphon::Framework ${SCRIPTINGBRIDGE})
 
 target_link_libraries(syphon-framework PUBLIC OpenGL::GL ${COCOA} ${IOSURF})
 
-set_target_properties(syphon-framework PROPERTIES FOLDER "plugins/mac-syphon" PREFIX "")
-
-add_library(mac-syphon MODULE)
-add_library(OBS::syphon ALIAS mac-syphon)
-
-target_sources(mac-syphon PRIVATE syphon.m plugin-main.c)
-
 target_compile_options(
-  mac-syphon PRIVATE -include "${CMAKE_CURRENT_SOURCE_DIR}/syphon-framework/Syphon_Prefix.pch"
+  mac-syphon PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/syphon-framework/Syphon_Prefix.pch
                      -fobjc-arc)
 
-target_link_libraries(mac-syphon PRIVATE OBS::libobs Syphon::Framework ${SCRIPTINGBRIDGE})
+target_compile_options(
+  syphon-framework PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/syphon-framework/Syphon_Prefix.pch
+                           -Wno-deprecated-declarations)
 
-set_target_properties_obs(mac-syphon PROPERTIES FOLDER "plugins" PREFIX "")
+target_compile_definitions(syphon-framework PUBLIC "SYPHON_UNIQUE_CLASS_NAME_PREFIX=OBS_")
+
+set_target_properties(mac-syphon PROPERTIES FOLDER "plugins" PREFIX "")
+
+set_target_properties(syphon-framework PROPERTIES FOLDER "plugins/mac-syphon" PREFIX "")
+
+setup_plugin_target(mac-syphon)
