@@ -353,11 +353,11 @@ static void mp_media_next_audio(mp_media_t *m)
 	struct mp_decode *d = &m->a;
 	struct obs_source_audio audio = {0};
 	AVFrame *f = d->frame;
-	int channels;
+	uint8_t channels;
 #if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(59, 19, 100)
 	channels = f->channels;
 #else
-	channels = f->ch_layout.nb_channels;
+	channels = (uint8_t)f->ch_layout.nb_channels;
 #endif
 
 	if (!mp_media_can_play_frame(m, d))
@@ -467,7 +467,7 @@ static void mp_media_next_video(mp_media_t *m, bool preload)
 
 	frame->width = f->width;
 	frame->height = f->height;
-	frame->max_luminance = d->max_luminance;
+	frame->max_luminance = (uint16_t)d->max_luminance;
 	frame->flip = flip;
 	frame->flags |= m->is_linear_alpha ? OBS_SOURCE_FRAME_LINEAR_ALPHA : 0;
 	switch (f->color_trc) {
