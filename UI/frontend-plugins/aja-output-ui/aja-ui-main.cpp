@@ -186,10 +186,10 @@ void preview_output_toggle()
 }
 
 void populate_misc_device_list(obs_property_t *list,
-			       aja::CardManager *cardManager,
+			       aja::CardManager *_cardManager,
 			       NTV2DeviceID &firstDeviceID)
 {
-	for (const auto &iter : *cardManager) {
+	for (const auto &iter : *_cardManager) {
 		if (!iter.second)
 			continue;
 		if (firstDeviceID == DEVICE_ID_NOTFOUND)
@@ -225,10 +225,10 @@ bool on_misc_device_selected(void *data, obs_properties_t *props,
 	const char *cardID = obs_data_get_string(settings, kUIPropDevice.id);
 	if (!cardID || !cardID[0])
 		return false;
-	aja::CardManager *cardManager = (aja::CardManager *)data;
-	if (!cardManager)
+	aja::CardManager *_cardManager = (aja::CardManager *)data;
+	if (!_cardManager)
 		return false;
-	auto cardEntry = cardManager->GetCardEntry(cardID);
+	auto cardEntry = _cardManager->GetCardEntry(cardID);
 	if (!cardEntry)
 		return false;
 
@@ -302,14 +302,14 @@ bool on_multi_view_toggle(void *data, obs_properties_t *props,
 		obs_data_get_bool(settings, kUIPropMultiViewEnable.id) &&
 		!main_output_running && !preview_output_running;
 	const int audioInputSource =
-		obs_data_get_int(settings, kUIPropMultiViewAudioSource.id);
+		(int)obs_data_get_int(settings, kUIPropMultiViewAudioSource.id);
 	const char *cardID = obs_data_get_string(settings, kUIPropDevice.id);
 	if (!cardID || !cardID[0])
 		return false;
-	aja::CardManager *cardManager = (aja::CardManager *)data;
-	if (!cardManager)
+	aja::CardManager *_cardManager = (aja::CardManager *)data;
+	if (!_cardManager)
 		return false;
-	CNTV2Card *card = cardManager->GetCard(cardID);
+	CNTV2Card *card = _cardManager->GetCard(cardID);
 	if (!card)
 		return false;
 
