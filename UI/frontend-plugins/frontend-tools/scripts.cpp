@@ -209,7 +209,7 @@ ScriptsTool::ScriptsTool() : QDialog(nullptr), ui(new Ui_ScriptsTool)
 
 	config_t *global_config = obs_frontend_get_global_config();
 	int row =
-		config_get_int(global_config, "scripts-tool", "prevScriptRow");
+		(int)config_get_int(global_config, "scripts-tool", "prevScriptRow");
 	ui->scripts->setCurrentRow(row);
 }
 

@@ -382,7 +382,7 @@ static void SaveSceneSwitcher(obs_data_t *save_data, bool saving, void *)
 
 		obs_data_set_default_int(obj, "interval", DEFAULT_INTERVAL);
 
-		switcher->interval = obs_data_get_int(obj, "interval");
+		switcher->interval = (int)obs_data_get_int(obj, "interval");
 		switcher->switchIfNotMatching =
 			obs_data_get_bool(obj, "switch_if_not_matching");
 		string nonMatchingScene =
