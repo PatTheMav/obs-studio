@@ -94,7 +94,7 @@ DeckLinkDeviceDiscovery::DeckLinkDeviceRemoved(IDeckLink *device)
 
 ULONG STDMETHODCALLTYPE DeckLinkDeviceDiscovery::AddRef(void)
 {
-	return os_atomic_inc_long(&refCount);
+	return (ULONG)os_atomic_inc_long(&refCount);
 }
 
 HRESULT STDMETHODCALLTYPE DeckLinkDeviceDiscovery::QueryInterface(REFIID iid,
@@ -127,5 +127,5 @@ ULONG STDMETHODCALLTYPE DeckLinkDeviceDiscovery::Release(void)
 		return 0;
 	}
 
-	return newRefCount;
+	return (ULONG)newRefCount;
 }

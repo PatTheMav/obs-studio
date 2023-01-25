@@ -215,13 +215,13 @@ static bool decklink_output_device_changed(obs_properties_t *props,
 
 		struct obs_video_info ovi;
 		if (obs_get_video_info(&ovi)) {
-			for (DeckLinkDeviceMode *mode : modes) {
-				if (mode->IsEqualFrameRate(ovi.fps_num,
-							   ovi.fps_den)) {
+			for (DeckLinkDeviceMode *device_mode : modes) {
+				if (device_mode->IsEqualFrameRate(
+					    ovi.fps_num, ovi.fps_den)) {
 					obs_property_list_add_int(
 						modeList,
-						mode->GetName().c_str(),
-						mode->GetId());
+						device_mode->GetName().c_str(),
+						device_mode->GetId());
 				}
 			}
 		}

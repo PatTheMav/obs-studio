@@ -17,7 +17,7 @@ DeckLinkDevice::~DeckLinkDevice(void)
 
 ULONG DeckLinkDevice::AddRef()
 {
-	return os_atomic_inc_long(&refCount);
+	return (ULONG)os_atomic_inc_long(&refCount);
 }
 
 ULONG DeckLinkDevice::Release()
@@ -25,7 +25,7 @@ ULONG DeckLinkDevice::Release()
 	long ret = os_atomic_dec_long(&refCount);
 	if (ret == 0)
 		delete this;
-	return ret;
+	return (ULONG)ret;
 }
 
 bool DeckLinkDevice::Init()
