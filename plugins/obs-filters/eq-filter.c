@@ -83,8 +83,8 @@ static void *eq_create(obs_data_t *settings, obs_source_t *filter)
 	eq->context = filter;
 
 	float freq = (float)audio_output_get_sample_rate(obs_get_audio());
-	eq->lf = 2.0f * sinf(M_PI * LOW_FREQ / freq);
-	eq->hf = 2.0f * sinf(M_PI * HIGH_FREQ / freq);
+	eq->lf = 2.0f * sinf((float)M_PI * LOW_FREQ / freq);
+	eq->hf = 2.0f * sinf((float)M_PI * HIGH_FREQ / freq);
 
 	eq_update(eq, settings);
 	return eq;

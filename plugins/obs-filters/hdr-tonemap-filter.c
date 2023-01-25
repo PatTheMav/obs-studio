@@ -70,7 +70,7 @@ static void hdr_tonemap_filter_update(void *data, obs_data_t *settings)
 {
 	struct hdr_tonemap_filter_data *filter = data;
 
-	filter->transform = obs_data_get_int(settings, "transform");
+	filter->transform = (int)obs_data_get_int(settings, "transform");
 	filter->sdr_white_level_nits_i =
 		1.f / (float)obs_data_get_int(settings, "sdr_white_level_nits");
 	filter->hdr_input_maximum_nits =
@@ -83,7 +83,7 @@ static bool transform_changed(obs_properties_t *props, obs_property_t *p,
 			      obs_data_t *settings)
 {
 	enum hdr_tonemap_transform transform =
-		obs_data_get_int(settings, "transform");
+		(int)obs_data_get_int(settings, "transform");
 
 	const bool reinhard = transform == TRANSFORM_SDR_REINHARD;
 	const bool maxrgb = transform == TRANSFORM_HDR_MAXRGB;
@@ -215,9 +215,8 @@ hdr_tonemap_filter_get_color_space(void *data, size_t count,
 		OBS_COUNTOF(potential_spaces), potential_spaces);
 
 	enum gs_color_space space = source_space;
-	switch (source_space) {
-	case GS_CS_709_EXTENDED:
-	case GS_CS_709_SCRGB:
+
+	if (source_space == GS_CS_709_EXTENDED || source_space == GS_CS_SRGB) {
 		if (filter->transform == TRANSFORM_SDR_REINHARD) {
 			space = GS_CS_SRGB;
 			for (size_t i = 0; i < count; ++i) {
