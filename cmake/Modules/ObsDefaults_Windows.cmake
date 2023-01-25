@@ -39,6 +39,7 @@ macro(setup_obs_project)
   set(OBS_LIBRARY_EXPORT_DESTINATION "bin/${_ARCH_SUFFIX}bit")
 
   set(OBS_PLUGIN_DESTINATION "obs-plugins/${_ARCH_SUFFIX}bit")
+  set(OBS_PLUGIN_PATH "../../${OBS_PLUGIN_DESTINATION}")
   set(OBS_PLUGIN32_DESTINATION "obs-plugins/32bit")
   set(OBS_PLUGIN64_DESTINATION "obs-plugins/64bit")
 

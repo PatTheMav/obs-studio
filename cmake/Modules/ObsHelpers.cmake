@@ -546,3 +546,14 @@ function(_install_obs_datatarget target destination)
     COMMENT "Installing ${target} to OBS rundir"
     VERBATIM)
 endfunction()
+
+# legacy_check: Macro to check for CMake framework version and include legacy
+# list file
+macro(legacy_check)
+  if(OBS_CMAKE_VERSION VERSION_LESS 3.0.0)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/legacy.cmake)
+      include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/legacy.cmake)
+    endif()
+    return()
+  endif()
+endmacro()
