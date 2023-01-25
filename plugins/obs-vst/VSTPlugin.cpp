@@ -57,7 +57,8 @@ intptr_t VSTPlugin::hostCallback_static(AEffect *effect, int32_t opcode,
 	// index: width, value: height
 	case audioMasterSizeWindow:
 		if (plugin && plugin->editorWidget) {
-			plugin->editorWidget->handleResizeRequest(index, value);
+			plugin->editorWidget->handleResizeRequest(index,
+								  (int)value);
 		}
 		return 1;
 
@@ -72,7 +73,7 @@ VstTimeInfo *VSTPlugin::GetTimeInfo()
 	return &mTimeInfo;
 }
 
-float VSTPlugin::GetSampleRate()
+double VSTPlugin::GetSampleRate()
 {
 	return mTimeInfo.sampleRate;
 }
@@ -453,7 +454,7 @@ void VSTPlugin::setProgram(const int programNumber)
 
 int VSTPlugin::getProgram()
 {
-	return effect->dispatcher(effect, effGetProgram, 0, 0, NULL, 0.0f);
+	return (int)effect->dispatcher(effect, effGetProgram, 0, 0, NULL, 0.0f);
 }
 
 void VSTPlugin::getSourceNames()

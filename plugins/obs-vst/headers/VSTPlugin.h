@@ -83,7 +83,7 @@ class VSTPlugin : public QObject {
 					    int32_t index, intptr_t value,
 					    void *ptr, float opt);
 	VstTimeInfo *GetTimeInfo();
-	float GetSampleRate();
+	double GetSampleRate();
 
 public:
 	VSTPlugin(obs_source_t *sourceContext);
