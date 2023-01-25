@@ -214,7 +214,7 @@ void save_font_list(void)
 
 static void create_bitmap_sizes(struct font_path_info *info, FT_Face face)
 {
-	DARRAY(int) sizes;
+	DARRAY(long) sizes;
 
 	if (!info->is_bitmap) {
 		info->num_sizes = 0;
@@ -226,7 +226,7 @@ static void create_bitmap_sizes(struct font_path_info *info, FT_Face face)
 	da_reserve(sizes, face->num_fixed_sizes);
 
 	for (int i = 0; i < face->num_fixed_sizes; i++) {
-		int val = face->available_sizes[i].size >> 6;
+		long val = face->available_sizes[i].size >> 6;
 		da_push_back(sizes, &val);
 	}
 
@@ -301,8 +301,8 @@ void build_font_path_info(FT_Face face, FT_Long idx, const char *path)
 		if (!family)
 			continue;
 
-		for (size_t i = 0; i < family_names.num; i++) {
-			if (astrcmpi(family_names.array[i], family) == 0) {
+		for (size_t j = 0; j < family_names.num; j++) {
+			if (astrcmpi(family_names.array[j], family) == 0) {
 				bfree(family);
 				family = NULL;
 				break;
@@ -386,9 +386,9 @@ const char *get_font_path(const char *family, uint16_t size, const char *style,
 			continue;
 
 		if (info->is_bitmap) {
-			int best_diff = 1000;
+			long best_diff = 1000;
 			for (uint32_t j = 0; j < info->num_sizes; j++) {
-				int diff = abs(info->sizes[j] - size);
+				long diff = labs(info->sizes[j] - size);
 				if (diff < best_diff)
 					best_diff = diff;
 			}

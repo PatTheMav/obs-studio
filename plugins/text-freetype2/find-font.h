@@ -16,7 +16,7 @@ struct font_path_info {
 
 	bool is_bitmap;
 	uint32_t num_sizes;
-	int *sizes;
+	long *sizes;
 
 	bool bold;
 	bool italic;
