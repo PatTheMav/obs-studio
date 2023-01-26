@@ -1,4 +1,36 @@
-cmake_minimum_required(VERSION 3.16...3.21)
+cmake_minimum_required(VERSION 3.22...3.25)
+
+if(OBS_CMAKE_VERSION VERSION_GREATER_EQUAL 3.0.0)
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake")
+
+  project(obs-studio VERSION ${OBS_VERSION_CANONICAL})
+
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/32bit/projects.cmake")
+    return()
+  endif()
+
+  include(compilerconfig)
+  include(defaults)
+  include(helpers)
+
+  option(ENABLE_RELEASE_BUILD "Enable all options for a release build" OFF)
+  option(ENABLE_UI "Enable building with UI (requires Qt)" ON)
+  option(ENABLE_SCRIPTING "Enable scripting support" ON)
+  option(ENABLE_HEVC "Enable HEVC encoders" ON)
+
+  add_subdirectory(libobs)
+  if(OS_WINDOWS)
+    add_subdirectory(libobs-d3d11)
+    add_subdirectory(libobs-winrt)
+  endif()
+  add_subdirectory(libobs-opengl)
+  add_subdirectory(plugins)
+  add_subdirectory(UI)
+
+  message_configuration()
+  return()
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
 include(VersionConfig)

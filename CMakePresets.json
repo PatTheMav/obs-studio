@@ -1,0 +1,255 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "macos-arm64",
+      "displayName": "obs-studio for macOS 11.0+ (Apple Silicon)",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "binaryDir": "${sourceDir}/build_arm64",
+      "generator": "Xcode",
+      "warnings": {"dev": true, "deprecated": true},
+      "cacheVariables": {
+        "QT_VERSION": "6",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "OBS_CODESIGN_IDENTITY": "-",
+        "OBS_CMAKE_VERSION": "3.0.0",
+        "CMAKE_PREFIX_PATH": {
+          "type": "PATH",
+          "value": ""
+        },
+        "CEF_ROOT_DIR": {
+          "type": "PATH",
+          "value": ""
+        },
+        "VLC_PATH": {
+          "type": "PATH",
+          "value": ""
+        }
+      }
+    },
+    {
+      "name": "macos-x86_64",
+      "displayName": "obs-studio for macOS 11.0+ (Intel)",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "binaryDir": "${sourceDir}/build_x86_64",
+      "generator": "Xcode",
+      "warnings": {"dev": true, "deprecated": true},
+      "cacheVariables": {
+        "QT_VERSION": "6",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0",
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "OBS_CODESIGN_IDENTITY": "-",
+        "OBS_CMAKE_VERSION": "3.0.0",
+        "CMAKE_PREFIX_PATH": {
+          "type": "PATH",
+          "value": ""
+        },
+        "CEF_ROOT_DIR": {
+          "type": "PATH",
+          "value": ""
+        },
+        "VLC_PATH": {
+          "type": "PATH",
+          "value": ""
+        }
+      }
+    },
+    {
+      "name": "macos-ci-arm64",
+      "inherits": ["macos-arm64"],
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "macos-ci-x86_64",
+      "inherits": ["macos-x86_64"],
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "macos-release-arm64",
+      "displayName": "obs-studio for macOS (Apple) - Release Configuration",
+      "inherits": ["macos-arm64"],
+      "cacheVariables": {
+        "ENABLE_RELEASE_BUILD": true,
+        "ENABLE_BROWSER": true,
+        "ENABLE_VLC": true,
+        "ENABLE_SPARKLE": true,
+        "OBS_SPARKLE_KEY": {"type": "STRING", "value": ""},
+        "OBS_CODESIGN_IDENTITY": "$penv{CODESIGN_IDENT}",
+        "VIRTUALCAM_DEVICE_UUID": {"type": "STRING", "value": "7626645E-4425-469E-9D8B-97E0FA59AC75"},
+        "VIRTUALCAM_STREAM_UUID": {"type": "STRING", "value": "A8D7B8AA-65AD-4D21-9C42-66480DBFA8E1"},
+        "VIRTUALCAM_SINK_UUID": {"type": "STRING", "value": "A3F16177-7044-4DD8-B900-72E2419F7A9A"}
+      }
+    },
+    {
+      "name": "macos-release-x86_64",
+      "displayName": "obs-studio for macOS (Intel) - Release Configuration",
+      "inherits": ["macos-x86_64"],
+      "cacheVariables": {
+        "ENABLE_RELEASE_BUILD": true,
+        "ENABLE_BROWSER": true,
+        "ENABLE_VLC": true,
+        "ENABLE_SPARKLE": true,
+        "OBS_SPARKLE_KEY": {"type": "STRING", "value": ""},
+        "OBS_CODESIGN_IDENTITY": "$penv{CODESIGN_IDENT}",
+        "VIRTUALCAM_DEVICE_UUID": {"type": "STRING", "value": "7626645E-4425-469E-9D8B-97E0FA59AC75"},
+        "VIRTUALCAM_STREAM_UUID": {"type": "STRING", "value": "A8D7B8AA-65AD-4D21-9C42-66480DBFA8E1"},
+        "VIRTUALCAM_SINK_UUID": {"type": "STRING", "value": "A3F16177-7044-4DD8-B900-72E2419F7A9A"}
+      }
+    },
+    {
+      "name": "linux-arm64",
+      "displayName": "obs-studio for Linux (arm64)",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "binaryDir": "${sourceDir}/build_arm64",
+      "generator": "Ninja",
+      "warnings": {"dev": true, "deprecated": true},
+      "cacheVariables": {
+        "ENABLE_WAYLAND": true,
+        "ENABLE_VLC": true,
+        "QT_VERSION": "6",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OBS_CMAKE_VERSION": "2.0.0",
+        "CMAKE_PREFIX_PATH": {
+          "type": "PATH",
+          "value": ""
+        }
+      }
+    },
+    {
+      "name": "linux-ci-arm64",
+      "inherits": ["linux-arm64"],
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "linux-release-arm64",
+      "displayName": "obs-studio for Linux (arm64) - Release Configuration",
+      "inherits": "linux-arm64",
+      "cacheVariables": {
+        "ENABLE_RELEASE_BUILD": true
+      }
+    },
+    {
+      "name": "linux-x86_64",
+      "displayName": "obs-studio for Linux (x86_64)",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "binaryDir": "${sourceDir}/build_x86_64",
+      "generator": "Ninja",
+      "warnings": {"dev": true, "deprecated": true},
+      "cacheVariables": {
+        "ENABLE_WAYLAND": true,
+        "ENABLE_VLC": true,
+        "QT_VERSION": "6",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OBS_CMAKE_VERSION": "2.0.0",
+        "CMAKE_PREFIX_PATH": {
+          "type": "PATH",
+          "value": ""
+        },
+        "CEF_ROOT_DIR": {
+          "type": "PATH",
+          "value": ""
+        }
+      }
+    },
+    {
+      "name": "linux-ci-x86_64",
+      "inherits": ["linux-x86_64"],
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "linux-release-x86_64",
+      "displayName": "obs-studio for Linux (x86_64) - Release Configuration",
+      "inherits": "linux-x86_64",
+      "cacheVariables": {
+        "ENABLE_RELEASE_BUILD": true,
+        "ENABLE_BROWSER": true
+      }
+    },
+    {
+      "name": "windows-x64",
+      "displayName": "obs-studio for Windows (x64)",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build_x64",
+      "generator": "Visual Studio 17 2022",
+      "warnings": {"dev": true, "deprecated": true},
+      "cacheVariables": {
+        "QT_VERSION": "6",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OBS_WINDOWS_LEGACY_DIRS": true,
+        "OBS_CMAKE_VERSION": "2.0.0",
+        "CMAKE_PREFIX_PATH": {
+          "type": "PATH",
+          "value": ""
+        },
+        "CEF_ROOT_DIR": {
+          "type": "PATH",
+          "value": ""
+        },
+        "VLC_PATH": {
+          "type": "PATH",
+          "value": ""
+        }
+      }
+    },
+    {
+      "name": "windows-ci-x64",
+      "inherits": "windows-x64",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "windows-release-x64",
+      "displayName": "obs-studio for Windows (x64) - Release Configuration",
+      "inherits": "windows-x64",
+      "cacheVariables": {
+        "ENABLE_RELEASE_BUILD": true,
+        "ENABLE_BROWSER": true,
+        "ENABLE_VLC": true,
+        "VIRTUALCAM_GUID": { "type": "STRING", "value": "A3FCE0F5-3493-419F-958A-ABA1250EC20B"}
+      }
+    }
+  ]
+}
