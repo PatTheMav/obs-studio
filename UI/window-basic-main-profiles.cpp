@@ -62,8 +62,8 @@ void EnumProfiles(std::function<bool(const char *, const char *)> &&cb)
 		file += "/basic.ini";
 
 		ConfigFile config;
-		int ret = config.Open(file.c_str(), CONFIG_OPEN_EXISTING);
-		if (ret != CONFIG_SUCCESS)
+		int _ret = config.Open(file.c_str(), CONFIG_OPEN_EXISTING);
+		if (_ret != CONFIG_SUCCESS)
 			continue;
 
 		const char *name = config_get_string(config, "General", "Name");
@@ -221,11 +221,12 @@ static bool ProfileNeedsRestart(config_t *newConfig, QString &settings)
 	const char *oldSpeakers =
 		config_get_string(main->Config(), "Audio", "ChannelSetup");
 	uint oldSampleRate =
-		config_get_uint(main->Config(), "Audio", "SampleRate");
+		(int)config_get_uint(main->Config(), "Audio", "SampleRate");
 
 	const char *newSpeakers =
 		config_get_string(newConfig, "Audio", "ChannelSetup");
-	uint newSampleRate = config_get_uint(newConfig, "Audio", "SampleRate");
+	uint newSampleRate =
+		(uint)config_get_uint(newConfig, "Audio", "SampleRate");
 
 	auto appendSetting = [&settings](const char *name) {
 		settings += QStringLiteral("\n") + QTStr(name);

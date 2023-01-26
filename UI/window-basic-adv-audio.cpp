@@ -83,8 +83,8 @@ inline void OBSBasicAdvAudio::AddAudioSource(obs_source_t *source)
 
 	InsertQObjectByName(controls, control);
 
-	for (auto control : controls) {
-		control->ShowAudioControl(ui->mainLayout);
+	for (auto _control : controls) {
+		_control->ShowAudioControl(ui->mainLayout);
 	}
 }
 

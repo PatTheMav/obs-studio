@@ -129,21 +129,21 @@ bool QTToGSWindow(QWindow *window, gs_window &gswindow)
 #elif __APPLE__
 	gswindow.view = (id)window->winId();
 #else
-	switch (obs_get_nix_platform()) {
-	case OBS_NIX_PLATFORM_X11_EGL:
+	enum obs_nix_platform_type platform = obs_get_nix_platform();
+
+	if (platform == OBS_NIX_PLATFORM_X11_EGL) {
 		gswindow.id = window->winId();
 		gswindow.display = obs_get_nix_platform_display();
-		break;
+	}
 #ifdef ENABLE_WAYLAND
-	case OBS_NIX_PLATFORM_WAYLAND:
+	if (platform == OBS_NIX_PLATFORM_WAYLAND) {
 		QPlatformNativeInterface *native =
 			QGuiApplication::platformNativeInterface();
 		gswindow.display =
 			native->nativeResourceForWindow("surface", window);
 		success = gswindow.display != nullptr;
-		break;
-#endif
 	}
+#endif
 #endif
 	return success;
 }

@@ -47,7 +47,7 @@ static QString MakeMissedFramesText(uint32_t total_lagged,
 	return QString("%1 / %2 (%3%)")
 		.arg(QString::number(total_lagged),
 		     QString::number(total_rendered),
-		     QString::number(num, 'f', 1));
+		     QString::number((double)num, 'f', 1));
 }
 
 OBSBasicStats::OBSBasicStats(QWidget *parent, bool closeable)
@@ -250,7 +250,7 @@ void OBSBasicStats::AddOutputLabels(QString name)
 	ol.bitrate = new QLabel(this);
 
 	int col = 0;
-	int row = outputLabels.size() + 1;
+	int row = (int)outputLabels.size() + 1;
 	outputLayout->addWidget(ol.name, row, col++);
 	outputLayout->addWidget(ol.status, row, col++);
 	outputLayout->addWidget(ol.droppedFrames, row, col++);
@@ -330,7 +330,7 @@ void OBSBasicStats::Update()
 		abrv = QStringLiteral(" GB");
 	}
 
-	str = QString::number(num, 'f', 1) + abrv;
+	str = QString::number((double)num, 'f', 1) + abrv;
 	hddSpace->setText(str);
 
 	if (num_bytes < GBYTE)
@@ -344,14 +344,14 @@ void OBSBasicStats::Update()
 
 	num = (long double)os_get_proc_resident_size() / (1024.0l * 1024.0l);
 
-	str = QString::number(num, 'f', 1) + QStringLiteral(" MB");
+	str = QString::number((double)num, 'f', 1) + QStringLiteral(" MB");
 	memUsage->setText(str);
 
 	/* ------------------ */
 
 	num = (long double)obs_get_average_frame_time_ns() / 1000000.0l;
 
-	str = QString::number(num, 'f', 1) + QStringLiteral(" ms");
+	str = QString::number((double)num, 'f', 1) + QStringLiteral(" ms");
 	renderTime->setText(str);
 
 	long double fpsFrameTime =
@@ -385,7 +385,7 @@ void OBSBasicStats::Update()
 	str = QString("%1 / %2 (%3%)")
 		      .arg(QString::number(total_skipped),
 			   QString::number(total_encoded),
-			   QString::number(num, 'f', 1));
+			   QString::number((double)num, 'f', 1));
 	skippedFrames->setText(str);
 
 	if (num > 5.0l)
@@ -541,8 +541,9 @@ void OBSBasicStats::OutputLabels::Update(obs_output_t *output, bool rec)
 	long double num = (long double)totalBytes / (1024.0l * 1024.0l);
 
 	megabytesSent->setText(
-		QString("%1 MB").arg(QString::number(num, 'f', 1)));
-	bitrate->setText(QString("%1 kb/s").arg(QString::number(kbps, 'f', 0)));
+		QString("%1 MB").arg(QString::number((double)num, 'f', 1)));
+	bitrate->setText(
+		QString("%1 kb/s").arg(QString::number((double)kbps, 'f', 0)));
 
 	if (!rec) {
 		int total = output ? obs_output_get_total_frames(output) : 0;
@@ -563,7 +564,7 @@ void OBSBasicStats::OutputLabels::Update(obs_output_t *output, bool rec)
 		str = QString("%1 / %2 (%3%)")
 			      .arg(QString::number(dropped),
 				   QString::number(total),
-				   QString::number(num, 'f', 1));
+				   QString::number((double)num, 'f', 1));
 		droppedFrames->setText(str);
 
 		if (num > 5.0l)

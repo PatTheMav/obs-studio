@@ -278,7 +278,7 @@ static int attempt_import(const Json &root, const string &name, Json &res)
 
 		double vol = source["volume"].number_value();
 		bool muted = source["muted"].bool_value();
-		string name = source["name"].string_value();
+		string source_name = source["name"].string_value();
 		int monitoring = (int)source["monitoringType"].int_value();
 
 		Json::object out_hotkeys = Json::object{};
@@ -294,9 +294,9 @@ static int attempt_import(const Json &root, const string &name, Json &res)
 		}
 
 		int copy = 1;
-		string out_name = name;
+		string out_name = source_name;
 		while (source_name_exists(out_sources, out_name))
-			out_name = name + "(" + to_string(copy++) + ")";
+			out_name = source_name + "(" + to_string(copy++) + ")";
 
 		string sl_id = source["id"].string_value();
 
@@ -331,7 +331,7 @@ static int attempt_import(const Json &root, const string &name, Json &res)
 
 		Json in_settings = scene["settings"];
 
-		string name = scene["name"].string_value();
+		string _scene_name = scene["name"].string_value();
 
 		Json::object out_hotkeys = Json::object{};
 		get_hotkey_bindings(out_hotkeys, hotkey_items, "");
@@ -346,12 +346,12 @@ static int attempt_import(const Json &root, const string &name, Json &res)
 		}
 
 		int copy = 1;
-		string out_name = name;
+		string out_name = _scene_name;
 		while (source_name_exists(out_sources, out_name))
-			out_name = name + "(" + to_string(copy++) + ")";
+			out_name = _scene_name + "(" + to_string(copy++) + ")";
 
-		if (scene_name.empty())
-			scene_name = out_name;
+		if (_scene_name.empty())
+			_scene_name = out_name;
 
 		string sl_id = scene["id"].string_value();
 
@@ -381,16 +381,16 @@ static int attempt_import(const Json &root, const string &name, Json &res)
 		Json in_settings = transition["settings"];
 
 		int duration = transition["duration"].int_value();
-		string name = transition["name"].string_value();
+		string _transition_name = transition["name"].string_value();
 		string id = transition["id"].string_value();
 
 		if (id == t_id)
-			transition_name = name;
+			transition_name = _transition_name;
 
 		out_transitions.push_back(
 			Json::object{{"id", transition["type"]},
 				     {"settings", in_settings},
-				     {"name", name},
+				     {"name", _transition_name},
 				     {"duration", duration}});
 	}
 

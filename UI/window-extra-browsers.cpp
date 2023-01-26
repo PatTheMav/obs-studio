@@ -45,7 +45,7 @@ void ExtraBrowsersModel::Reset()
 
 int ExtraBrowsersModel::rowCount(const QModelIndex &) const
 {
-	int count = items.size() + 1;
+	int count = (int)items.size() + 1;
 	return count;
 }
 
@@ -58,7 +58,7 @@ QVariant ExtraBrowsersModel::data(const QModelIndex &index, int role) const
 {
 	int column = index.column();
 	int idx = index.row();
-	int count = items.size();
+	int count = (int)items.size();
 	bool validRole = role == Qt::DisplayRole ||
 			 role == Qt::AccessibleTextRole;
 
@@ -153,7 +153,7 @@ void ExtraBrowsersModel::CheckToAdd()
 	if (newTitle.isEmpty() || newURL.isEmpty())
 		return;
 
-	int idx = items.size() + 1;
+	int idx = (int)(items.size() + 1);
 	beginInsertRows(QModelIndex(), idx, idx);
 
 	Item item;
@@ -232,7 +232,7 @@ void ExtraBrowsersModel::Apply()
 		}
 	}
 
-	for (int i = deleted.size() - 1; i >= 0; i--) {
+	for (int i = (int)(deleted.size() - 1); i >= 0; i--) {
 		int idx = deleted[i];
 		main->extraBrowserDockActions.removeAt(idx);
 		main->extraBrowserDockTargets.removeAt(idx);

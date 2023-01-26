@@ -133,8 +133,9 @@ AutoConfigVideoPage::AutoConfigVideoPage(QWidget *parent)
 	long double fpsVal =
 		(long double)ovi.fps_num / (long double)ovi.fps_den;
 
-	QString fpsStr = (ovi.fps_den > 1) ? QString::number(fpsVal, 'f', 2)
-					   : QString::number(fpsVal, 'g', 2);
+	QString fpsStr = (ovi.fps_den > 1)
+				 ? QString::number((double)fpsVal, 'f', 2)
+				 : QString::number((double)fpsVal, 'g', 2);
 
 	ui->fps->addItem(QTStr(FPS_PREFER_HIGH_FPS),
 			 (int)AutoConfig::FPSType::PreferHighFPS);
@@ -166,8 +167,8 @@ AutoConfigVideoPage::AutoConfigVideoPage(QWidget *parent)
 
 		// Calculate physical screen resolution based on the virtual screen resolution
 		// They might differ if scaling is enabled, e.g. for HiDPI screens
-		as_width = round(as_width * screen->devicePixelRatio());
-		as_height = round(as_height * screen->devicePixelRatio());
+		as_width = (int)round(as_width * screen->devicePixelRatio());
+		as_height = (int)round(as_height * screen->devicePixelRatio());
 
 		encRes = as_width << 16 | as_height;
 
@@ -957,7 +958,7 @@ AutoConfig::AutoConfig(QWidget *parent) : QWizard(parent)
 		streamPage->ui->key->setText(key.c_str());
 
 	int bitrate =
-		config_get_int(main->Config(), "SimpleOutput", "VBitrate");
+		(int)config_get_int(main->Config(), "SimpleOutput", "VBitrate");
 	streamPage->ui->bitrate->setValue(bitrate);
 	streamPage->ServiceChanged();
 
@@ -969,9 +970,9 @@ AutoConfig::AutoConfig(QWidget *parent) : QWizard(parent)
 		/* Newer generations of NVENC have a high enough quality to
 		 * bitrate ratio that if NVENC is available, it makes sense to
 		 * just always prefer hardware encoding by default */
-		bool preferHardware = nvencAvailable || appleAvailable ||
-				      os_get_physical_cores() <= 4;
-		streamPage->ui->preferHardware->setChecked(preferHardware);
+		bool _preferHardware = nvencAvailable || appleAvailable ||
+				       os_get_physical_cores() <= 4;
+		streamPage->ui->preferHardware->setChecked(_preferHardware);
 	}
 
 	setOptions(QWizard::WizardOptions());
@@ -1015,19 +1016,19 @@ void AutoConfig::TestHardwareEncoding()
 	}
 }
 
-bool AutoConfig::CanTestServer(const char *server)
+bool AutoConfig::CanTestServer(const char *_server)
 {
 	if (!testRegions || (regionUS && regionEU && regionAsia && regionOther))
 		return true;
 
 	if (service == Service::Twitch) {
-		if (astrcmp_n(server, "US West:", 8) == 0 ||
-		    astrcmp_n(server, "US East:", 8) == 0 ||
-		    astrcmp_n(server, "US Central:", 11) == 0) {
+		if (astrcmp_n(_server, "US West:", 8) == 0 ||
+		    astrcmp_n(_server, "US East:", 8) == 0 ||
+		    astrcmp_n(_server, "US Central:", 11) == 0) {
 			return regionUS;
-		} else if (astrcmp_n(server, "EU:", 3) == 0) {
+		} else if (astrcmp_n(_server, "EU:", 3) == 0) {
 			return regionEU;
-		} else if (astrcmp_n(server, "Asia:", 5) == 0) {
+		} else if (astrcmp_n(_server, "Asia:", 5) == 0) {
 			return regionAsia;
 		} else if (regionOther) {
 			return true;

@@ -263,7 +263,7 @@ void RemuxEntryPathItemDelegate::updateText()
 
 int RemuxQueueModel::rowCount(const QModelIndex &) const
 {
-	return queue.length() + (isProcessing ? 0 : 1);
+	return (int)(queue.length() + (isProcessing ? 0 : 1));
 }
 
 int RemuxQueueModel::columnCount(const QModelIndex &) const
@@ -361,7 +361,7 @@ bool RemuxQueueModel::setData(const QModelIndex &index, const QVariant &value,
 
 			if (pathList.size() > 0) {
 				int row = index.row();
-				int lastRow = row + pathList.size() - 1;
+				int lastRow = (int)(row + pathList.size() - 1);
 				beginInsertRows(QModelIndex(), row, lastRow);
 
 				for (QString path : pathList) {
@@ -387,8 +387,9 @@ bool RemuxQueueModel::setData(const QModelIndex &index, const QVariant &value,
 			RemuxQueueEntry entry;
 			entry.sourcePath = path;
 
-			beginInsertRows(QModelIndex(), queue.length() + 1,
-					queue.length() + 1);
+			beginInsertRows(QModelIndex(),
+					(int)(queue.length() + 1),
+					(int)(queue.length() + 1));
 			queue.append(entry);
 			endInsertRows();
 
@@ -513,7 +514,7 @@ bool RemuxQueueModel::checkForErrors() const
 
 void RemuxQueueModel::clearAll()
 {
-	beginRemoveRows(QModelIndex(), 0, queue.size() - 1);
+	beginRemoveRows(QModelIndex(), 0, (int)(queue.size() - 1));
 	queue.clear();
 	endRemoveRows();
 }
@@ -552,13 +553,14 @@ void RemuxQueueModel::beginProcessing()
 			entry.state = RemuxEntryState::Pending;
 
 	// Signal that the insertion point no longer exists.
-	beginRemoveRows(QModelIndex(), queue.length(), queue.length());
+	beginRemoveRows(QModelIndex(), (int)queue.length(),
+			(int)queue.length());
 	endRemoveRows();
 
 	isProcessing = true;
 
 	emit dataChanged(index(0, RemuxEntryColumn::State),
-			 index(queue.length(), RemuxEntryColumn::State));
+			 index((int)queue.length(), RemuxEntryColumn::State));
 }
 
 void RemuxQueueModel::endProcessing()
@@ -572,14 +574,15 @@ void RemuxQueueModel::endProcessing()
 	// Signal that the insertion point exists again.
 
 	if (!autoRemux) {
-		beginInsertRows(QModelIndex(), queue.length(), queue.length());
+		beginInsertRows(QModelIndex(), (int)queue.length(),
+				(int)queue.length());
 		endInsertRows();
 	}
 
 	isProcessing = false;
 
 	emit dataChanged(index(0, RemuxEntryColumn::State),
-			 index(queue.length(), RemuxEntryColumn::State));
+			 index((int)queue.length(), RemuxEntryColumn::State));
 }
 
 bool RemuxQueueModel::beginNextEntry(QString &inputPath, QString &outputPath)
@@ -920,7 +923,7 @@ void OBSRemux::reject()
 
 void OBSRemux::updateProgress(float percent)
 {
-	ui->progressBar->setValue(percent * 10);
+	ui->progressBar->setValue((int)(percent * 10));
 }
 
 void OBSRemux::remuxFinished(bool success)

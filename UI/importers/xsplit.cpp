@@ -46,7 +46,7 @@ static int hex_string_to_int(string str)
 
 static Json::object parse_text(QString &config)
 {
-	int start = config.indexOf("*{");
+	int start = (int)config.indexOf("*{");
 	config = config.mid(start + 1);
 	config.replace("\\", "/");
 
@@ -92,12 +92,12 @@ static Json::array parse_playlist(QString &playlist)
 	Json::array out = Json::array{};
 
 	while (true) {
-		int end = playlist.indexOf('*');
+		int end = (int)playlist.indexOf('*');
 		QString path = playlist.left(end);
 
 		out.push_back(Json::object{{"value", path.toStdString()}});
 
-		int next = playlist.indexOf('|');
+		int next = (int)playlist.indexOf('|');
 		if (next == -1)
 			break;
 
@@ -121,7 +121,7 @@ static void parse_media_types(QDomNamedNodeMap &attr, Json::object &source,
 			settings["loop"] = true;
 	} else {
 		QString url = attr.namedItem("item").nodeValue();
-		int sep = url.indexOf("://");
+		int sep = (int)url.indexOf("://");
 
 		if (sep != -1) {
 			QString prot = url.left(sep);
@@ -129,7 +129,7 @@ static void parse_media_types(QDomNamedNodeMap &attr, Json::object &source,
 				source["id"] = "ndi_source";
 			} else {
 				source["id"] = "ffmpeg_source";
-				int info = url.indexOf("\\");
+				int info = (int)url.indexOf("\\");
 				QString input;
 
 				if (info != -1) {
@@ -152,14 +152,14 @@ static void parse_media_types(QDomNamedNodeMap &attr, Json::object &source,
 
 static Json::object parse_slideshow(QString &config)
 {
-	int start = config.indexOf("images\":[");
+	int start = (int)config.indexOf("images\":[");
 	if (start == -1)
 		return Json::object{};
 
 	config = config.mid(start + 8);
 	config.replace("\\\\", "/");
 
-	int end = config.indexOf(']');
+	int end = (int)config.indexOf(']');
 	if (end == -1)
 		return Json::object{};
 
@@ -268,7 +268,7 @@ static void parse_items(QDomNode &item, Json::array &items,
 				source["id"] = "dshow_input";
 			} else {
 				source["id"] = "wasapi_input_capture";
-				int dev = audio.indexOf("\\wave:") + 6;
+				int dev = (int)(audio.indexOf("\\wave:") + 6);
 
 				QString res =
 					"{0.0.1.00000000}." + audio.mid(dev);
@@ -310,7 +310,7 @@ static void parse_items(QDomNode &item, Json::array &items,
 				QString _class =
 					o_attr.namedItem("class").nodeValue();
 
-				int pos = exec.lastIndexOf('\\');
+				int pos = (int)exec.lastIndexOf('\\');
 
 				if (_class.isEmpty()) {
 					_class = "class";
@@ -334,11 +334,12 @@ static void parse_items(QDomNode &item, Json::array &items,
 			QDomNode el = doc.documentElement();
 			QDomNamedNodeMap o_attr = el.attributes();
 
-			QString name = o_attr.namedItem("wndname").nodeValue();
+			QString window_name =
+				o_attr.namedItem("wndname").nodeValue();
 			QString exec =
 				o_attr.namedItem("imagename").nodeValue();
 
-			QString res = name = "::" + exec;
+			QString res = window_name = "::" + exec;
 
 			source["id"] = "game_capture";
 			settings["window"] = res.toStdString();
@@ -355,15 +356,15 @@ static void parse_items(QDomNode &item, Json::array &items,
 				settings = parse_text(plugin);
 			} else if (plugin.startsWith("http")) {
 				source["id"] = "browser_source";
-				int end = plugin.indexOf('*');
+				int end = (int)plugin.indexOf('*');
 				settings["url"] =
 					plugin.left(end).toStdString();
 			}
 		} else if (type == 11) {
 			QString id = attr.namedItem("item").nodeValue();
-			Json source =
+			Json source_data =
 				get_source_with_id(id.toStdString(), sources);
-			name = source["name"].string_value();
+			name = source_data["name"].string_value();
 
 			goto skip;
 		}

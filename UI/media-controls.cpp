@@ -469,7 +469,7 @@ void MediaControls::MoveSliderFoward(int seconds)
 	if (!source)
 		return;
 
-	int ms = obs_source_media_get_time(source);
+	int ms = (int)obs_source_media_get_time(source);
 	ms += seconds * 1000;
 
 	obs_source_media_set_time(source, ms);
@@ -483,7 +483,7 @@ void MediaControls::MoveSliderBackwards(int seconds)
 	if (!source)
 		return;
 
-	int ms = obs_source_media_get_time(source);
+	int ms = (int)obs_source_media_get_time(source);
 	ms -= seconds * 1000;
 
 	obs_source_media_set_time(source, ms);
@@ -504,10 +504,10 @@ void MediaControls::UpdateSlideCounter()
 	calldata_t cd = {};
 
 	proc_handler_call(ph, "current_index", &cd);
-	int slide = calldata_int(&cd, "current_index");
+	int slide = (int)calldata_int(&cd, "current_index");
 
 	proc_handler_call(ph, "total_files", &cd);
-	int total = calldata_int(&cd, "total_files");
+	int total = (int)calldata_int(&cd, "total_files");
 	calldata_free(&cd);
 
 	if (total > 0) {

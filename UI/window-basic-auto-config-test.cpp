@@ -464,7 +464,7 @@ void AutoConfigTestPage::TestBandwidthThread()
  * the closest to the expected values */
 static long double EstimateBitrateVal(int cx, int cy, int fps_num, int fps_den)
 {
-	long fps = (long double)fps_num / (long double)fps_den;
+	long fps = (long)((long double)fps_num / (long double)fps_den);
 	long double areaVal = pow((long double)(cx * cy), 0.85l);
 	return areaVal * sqrt(pow(fps, 1.1l));
 }
@@ -613,7 +613,7 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 	/* -----------------------------------*/
 	/* perform tests                      */
 
-	vector<Result> results;
+	vector<Result> _results;
 	int i = 0;
 	int count = 1;
 
@@ -625,7 +625,7 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 			return true;
 
 		/* no need for more than 3 tests max */
-		if (results.size() >= 3)
+		if (_results.size() >= 3)
 			return true;
 
 		if (!fps_num || !fps_den) {
@@ -639,7 +639,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 			     (long double)cy);
 
 		if (!force && wiz->type != AutoConfig::Type::Recording) {
-			int est = EstimateMinBitrate(cx, cy, fps_num, fps_den);
+			int est = (int)EstimateMinBitrate(cx, cy, fps_num,
+							  fps_den);
 			if (est > wiz->idealBitrate)
 				return true;
 		}
@@ -659,8 +660,9 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 		QString cxStr = QString::number(cx);
 		QString cyStr = QString::number(cy);
 
-		QString fpsStr = (fps_den > 1) ? QString::number(fps, 'f', 2)
-					       : QString::number(fps, 'g', 2);
+		QString fpsStr = (fps_den > 1)
+					 ? QString::number((double)fps, 'f', 2)
+					 : QString::number((double)fps, 'g', 2);
 
 		QMetaObject::invokeMethod(
 			this, "UpdateMessage",
@@ -686,7 +688,7 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 		int skipped =
 			(int)video_output_get_skipped_frames(obs_get_video());
 		if (force || skipped <= 10)
-			results.emplace_back(cx, cy, fps_num, fps_den);
+			_results.emplace_back(cx, cy, fps_num, fps_den);
 
 		return !cancel;
 	};
@@ -744,18 +746,18 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 
 	int minArea = 960 * 540 + 1000;
 
-	if (!wiz->specificFPSNum && wiz->preferHighFPS && results.size() > 1) {
-		Result &result1 = results[0];
-		Result &result2 = results[1];
+	if (!wiz->specificFPSNum && wiz->preferHighFPS && _results.size() > 1) {
+		Result &result1 = _results[0];
+		Result &result2 = _results[1];
 
 		if (result1.fps_num == 30 && result2.fps_num == 60) {
 			int nextArea = result2.cx * result2.cy;
 			if (nextArea >= minArea)
-				results.erase(results.begin());
+				_results.erase(_results.begin());
 		}
 	}
 
-	Result result = results.front();
+	Result result = _results.front();
 	wiz->idealResolutionCX = result.cx;
 	wiz->idealResolutionCY = result.cy;
 	wiz->idealFPSNum = result.fps_num;
@@ -784,7 +786,7 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 	int baseCY = wiz->baseResolutionCY;
 	CalcBaseRes(baseCX, baseCY);
 
-	vector<Result> results;
+	vector<Result> _results;
 
 	int pcores = os_get_physical_cores();
 	int maxDataRate;
@@ -798,7 +800,7 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 		if (cy > baseCY)
 			return;
 
-		if (results.size() >= 3)
+		if (_results.size() >= 3)
 			return;
 
 		if (!fps_num || !fps_den) {
@@ -818,7 +820,8 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 		AutoConfig::Encoder encType = wiz->streamingEncoder;
 		bool nvenc = encType == AutoConfig::Encoder::NVENC;
 
-		int minBitrate = EstimateMinBitrate(cx, cy, fps_num, fps_den);
+		int minBitrate =
+			(int)EstimateMinBitrate(cx, cy, fps_num, fps_den);
 
 		/* most hardware encoders don't have a good quality to bitrate
 		 * ratio, so increase the minimum bitrate estimate for them.
@@ -830,7 +833,7 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 		if (wiz->type == AutoConfig::Type::Recording)
 			force = true;
 		if (force || wiz->idealBitrate >= minBitrate)
-			results.emplace_back(cx, cy, fps_num, fps_den);
+			_results.emplace_back(cx, cy, fps_num, fps_den);
 	};
 
 	if (wiz->specificFPSNum && wiz->specificFPSDen) {
@@ -860,18 +863,18 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 
 	int minArea = 960 * 540 + 1000;
 
-	if (!wiz->specificFPSNum && wiz->preferHighFPS && results.size() > 1) {
-		Result &result1 = results[0];
-		Result &result2 = results[1];
+	if (!wiz->specificFPSNum && wiz->preferHighFPS && _results.size() > 1) {
+		Result &result1 = _results[0];
+		Result &result2 = _results[1];
 
 		if (result1.fps_num == 30 && result2.fps_num == 60) {
 			int nextArea = result2.cx * result2.cy;
 			if (nextArea >= minArea)
-				results.erase(results.begin());
+				_results.erase(_results.begin());
 		}
 	}
 
-	Result result = results.front();
+	Result result = _results.front();
 	wiz->idealResolutionCX = result.cx;
 	wiz->idealResolutionCY = result.cy;
 	wiz->idealFPSNum = result.fps_num;
@@ -1097,8 +1100,9 @@ void AutoConfigTestPage::FinalizeResults()
 	long double fps =
 		(long double)wiz->idealFPSNum / (long double)wiz->idealFPSDen;
 
-	QString fpsStr = (wiz->idealFPSDen > 1) ? QString::number(fps, 'f', 2)
-						: QString::number(fps, 'g', 2);
+	QString fpsStr = (wiz->idealFPSDen > 1)
+				 ? QString::number((double)fps, 'f', 2)
+				 : QString::number((double)fps, 'g', 2);
 
 	form->addRow(newLabel("Basic.Settings.Video.BaseResolution"),
 		     new QLabel(baseRes, ui->finishPage));

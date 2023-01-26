@@ -76,9 +76,9 @@ void VolControl::SetMuted(bool checked)
 	obs_source_set_muted(source, checked);
 
 	auto undo_redo = [](const std::string &name, bool val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		obs_source_set_muted(source, val);
+		obs_source_set_muted(_source, val);
 	};
 
 	QString text =
@@ -96,13 +96,14 @@ void VolControl::SliderChanged(int vol)
 {
 	float prev = obs_source_get_volume(source);
 
-	obs_fader_set_deflection(obs_fader, float(vol) / FADER_PRECISION);
+	obs_fader_set_deflection(obs_fader,
+				 float(vol) / (float)FADER_PRECISION);
 	updateText();
 
 	auto undo_redo = [](const std::string &name, float val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		obs_source_set_volume(source, val);
+		obs_source_set_volume(_source, val);
 	};
 
 	float val = obs_source_get_volume(source);
@@ -1095,11 +1096,15 @@ void VolumeMeter::paintHMeter(QPainter &painter, int x, int y, int width,
 	QMutexLocker locker(&dataMutex);
 	int minimumPosition = x + 0;
 	int maximumPosition = x + width;
-	int magnitudePosition = x + width - convertToInt(magnitude * scale);
-	int peakPosition = x + width - convertToInt(peak * scale);
-	int peakHoldPosition = x + width - convertToInt(peakHold * scale);
-	int warningPosition = x + width - convertToInt(warningLevel * scale);
-	int errorPosition = x + width - convertToInt(errorLevel * scale);
+	int magnitudePosition =
+		x + width - convertToInt(magnitude * (float)scale);
+	int peakPosition = x + width - convertToInt(peak * (float)scale);
+	int peakHoldPosition =
+		x + width - convertToInt(peakHold * (float)scale);
+	int warningPosition =
+		x + width - convertToInt((float)warningLevel * (float)scale);
+	int errorPosition =
+		x + width - convertToInt((float)errorLevel * (float)scale);
 
 	int nominalLength = warningPosition - minimumPosition;
 	int warningLength = errorPosition - warningPosition;
@@ -1207,11 +1212,15 @@ void VolumeMeter::paintVMeter(QPainter &painter, int x, int y, int width,
 	QMutexLocker locker(&dataMutex);
 	int minimumPosition = y + 0;
 	int maximumPosition = y + height;
-	int magnitudePosition = y + height - convertToInt(magnitude * scale);
-	int peakPosition = y + height - convertToInt(peak * scale);
-	int peakHoldPosition = y + height - convertToInt(peakHold * scale);
-	int warningPosition = y + height - convertToInt(warningLevel * scale);
-	int errorPosition = y + height - convertToInt(errorLevel * scale);
+	int magnitudePosition =
+		y + height - convertToInt(magnitude * (float)scale);
+	int peakPosition = y + height - convertToInt(peak * (float)scale);
+	int peakHoldPosition =
+		y + height - convertToInt(peakHold * (float)scale);
+	int warningPosition =
+		y + height - convertToInt((float)warningLevel * (float)scale);
+	int errorPosition =
+		y + height - convertToInt((float)errorLevel * (float)scale);
 
 	int nominalLength = warningPosition - minimumPosition;
 	int warningLength = errorPosition - warningPosition;

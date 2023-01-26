@@ -43,7 +43,7 @@ SourceTreeItem::SourceTreeItem(SourceTree *tree_, OBSSceneItem sceneitem_)
 
 	OBSDataAutoRelease privData =
 		obs_sceneitem_get_private_settings(sceneitem);
-	int preset = obs_data_get_int(privData, "color-preset");
+	int preset = (int)obs_data_get_int(privData, "color-preset");
 
 	if (preset == 1) {
 		const char *color = obs_data_get_string(privData, "color");
@@ -344,7 +344,7 @@ void SourceTreeItem::enterEvent(QEvent *event)
 
 	OBSBasicPreview *preview = OBSBasicPreview::Get();
 
-	std::lock_guard<std::mutex> lock(preview->selectMutex);
+	std::lock_guard<std::mutex> _lock(preview->selectMutex);
 	preview->hoveredPreviewItems.clear();
 	preview->hoveredPreviewItems.push_back(sceneitem);
 }
@@ -355,7 +355,7 @@ void SourceTreeItem::leaveEvent(QEvent *event)
 
 	OBSBasicPreview *preview = OBSBasicPreview::Get();
 
-	std::lock_guard<std::mutex> lock(preview->selectMutex);
+	std::lock_guard<std::mutex> _lock(preview->selectMutex);
 	preview->hoveredPreviewItems.clear();
 }
 
@@ -867,7 +867,7 @@ SourceTreeModel::~SourceTreeModel()
 
 int SourceTreeModel::rowCount(const QModelIndex &parent) const
 {
-	return parent.isValid() ? 0 : items.count();
+	return parent.isValid() ? 0 : (int)items.count();
 }
 
 QVariant SourceTreeModel::data(const QModelIndex &index, int role) const
@@ -946,7 +946,7 @@ void SourceTreeModel::GroupSelectedItems(QModelIndexList &indices)
 
 	QVector<obs_sceneitem_t *> item_order;
 
-	for (int i = indices.count() - 1; i >= 0; i--) {
+	for (int i = (int)indices.count() - 1; i >= 0; i--) {
 		obs_sceneitem_t *item = items[indices[i].row()];
 		item_order << item;
 	}
@@ -962,8 +962,8 @@ void SourceTreeModel::GroupSelectedItems(QModelIndexList &indices)
 
 	main->undo_s.push_disabled();
 
-	for (obs_sceneitem_t *item : item_order)
-		obs_sceneitem_select(item, false);
+	for (obs_sceneitem_t *_item : item_order)
+		obs_sceneitem_select(_item, false);
 
 	hasGroups = true;
 	st->UpdateWidgets(true);
@@ -989,7 +989,7 @@ void SourceTreeModel::UngroupSelectedGroups(QModelIndexList &indices)
 	OBSScene scene = main->GetCurrentScene();
 	OBSData undoData = main->BackupScene(scene);
 
-	for (int i = indices.count() - 1; i >= 0; i--) {
+	for (int i = (int)indices.count() - 1; i >= 0; i--) {
 		obs_sceneitem_t *item = items[indices[i].row()];
 		obs_sceneitem_group_ungroup(item);
 	}
@@ -1003,7 +1003,7 @@ void SourceTreeModel::UngroupSelectedGroups(QModelIndexList &indices)
 
 void SourceTreeModel::ExpandGroup(obs_sceneitem_t *item)
 {
-	int itemIdx = items.indexOf(item);
+	int itemIdx = (int)items.indexOf(item);
 	if (itemIdx == -1)
 		return;
 
@@ -1017,7 +1017,8 @@ void SourceTreeModel::ExpandGroup(obs_sceneitem_t *item)
 	if (!subItems.size())
 		return;
 
-	beginInsertRows(QModelIndex(), itemIdx, itemIdx + subItems.size() - 1);
+	beginInsertRows(QModelIndex(), itemIdx,
+			(int)(itemIdx + subItems.size() - 1));
 	for (int i = 0; i < subItems.size(); i++)
 		items.insert(i + itemIdx, subItems[i]);
 	endInsertRows();
@@ -1200,7 +1201,7 @@ void SourceTree::dropEvent(QDropEvent *event)
 			return;
 		}
 
-		row = items.size() - 1;
+		row = (int)items.size() - 1;
 		indicator = QAbstractItemView::BelowItem;
 	}
 
@@ -1302,7 +1303,7 @@ void SourceTree::dropEvent(QDropEvent *event)
 
 	if (hasGroups) {
 		/* remove sub-items if selected */
-		for (int i = indices.size() - 1; i >= 0; i--) {
+		for (int i = (int)indices.size() - 1; i >= 0; i--) {
 			obs_sceneitem_t *item = items[indices[i].row()];
 			obs_scene_t *itemScene = obs_sceneitem_get_scene(item);
 
@@ -1312,11 +1313,12 @@ void SourceTree::dropEvent(QDropEvent *event)
 		}
 
 		/* add all sub-items of selected groups */
-		for (int i = indices.size() - 1; i >= 0; i--) {
+		for (int i = (int)indices.size() - 1; i >= 0; i--) {
 			obs_sceneitem_t *item = items[indices[i].row()];
 
 			if (obs_sceneitem_is_group(item)) {
-				for (int j = items.size() - 1; j >= 0; j--) {
+				for (int j = (int)items.size() - 1; j >= 0;
+				     j--) {
 					obs_sceneitem_t *subitem = items[j];
 					obs_sceneitem_t *subitemGroup =
 						obs_sceneitem_get_group(
@@ -1718,7 +1720,7 @@ void SourceTree::paintEvent(QPaintEvent *event)
 
 		x = thisSize.width() / 2.0 - textSize.width() / 2.0;
 		y += spacing + iconSize.height();
-		p.drawStaticText(x, y, textNoSources);
+		p.drawStaticText((int)x, (int)y, textNoSources);
 	} else {
 		QListView::paintEvent(event);
 	}

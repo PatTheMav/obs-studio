@@ -285,16 +285,16 @@ static void SaveOutputTimer(obs_data_t *save_data, bool saving, void *)
 		ot->ui->streamingTimerHours->setValue(
 			(int)obs_data_get_int(obj, "streamTimerHours"));
 		ot->ui->streamingTimerMinutes->setValue(
-                                                (int)obs_data_get_int(obj, "streamTimerMinutes"));
+			(int)obs_data_get_int(obj, "streamTimerMinutes"));
 		ot->ui->streamingTimerSeconds->setValue(
-                                                (int)obs_data_get_int(obj, "streamTimerSeconds"));
+			(int)obs_data_get_int(obj, "streamTimerSeconds"));
 
 		ot->ui->recordingTimerHours->setValue(
-                                              (int)obs_data_get_int(obj, "recordTimerHours"));
+			(int)obs_data_get_int(obj, "recordTimerHours"));
 		ot->ui->recordingTimerMinutes->setValue(
-                                                (int)obs_data_get_int(obj, "recordTimerMinutes"));
+			(int)obs_data_get_int(obj, "recordTimerMinutes"));
 		ot->ui->recordingTimerSeconds->setValue(
-                                                (int)obs_data_get_int(obj, "recordTimerSeconds"));
+			(int)obs_data_get_int(obj, "recordTimerSeconds"));
 
 		ot->ui->autoStartStreamTimer->setChecked(
 			obs_data_get_bool(obj, "autoStartStreamTimer"));
