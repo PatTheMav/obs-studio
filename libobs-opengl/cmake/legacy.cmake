@@ -1,14 +1,7 @@
-cmake_minimum_required(VERSION 3.22...3.25)
-
-legacy_check()
+project(libobs-opengl)
 
 add_library(libobs-opengl SHARED)
 add_library(OBS::libobs-opengl ALIAS libobs-opengl)
-
-if(NOT TARGET OBS::glad)
-  add_subdirectory("${CMAKE_SOURCE_DIR}/deps/glad"
-                   "${CMAKE_BINARY_DIR}/deps/glad")
-endif()
 
 target_sources(
   libobs-opengl
@@ -27,12 +20,21 @@ target_sources(
           gl-vertexbuffer.c
           gl-zstencil.c)
 
-target_link_libraries(libobs-opengl PRIVATE OBS::libobs OBS::glad)
+target_link_libraries(libobs-opengl PRIVATE OBS::libobs OBS::obsglad)
+
+set_target_properties(
+  libobs-opengl
+  PROPERTIES FOLDER "core"
+             VERSION "${OBS_VERSION_MAJOR}"
+             SOVERSION "1")
 
 if(OS_WINDOWS)
-  configure_file(cmake/windows/obs-module.rc.in libobs-opengl.rc)
+  set(MODULE_DESCRIPTION "OBS Library OpenGL wrapper")
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+                 libobs-opengl.rc)
 
   target_sources(libobs-opengl PRIVATE gl-windows.c libobs-opengl.rc)
+
 elseif(OS_MACOS)
   find_library(COCOA Cocoa)
   find_library(IOSURF IOSurface)
@@ -41,35 +43,30 @@ elseif(OS_MACOS)
   target_compile_definitions(libobs-opengl PRIVATE GL_SILENCE_DEPRECATION)
 
   target_link_libraries(libobs-opengl PRIVATE ${COCOA} ${IOSURF})
-elseif(OS_LINUX OR OS_FREEBSD)
+  set_target_properties(libobs-opengl PROPERTIES PREFIX "")
+
+elseif(OS_POSIX)
   find_package(X11 REQUIRED)
-  find_package(
-    xcb
-    COMPONENTS xcb
-    REQUIRED)
-  find_package(x11-xcb REQUIRED)
+  find_package(XCB COMPONENTS XCB)
+  find_package(X11_XCB REQUIRED)
 
   target_sources(libobs-opengl PRIVATE gl-egl-common.c gl-nix.c gl-x11-egl.c)
-  target_link_libraries(libobs-opengl PRIVATE xcb::xcb X11::x11-xcb)
+
+  target_link_libraries(libobs-opengl PRIVATE XCB::XCB X11::X11_xcb)
+
+  set_target_properties(libobs-opengl PROPERTIES PREFIX "")
 
   if(ENABLE_WAYLAND)
     find_package(
       OpenGL
       COMPONENTS EGL
       REQUIRED)
-
     find_package(Wayland REQUIRED)
 
     target_sources(libobs-opengl PRIVATE gl-wayland-egl.c)
+
     target_link_libraries(libobs-opengl PRIVATE OpenGL::EGL Wayland::EGL)
   endif()
-
 endif()
 
-target_enable_feature(libobs "OpenGL renderer")
-
-set_target_properties_obs(
-  libobs-opengl
-  PROPERTIES FOLDER core
-             VERSION 0
-             SOVERSION "${OBS_VERSION_MAJOR}")
+setup_binary_target(libobs-opengl)
