@@ -329,7 +329,7 @@ void OBSAdvAudioCtrl::OBSSourceSyncChanged(void *param, calldata_t *calldata)
 void OBSAdvAudioCtrl::OBSSourceMonitoringTypeChanged(void *param,
 						     calldata_t *calldata)
 {
-	int type = calldata_int(calldata, "type");
+	int type = (int)calldata_int(calldata, "type");
 	QMetaObject::invokeMethod(reinterpret_cast<OBSAdvAudioCtrl *>(param),
 				  "SourceMonitoringTypeChanged",
 				  Q_ARG(int, type));
@@ -345,7 +345,8 @@ void OBSAdvAudioCtrl::OBSSourceMixersChanged(void *param, calldata_t *calldata)
 
 void OBSAdvAudioCtrl::OBSSourceBalanceChanged(void *param, calldata_t *calldata)
 {
-	int balance = (float)calldata_float(calldata, "balance") * 100.0f;
+	int balance =
+		(int)((float)calldata_float(calldata, "balance") * 100.0f);
 	QMetaObject::invokeMethod(reinterpret_cast<OBSAdvAudioCtrl *>(param),
 				  "SourceBalanceChanged", Q_ARG(int, balance));
 }
@@ -405,7 +406,7 @@ void OBSAdvAudioCtrl::SourceBalanceChanged(int value)
 void OBSAdvAudioCtrl::SourceSyncChanged(int64_t offset)
 {
 	syncOffset->blockSignals(true);
-	syncOffset->setValue(offset / NSEC_PER_MSEC);
+	syncOffset->setValue((int)(offset / NSEC_PER_MSEC));
 	syncOffset->blockSignals(false);
 }
 
@@ -439,13 +440,13 @@ void OBSAdvAudioCtrl::volumeChanged(double db)
 		db = -INFINITY;
 	}
 
-	float val = obs_db_to_mul(db);
+	float val = obs_db_to_mul((float)db);
 	obs_source_set_volume(source, val);
 
 	auto undo_redo = [](const std::string &name, float val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		obs_source_set_volume(source, val);
+		obs_source_set_volume(_source, val);
 	};
 
 	const char *name = obs_source_get_name(source);
@@ -458,17 +459,17 @@ void OBSAdvAudioCtrl::volumeChanged(double db)
 		true);
 }
 
-void OBSAdvAudioCtrl::percentChanged(int percent)
+void OBSAdvAudioCtrl::percentChanged(int _percent)
 {
 	float prev = obs_source_get_volume(source);
-	float val = (float)percent / 100.0f;
+	float val = (float)_percent / 100.0f;
 
 	obs_source_set_volume(source, val);
 
 	auto undo_redo = [](const std::string &name, float val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		obs_source_set_volume(source, val);
+		obs_source_set_volume(_source, val);
 	};
 
 	const char *name = obs_source_get_name(source);
@@ -505,9 +506,9 @@ void OBSAdvAudioCtrl::downmixMonoChanged(bool val)
 	obs_source_set_flags(source, flags);
 
 	auto undo_redo = [](const std::string &name, bool val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		set_mono(source, val);
+		set_mono(_source, val);
 	};
 
 	QString text = QTStr(val ? "Undo.ForceMono.On" : "Undo.ForceMono.Off");
@@ -534,9 +535,9 @@ void OBSAdvAudioCtrl::balanceChanged(int val)
 	obs_source_set_balance_value(source, bal);
 
 	auto undo_redo = [](const std::string &name, float val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		obs_source_set_balance_value(source, val);
+		obs_source_set_balance_value(_source, val);
 	};
 
 	const char *name = obs_source_get_name(source);
@@ -563,9 +564,9 @@ void OBSAdvAudioCtrl::syncOffsetChanged(int milliseconds)
 	obs_source_set_sync_offset(source, val);
 
 	auto undo_redo = [](const std::string &name, int64_t val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		obs_source_set_sync_offset(source, val);
+		obs_source_set_sync_offset(_source, val);
 	};
 
 	const char *name = obs_source_get_name(source);
@@ -603,9 +604,9 @@ void OBSAdvAudioCtrl::monitoringTypeChanged(int index)
 	     name ? name : "(null)", type);
 
 	auto undo_redo = [](const std::string &name, obs_monitoring_type val) {
-		OBSSourceAutoRelease source =
+		OBSSourceAutoRelease _source =
 			obs_get_source_by_name(name.c_str());
-		obs_source_set_monitoring_type(source, val);
+		obs_source_set_monitoring_type(_source, val);
 	};
 
 	OBSBasic::Get()->undo_s.add_action(

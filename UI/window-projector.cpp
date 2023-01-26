@@ -461,9 +461,9 @@ void OBSProjector::ResizeToContent()
 	resize(newX, newY);
 }
 
-void OBSProjector::AlwaysOnTopToggled(bool isAlwaysOnTop)
+void OBSProjector::AlwaysOnTopToggled(bool _isAlwaysOnTop)
 {
-	SetIsAlwaysOnTop(isAlwaysOnTop, true);
+	SetIsAlwaysOnTop(_isAlwaysOnTop, true);
 }
 
 void OBSProjector::closeEvent(QCloseEvent *event)
@@ -482,12 +482,12 @@ bool OBSProjector::IsAlwaysOnTopOverridden() const
 	return isAlwaysOnTopOverridden;
 }
 
-void OBSProjector::SetIsAlwaysOnTop(bool isAlwaysOnTop, bool isOverridden)
+void OBSProjector::SetIsAlwaysOnTop(bool _isAlwaysOnTop, bool isOverridden)
 {
-	this->isAlwaysOnTop = isAlwaysOnTop;
+	this->isAlwaysOnTop = _isAlwaysOnTop;
 	this->isAlwaysOnTopOverridden = isOverridden;
 
-	SetAlwaysOnTop(this, isAlwaysOnTop);
+	SetAlwaysOnTop(this, _isAlwaysOnTop);
 }
 
 void OBSProjector::ScreenRemoved(QScreen *screen_)

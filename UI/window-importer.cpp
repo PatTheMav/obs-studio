@@ -205,7 +205,7 @@ void ImporterEntryPathItemDelegate::updateText()
 
 int ImporterModel::rowCount(const QModelIndex &) const
 {
-	return options.length() + 1;
+	return (int)(options.length() + 1);
 }
 
 int ImporterModel::columnCount(const QModelIndex &) const
@@ -320,7 +320,7 @@ bool ImporterModel::setData(const QModelIndex &index, const QVariant &value,
 
 			if (list.size() > 0) {
 				int row = index.row();
-				int lastRow = row + list.size() - 1;
+				int lastRow = (int)(row + list.size() - 1);
 				beginInsertRows(QModelIndex(), row, lastRow);
 
 				for (QString path : list) {
@@ -348,8 +348,9 @@ bool ImporterModel::setData(const QModelIndex &index, const QVariant &value,
 			entry.selected = role != ImporterEntryRole::AutoPath;
 			entry.empty = false;
 
-			beginInsertRows(QModelIndex(), options.length() + 1,
-					options.length() + 1);
+			beginInsertRows(QModelIndex(),
+					(int)(options.length() + 1),
+					(int)(options.length() + 1));
 			options.append(entry);
 			endInsertRows();
 

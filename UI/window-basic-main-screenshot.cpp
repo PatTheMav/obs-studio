@@ -147,7 +147,7 @@ void ScreenshotObj::Copy()
 		} else {
 			image = QImage(cx, cy, QImage::Format::Format_RGBX8888);
 
-			int linesize = image.bytesPerLine();
+			int linesize = (int)image.bytesPerLine();
 			for (int y = 0; y < (int)cy; y++)
 				memcpy(image.scanLine(y),
 				       videoData + (y * videoLinesize),

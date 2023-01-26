@@ -341,12 +341,12 @@ void OBSBasicStatusBar::UpdateDroppedFrames()
 		float red = avgCongestion * 2.0f;
 		if (red > 1.0f)
 			red = 1.0f;
-		red *= 255.0;
+		red *= 255.0f;
 
 		float green = (1.0f - avgCongestion) * 2.0f;
 		if (green > 1.0f)
 			green = 1.0f;
-		green *= 255.0;
+		green *= 255.0f;
 
 		pixmap.fill(QColor(int(red), int(green), 0));
 		statusSquare->setPixmap(pixmap);

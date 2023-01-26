@@ -25,16 +25,16 @@ static inline bool equali(NSString *a, NSString *b)
 		return nil;
 
 	SUAppcastItem *app = nil, *mpkg = nil;
-	for (SUAppcastItem *item in appcast.items) {
-		NSString *deployed = item.propertiesDictionary[@"ce:deployed"];
+	for (SUAppcastItem *_item in appcast.items) {
+		NSString *deployed = _item.propertiesDictionary[@"ce:deployed"];
 		if (deployed && !(deployed.boolValue || updateToUndeployed))
 			continue;
 
-		NSString *type = item.propertiesDictionary[@"ce:packageType"];
+		NSString *type = _item.propertiesDictionary[@"ce:packageType"];
 		if (!mpkg && (!type || equali(type, @"mpkg")))
-			mpkg = item;
+			mpkg = _item;
 		else if (!app && type && equali(type, @"app"))
-			app = item;
+			app = _item;
 
 		if (app && mpkg)
 			break;

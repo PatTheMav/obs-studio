@@ -520,8 +520,8 @@ void SimpleOutput::Update()
 	OBSDataAutoRelease videoSettings = obs_data_create();
 	OBSDataAutoRelease aacSettings = obs_data_create();
 
-	int videoBitrate =
-		config_get_uint(main->Config(), "SimpleOutput", "VBitrate");
+	int videoBitrate = (int)config_get_uint(main->Config(), "SimpleOutput",
+						"VBitrate");
 	int audioBitrate = GetAudioBitrate();
 	bool advanced =
 		config_get_bool(main->Config(), "SimpleOutput", "UseAdvanced");
@@ -622,8 +622,8 @@ void SimpleOutput::UpdateRecordingAudioSettings()
 
 int SimpleOutput::CalcCRF(int crf)
 {
-	int cx = config_get_uint(main->Config(), "Video", "OutputCX");
-	int cy = config_get_uint(main->Config(), "Video", "OutputCY");
+	int cx = (int)config_get_uint(main->Config(), "Video", "OutputCX");
+	int cy = (int)config_get_uint(main->Config(), "Video", "OutputCY");
 	double fCX = double(cx);
 	double fCY = double(cy);
 
@@ -960,12 +960,13 @@ bool SimpleOutput::StartStreaming(obs_service_t *service)
 {
 	bool reconnect = config_get_bool(main->Config(), "Output", "Reconnect");
 	int retryDelay =
-		config_get_uint(main->Config(), "Output", "RetryDelay");
+		(int)config_get_uint(main->Config(), "Output", "RetryDelay");
 	int maxRetries =
-		config_get_uint(main->Config(), "Output", "MaxRetries");
+		(int)config_get_uint(main->Config(), "Output", "MaxRetries");
 	bool useDelay =
 		config_get_bool(main->Config(), "Output", "DelayEnable");
-	int delaySec = config_get_int(main->Config(), "Output", "DelaySec");
+	int delaySec =
+		(int)config_get_int(main->Config(), "Output", "DelaySec");
 	bool preserveDelay =
 		config_get_bool(main->Config(), "Output", "DelayPreserve");
 	const char *bindIP =
@@ -1058,10 +1059,10 @@ bool SimpleOutput::ConfigureRecording(bool updateReplayBuffer)
 						 "RecRBPrefix");
 	const char *rbSuffix = config_get_string(main->Config(), "SimpleOutput",
 						 "RecRBSuffix");
-	int rbTime =
-		config_get_int(main->Config(), "SimpleOutput", "RecRBTime");
-	int rbSize =
-		config_get_int(main->Config(), "SimpleOutput", "RecRBSize");
+	int rbTime = (int)config_get_int(main->Config(), "SimpleOutput",
+					 "RecRBTime");
+	int rbSize = (int)config_get_int(main->Config(), "SimpleOutput",
+					 "RecRBSize");
 
 	string f;
 	string strPath;
@@ -1367,7 +1368,7 @@ AdvancedOutput::AdvancedOutput(OBSBasic *main_) : BasicOutputHandler(main_)
 
 	std::string id;
 	int streamTrack =
-		config_get_int(main->Config(), "AdvOut", "TrackIndex") - 1;
+		(int)config_get_int(main->Config(), "AdvOut", "TrackIndex") - 1;
 	if (!CreateAACEncoder(streamAudioEnc, id, GetAudioBitrate(streamTrack),
 			      "adv_stream_aac", streamTrack))
 		throw "Failed to create streaming audio encoder "
@@ -1375,7 +1376,8 @@ AdvancedOutput::AdvancedOutput(OBSBasic *main_) : BasicOutputHandler(main_)
 
 	id = "";
 	int vodTrack =
-		config_get_int(main->Config(), "AdvOut", "VodTrackIndex") - 1;
+		(int)config_get_int(main->Config(), "AdvOut", "VodTrackIndex") -
+		1;
 	if (!CreateAACEncoder(streamArchiveEnc, id, GetAudioBitrate(vodTrack),
 			      ADV_ARCHIVE_NAME, vodTrack))
 		throw "Failed to create archive audio encoder "
@@ -1509,9 +1511,11 @@ inline void AdvancedOutput::SetupRecording()
 	bool flv = strcmp(recFormat, "flv") == 0;
 
 	if (flv)
-		tracks = config_get_int(main->Config(), "AdvOut", "FLVTrack");
+		tracks = (int)config_get_int(main->Config(), "AdvOut",
+					     "FLVTrack");
 	else
-		tracks = config_get_int(main->Config(), "AdvOut", "RecTracks");
+		tracks = (int)config_get_int(main->Config(), "AdvOut",
+					     "RecTracks");
 
 	OBSDataAutoRelease settings = obs_data_create();
 	unsigned int cx = 0;
@@ -1519,7 +1523,8 @@ inline void AdvancedOutput::SetupRecording()
 	int idx = 0;
 
 	if (tracks == 0)
-		tracks = config_get_int(main->Config(), "AdvOut", "TrackIndex");
+		tracks = (int)config_get_int(main->Config(), "AdvOut",
+					     "TrackIndex");
 
 	if (useStreamEncoder) {
 		obs_output_set_video_encoder(fileOutput, videoStreaming);
@@ -1571,8 +1576,10 @@ inline void AdvancedOutput::SetupRecording()
 inline void AdvancedOutput::SetupFFmpeg()
 {
 	const char *url = config_get_string(main->Config(), "AdvOut", "FFURL");
-	int vBitrate = config_get_int(main->Config(), "AdvOut", "FFVBitrate");
-	int gopSize = config_get_int(main->Config(), "AdvOut", "FFVGOPSize");
+	int vBitrate =
+		(int)config_get_int(main->Config(), "AdvOut", "FFVBitrate");
+	int gopSize =
+		(int)config_get_int(main->Config(), "AdvOut", "FFVGOPSize");
 	bool rescale = config_get_bool(main->Config(), "AdvOut", "FFRescale");
 	const char *rescaleRes =
 		config_get_string(main->Config(), "AdvOut", "FFRescaleRes");
@@ -1585,15 +1592,17 @@ inline void AdvancedOutput::SetupFFmpeg()
 	const char *vEncoder =
 		config_get_string(main->Config(), "AdvOut", "FFVEncoder");
 	int vEncoderId =
-		config_get_int(main->Config(), "AdvOut", "FFVEncoderId");
+		(int)config_get_int(main->Config(), "AdvOut", "FFVEncoderId");
 	const char *vEncCustom =
 		config_get_string(main->Config(), "AdvOut", "FFVCustom");
-	int aBitrate = config_get_int(main->Config(), "AdvOut", "FFABitrate");
-	int aMixes = config_get_int(main->Config(), "AdvOut", "FFAudioMixes");
+	int aBitrate =
+		(int)config_get_int(main->Config(), "AdvOut", "FFABitrate");
+	int aMixes =
+		(int)config_get_int(main->Config(), "AdvOut", "FFAudioMixes");
 	const char *aEncoder =
 		config_get_string(main->Config(), "AdvOut", "FFAEncoder");
 	int aEncoderId =
-		config_get_int(main->Config(), "AdvOut", "FFAEncoderId");
+		(int)config_get_int(main->Config(), "AdvOut", "FFAEncoderId");
 	const char *aEncCustom =
 		config_get_string(main->Config(), "AdvOut", "FFACustom");
 	OBSDataAutoRelease settings = obs_data_create();
@@ -1641,9 +1650,9 @@ inline void AdvancedOutput::UpdateAudioSettings()
 	bool enforceBitrate = !config_get_bool(main->Config(), "Stream1",
 					       "IgnoreRecommended");
 	int streamTrackIndex =
-		config_get_int(main->Config(), "AdvOut", "TrackIndex");
+		(int)config_get_int(main->Config(), "AdvOut", "TrackIndex");
 	int vodTrackIndex =
-		config_get_int(main->Config(), "AdvOut", "VodTrackIndex");
+		(int)config_get_int(main->Config(), "AdvOut", "VodTrackIndex");
 	OBSDataAutoRelease settings[MAX_AUDIO_MIXES];
 
 	for (size_t i = 0; i < MAX_AUDIO_MIXES; i++) {
@@ -1720,11 +1729,11 @@ int AdvancedOutput::GetAudioBitrate(size_t i) const
 inline void AdvancedOutput::SetupVodTrack(obs_service_t *service)
 {
 	int streamTrack =
-		config_get_int(main->Config(), "AdvOut", "TrackIndex");
+		(int)config_get_int(main->Config(), "AdvOut", "TrackIndex");
 	bool vodTrackEnabled =
 		config_get_bool(main->Config(), "AdvOut", "VodTrackEnabled");
 	int vodTrackIndex =
-		config_get_int(main->Config(), "AdvOut", "VodTrackIndex");
+		(int)config_get_int(main->Config(), "AdvOut", "VodTrackIndex");
 	bool enableForCustomServer = config_get_bool(
 		GetGlobalConfig(), "General", "EnableCustomServerVodTrack");
 
@@ -1734,8 +1743,9 @@ inline void AdvancedOutput::SetupVodTrack(obs_service_t *service)
 							: false;
 	} else {
 		OBSDataAutoRelease settings = obs_service_get_settings(service);
-		const char *service = obs_data_get_string(settings, "service");
-		if (!ServiceSupportsVodTrack(service))
+		const char *service_name =
+			obs_data_get_string(settings, "service");
+		if (!ServiceSupportsVodTrack(service_name))
 			vodTrackEnabled = false;
 	}
 
@@ -1748,7 +1758,7 @@ inline void AdvancedOutput::SetupVodTrack(obs_service_t *service)
 bool AdvancedOutput::SetupStreaming(obs_service_t *service)
 {
 	int streamTrack =
-		config_get_int(main->Config(), "AdvOut", "TrackIndex");
+		(int)config_get_int(main->Config(), "AdvOut", "TrackIndex");
 
 	if (!useStreamEncoder ||
 	    (!ffmpegOutput && !obs_output_active(fileOutput))) {
@@ -1857,12 +1867,16 @@ bool AdvancedOutput::StartStreaming(obs_service_t *service)
 {
 	obs_output_set_service(streamOutput, service);
 
-	bool reconnect = config_get_bool(main->Config(), "Output", "Reconnect");
-	int retryDelay = config_get_int(main->Config(), "Output", "RetryDelay");
-	int maxRetries = config_get_int(main->Config(), "Output", "MaxRetries");
+	bool reconnect =
+		(int)config_get_bool(main->Config(), "Output", "Reconnect");
+	int retryDelay =
+		(int)config_get_int(main->Config(), "Output", "RetryDelay");
+	int maxRetries =
+		(int)config_get_int(main->Config(), "Output", "MaxRetries");
 	bool useDelay =
 		config_get_bool(main->Config(), "Output", "DelayEnable");
-	int delaySec = config_get_int(main->Config(), "Output", "DelaySec");
+	int delaySec =
+		(int)config_get_int(main->Config(), "Output", "DelaySec");
 	bool preserveDelay =
 		config_get_bool(main->Config(), "Output", "DelayPreserve");
 	const char *bindIP =
@@ -1965,18 +1979,18 @@ bool AdvancedOutput::StartRecording()
 		if (splitFile) {
 			splitFileType = config_get_string(
 				main->Config(), "AdvOut", "RecSplitFileType");
-			splitFileTime =
-				(astrcmpi(splitFileType, "Time") == 0)
-					? config_get_int(main->Config(),
-							 "AdvOut",
-							 "RecSplitFileTime")
-					: 0;
-			splitFileSize =
-				(astrcmpi(splitFileType, "Size") == 0)
-					? config_get_int(main->Config(),
-							 "AdvOut",
-							 "RecSplitFileSize")
-					: 0;
+			splitFileTime = (astrcmpi(splitFileType, "Time") == 0)
+						? (int)config_get_int(
+							  main->Config(),
+							  "AdvOut",
+							  "RecSplitFileTime")
+						: 0;
+			splitFileSize = (astrcmpi(splitFileType, "Size") == 0)
+						? (int)config_get_int(
+							  main->Config(),
+							  "AdvOut",
+							  "RecSplitFileSize")
+						: 0;
 			obs_data_set_string(settings, "directory", path);
 			obs_data_set_string(settings, "format", filenameFormat);
 			obs_data_set_string(settings, "extension", recFormat);
@@ -2052,8 +2066,10 @@ bool AdvancedOutput::StartReplayBuffer()
 					     "RecRBPrefix");
 		rbSuffix = config_get_string(main->Config(), "SimpleOutput",
 					     "RecRBSuffix");
-		rbTime = config_get_int(main->Config(), "AdvOut", "RecRBTime");
-		rbSize = config_get_int(main->Config(), "AdvOut", "RecRBSize");
+		rbTime = (int)config_get_int(main->Config(), "AdvOut",
+					     "RecRBTime");
+		rbSize = (int)config_get_int(main->Config(), "AdvOut",
+					     "RecRBSize");
 
 		string f = GetFormatString(filenameFormat, rbPrefix, rbSuffix);
 		string strPath = GetOutputFilename(

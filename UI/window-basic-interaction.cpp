@@ -255,7 +255,7 @@ static int TranslateQtMouseEventModifiers(QMouseEvent *event)
 bool OBSBasicInteraction::GetSourceRelativeXY(int mouseX, int mouseY, int &relX,
 					      int &relY)
 {
-	float pixelRatio = devicePixelRatioF();
+	float pixelRatio = (float)devicePixelRatioF();
 	int mouseXscaled = (int)roundf(mouseX * pixelRatio);
 	int mouseYscaled = (int)roundf(mouseY * pixelRatio);
 
@@ -372,8 +372,8 @@ bool OBSBasicInteraction::HandleMouseWheelEvent(QWheelEvent *event)
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 	const QPointF position = event->position();
-	const int x = position.x();
-	const int y = position.y();
+	const int x = (int)position.x();
+	const int y = (int)position.y();
 #else
 	const int x = event->x();
 	const int y = event->y();

@@ -69,10 +69,10 @@ OBSBasicTransform::OBSBasicTransform(OBSBasic *parent)
 
 	installEventFilter(CreateShortcutFilter());
 
-	OBSSceneItem item = FindASelectedItem(main->GetCurrentScene());
-	OBSScene scene = obs_sceneitem_get_scene(item);
+	OBSSceneItem selected_item = FindASelectedItem(main->GetCurrentScene());
+	OBSScene scene = obs_sceneitem_get_scene(selected_item);
 	SetScene(scene);
-	SetItem(item);
+	SetItem(selected_item);
 
 	std::string name = obs_source_get_name(obs_sceneitem_get_source(item));
 	setWindowTitle(QTStr("Basic.TransformWindow.Title").arg(name.c_str()));

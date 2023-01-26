@@ -45,9 +45,9 @@ quint16 AuthListener::GetPort()
 	return server ? server->serverPort() : 0;
 }
 
-void AuthListener::SetState(QString state)
+void AuthListener::SetState(QString new_state)
 {
-	this->state = state;
+	this->state = new_state;
 }
 
 void AuthListener::NewConnection()

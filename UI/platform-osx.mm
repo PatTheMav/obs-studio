@@ -63,7 +63,7 @@ void CheckIfAlreadyRunning(bool &already_running)
 			throw "Could not find bundle identifier";
 
 		int app_count =
-			[NSRunningApplication
+			(int)[NSRunningApplication
 				runningApplicationsWithBundleIdentifier:bundleID]
 				.count;
 
@@ -215,7 +215,7 @@ void EnableOSXDockIcon(bool enable)
 - (id)initWithIcon:(QIcon)icon
 {
 	self = [super init];
-	_icon = icon;
+	self->_icon = icon;
 	return self;
 }
 - (void)drawRect:(NSRect)dirtyRect
@@ -228,9 +228,10 @@ void EnableOSXDockIcon(bool enable)
 	[appIcon drawInRect:CGRectMake(0, 0, size.width, size.height)];
 
 	/* Draw small icon on top */
-	float iconSize = 0.45;
-	CGImageRef image =
-		_icon.pixmap(size.width, size.height).toImage().toCGImage();
+	float iconSize = 0.45f;
+	CGImageRef image = self->_icon.pixmap((int)size.width, (int)size.height)
+				   .toImage()
+				   .toCGImage();
 	CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
 	CGContextDrawImage(context,
 			   CGRectMake(size.width * (1 - iconSize), 0,

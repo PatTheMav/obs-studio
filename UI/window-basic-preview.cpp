@@ -104,7 +104,7 @@ static bool SceneItemHasVideo(obs_sceneitem_t *item)
 	return (flags & OBS_SOURCE_VIDEO) != 0;
 }
 
-static bool CloseFloat(float a, float b, float epsilon = 0.01)
+static bool CloseFloat(float a, float b, float epsilon = 0.01f)
 {
 	using std::abs;
 	return abs(a - b) <= epsilon;
@@ -190,9 +190,9 @@ vec3 OBSBasicPreview::GetSnapOffset(const vec3 &tl, const vec3 &br)
 	const bool centerSnap = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "CenterSnapping");
 
-	const float clampDist = config_get_double(GetGlobalConfig(),
-						  "BasicWindow",
-						  "SnapDistance") /
+	const float clampDist = (float)config_get_double(GetGlobalConfig(),
+							 "BasicWindow",
+							 "SnapDistance") /
 				main->previewScale;
 	const float centerX = br.x - (br.x - tl.x) / 2.0f;
 	const float centerY = br.y - (br.y - tl.y) / 2.0f;
@@ -390,7 +390,7 @@ static bool FindHandleAtPos(obs_scene_t *scene, obs_sceneitem_t *item,
 
 	vec2 rotHandleOffset;
 	vec2_set(&rotHandleOffset, 0.0f,
-		 HANDLE_RADIUS * data.radius * 1.5 - data.radius);
+		 HANDLE_RADIUS * data.radius * 1.5f - data.radius);
 	RotatePos(&rotHandleOffset, atan2(transform.x.y, transform.x.x));
 	RotatePos(&rotHandleOffset, RAD(data.angleOffset));
 
@@ -576,8 +576,8 @@ void OBSBasicPreview::mousePressEvent(QMouseEvent *event)
 	if (scrollMode && IsFixedScaling() &&
 	    event->button() == Qt::LeftButton) {
 		setCursor(Qt::ClosedHandCursor);
-		scrollingFrom.x = pos.x();
-		scrollingFrom.y = pos.y();
+		scrollingFrom.x = (float)pos.x();
+		scrollingFrom.y = (float)pos.y();
 		return;
 	}
 
@@ -593,8 +593,8 @@ void OBSBasicPreview::mousePressEvent(QMouseEvent *event)
 
 	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
 	float pixelRatio = main->GetDevicePixelRatio();
-	float x = pos.x() - main->previewX / pixelRatio;
-	float y = pos.y() - main->previewY / pixelRatio;
+	float x = (float)pos.x() - main->previewX / pixelRatio;
+	float y = (float)pos.y() - main->previewY / pixelRatio;
 	Qt::KeyboardModifiers modifiers = QGuiApplication::keyboardModifiers();
 	bool altDown = (modifiers & Qt::AltModifier);
 	bool shiftDown = (modifiers & Qt::ShiftModifier);
@@ -955,9 +955,9 @@ void OBSBasicPreview::SnapItemMovement(vec2 &offset)
 		return;
 	}
 
-	const float clampDist = config_get_double(GetGlobalConfig(),
-						  "BasicWindow",
-						  "SnapDistance") /
+	const float clampDist = (float)config_get_double(GetGlobalConfig(),
+							 "BasicWindow",
+							 "SnapDistance") /
 				main->previewScale;
 
 	OffsetData offsetData;
@@ -1201,7 +1201,7 @@ static bool FindItemsInBox(obs_scene_t *scene, obs_sceneitem_t *item,
 	return true;
 }
 
-void OBSBasicPreview::BoxItems(const vec2 &startPos, const vec2 &pos)
+void OBSBasicPreview::BoxItems(const vec2 &_startPos, const vec2 &pos)
 {
 	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
 
@@ -1212,7 +1212,7 @@ void OBSBasicPreview::BoxItems(const vec2 &startPos, const vec2 &pos)
 	if (cursor().shape() != Qt::CrossCursor)
 		setCursor(Qt::CrossCursor);
 
-	SceneFindBoxData data(startPos, pos);
+	SceneFindBoxData data(_startPos, pos);
 	obs_scene_enum_items(scene, FindItemsInBox, &data);
 
 	std::lock_guard<std::mutex> lock(selectMutex);
@@ -1384,20 +1384,20 @@ void OBSBasicPreview::CropItem(const vec2 &pos)
 	pos3.y = max_y(pos3.y, max_tl.y);
 
 	if (stretchFlags & ITEM_LEFT) {
-		float maxX = stretchItemSize.x - (2.0 * scale.x);
+		float maxX = stretchItemSize.x - (2.0f * scale.x);
 		pos3.x = tl.x = min_x(pos3.x, maxX);
 
 	} else if (stretchFlags & ITEM_RIGHT) {
-		float minX = (2.0 * scale.x);
+		float minX = (2.0f * scale.x);
 		pos3.x = br.x = max_x(pos3.x, minX);
 	}
 
 	if (stretchFlags & ITEM_TOP) {
-		float maxY = stretchItemSize.y - (2.0 * scale.y);
+		float maxY = stretchItemSize.y - (2.0f * scale.y);
 		pos3.y = tl.y = min_y(pos3.y, maxY);
 
 	} else if (stretchFlags & ITEM_BOTTOM) {
-		float minY = (2.0 * scale.y);
+		float minY = (2.0f * scale.y);
 		pos3.y = br.y = max_y(pos3.y, minY);
 	}
 
@@ -1594,10 +1594,12 @@ void OBSBasicPreview::mouseMoveEvent(QMouseEvent *event)
 	float pixelRatio = main->GetDevicePixelRatio();
 
 	if (scrollMode && event->buttons() == Qt::LeftButton) {
-		scrollingOffset.x += pixelRatio * (qtPos.x() - scrollingFrom.x);
-		scrollingOffset.y += pixelRatio * (qtPos.y() - scrollingFrom.y);
-		scrollingFrom.x = qtPos.x();
-		scrollingFrom.y = qtPos.y();
+		scrollingOffset.x +=
+			pixelRatio * ((float)qtPos.x() - scrollingFrom.x);
+		scrollingOffset.y +=
+			pixelRatio * ((float)qtPos.y() - scrollingFrom.y);
+		scrollingFrom.x = (float)qtPos.x();
+		scrollingFrom.y = (float)qtPos.y();
 		emit DisplayResized();
 		return;
 	}
@@ -1669,11 +1671,11 @@ void OBSBasicPreview::mouseMoveEvent(QMouseEvent *event)
 
 		if (!mouseMoved && hoveredPreviewItems.size() > 0) {
 			mousePos = pos;
-			OBSBasic *main = reinterpret_cast<OBSBasic *>(
+			OBSBasic *_main = reinterpret_cast<OBSBasic *>(
 				App()->GetMainWindow());
-			float scale = main->GetDevicePixelRatio();
-			float x = qtPos.x() - main->previewX / scale;
-			float y = qtPos.y() - main->previewY / scale;
+			float scale = _main->GetDevicePixelRatio();
+			float x = (float)qtPos.x() - _main->previewX / scale;
+			float y = (float)qtPos.y() - _main->previewY / scale;
 			vec2_set(&startPos, x, y);
 			updateCursor = true;
 		}
@@ -1765,8 +1767,8 @@ static void DrawRotationHandle(gs_vertbuffer_t *circle, float rot,
 	gs_matrix_translate(&pos);
 
 	gs_matrix_rotaa4f(0.0f, 0.0f, 1.0f, RAD(rot));
-	gs_matrix_translate3f(-HANDLE_RADIUS * 1.5 * pixelRatio,
-			      -HANDLE_RADIUS * 1.5 * pixelRatio, 0.0f);
+	gs_matrix_translate3f(-HANDLE_RADIUS * 1.5f * pixelRatio,
+			      -HANDLE_RADIUS * 1.5f * pixelRatio, 0.0f);
 	gs_matrix_scale3f(HANDLE_RADIUS * 3 * pixelRatio,
 			  HANDLE_RADIUS * 3 * pixelRatio, 1.0f);
 
@@ -1787,12 +1789,12 @@ static void DrawStripedLine(float x1, float y1, float x2, float y2,
 	float ySide = (y1 == y2) ? (y1 < 0.5f ? 1.0f : -1.0f) : 0.0f;
 	float xSide = (x1 == x2) ? (x1 < 0.5f ? 1.0f : -1.0f) : 0.0f;
 
-	float dist =
-		sqrt(pow((x1 - x2) * scale.x, 2) + pow((y1 - y2) * scale.y, 2));
+	float dist = (float)sqrt(pow((x1 - x2) * scale.x, 2) +
+				 pow((y1 - y2) * scale.y, 2));
 	float offX = (x2 - x1) / dist;
 	float offY = (y2 - y1) / dist;
 
-	for (int i = 0, l = ceil(dist / 15); i < l; i++) {
+	for (int i = 0, l = (int)ceil(dist / 15); i < l; i++) {
 		gs_render_start(true);
 
 		float xx1 = x1 + i * 15 * offX;
@@ -2295,7 +2297,7 @@ static obs_source_t *CreateLabel(float pixelRatio)
 	obs_data_set_string(font, "face", "Monospace");
 #endif
 	obs_data_set_int(font, "flags", 1); // Bold text
-	obs_data_set_int(font, "size", 16 * pixelRatio);
+	obs_data_set_int(font, "size", 16 * (long long)pixelRatio);
 
 	obs_data_set_obj(settings, "font", font);
 	obs_data_set_bool(settings, "outline", true);

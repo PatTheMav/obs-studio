@@ -302,11 +302,11 @@ void OBSBasicFilters::UpdatePropertiesView(int row, bool async)
 	OBSDataAutoRelease settings = obs_source_get_settings(filter);
 
 	auto disabled_undo = [](void *vp, obs_data_t *settings) {
-		OBSBasic *main =
+		OBSBasic *_main =
 			reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
-		main->undo_s.disable();
-		obs_source_t *source = reinterpret_cast<obs_source_t *>(vp);
-		obs_source_update(source, settings);
+		_main->undo_s.disable();
+		obs_source_t *_source = reinterpret_cast<obs_source_t *>(vp);
+		obs_source_update(_source, settings);
 	};
 
 	view = new OBSPropertiesView(
@@ -630,14 +630,14 @@ void OBSBasicFilters::AddNewFilter(const char *id)
 
 			obs_data_t *dat =
 				obs_data_create_from_json(data.c_str());
-			obs_source_t *source = obs_get_source_by_name(
+			obs_source_t *source_name = obs_get_source_by_name(
 				obs_data_get_string(dat, "sname"));
 			obs_source_t *filter = obs_source_get_filter_by_name(
-				source, obs_data_get_string(dat, "fname"));
-			obs_source_filter_remove(source, filter);
+				source_name, obs_data_get_string(dat, "fname"));
+			obs_source_filter_remove(source_name, filter);
 
 			obs_data_release(dat);
-			obs_source_release(source);
+			obs_source_release(source_name);
 			obs_source_release(filter);
 		};
 
@@ -653,13 +653,14 @@ void OBSBasicFilters::AddNewFilter(const char *id)
 
 			OBSDataAutoRelease dat =
 				obs_data_create_from_json(data.c_str());
-			OBSSourceAutoRelease source = obs_get_source_by_name(
-				obs_data_get_string(dat, "sname"));
+			OBSSourceAutoRelease source_name =
+				obs_get_source_by_name(
+					obs_data_get_string(dat, "sname"));
 
 			OBSSourceAutoRelease filter = obs_source_create(
 				id.c_str(), name.c_str(), nullptr, nullptr);
 			if (filter) {
-				obs_source_filter_add(source, filter);
+				obs_source_filter_add(source_name, filter);
 			}
 		};
 
@@ -1135,10 +1136,10 @@ void OBSBasicFilters::FilterNameEdited(QWidget *editor, QListWidget *list)
 			reinterpret_cast<OBSBasic *>(App()->GetMainWindow())
 				->SetCurrentScene(ssource.Get(), true);
 
-			OBSSourceAutoRelease source =
+			OBSSourceAutoRelease source_name =
 				obs_get_source_by_name(data.c_str());
 			OBSSourceAutoRelease filter =
-				obs_source_get_filter_by_name(source,
+				obs_source_get_filter_by_name(source_name,
 							      name.c_str());
 			obs_source_set_name(filter, prev.c_str());
 		};
@@ -1150,10 +1151,10 @@ void OBSBasicFilters::FilterNameEdited(QWidget *editor, QListWidget *list)
 			reinterpret_cast<OBSBasic *>(App()->GetMainWindow())
 				->SetCurrentScene(ssource.Get(), true);
 
-			OBSSourceAutoRelease source =
+			OBSSourceAutoRelease source_name =
 				obs_get_source_by_name(data.c_str());
 			OBSSourceAutoRelease filter =
-				obs_source_get_filter_by_name(source,
+				obs_source_get_filter_by_name(source_name,
 							      prev.c_str());
 			obs_source_set_name(filter, name.c_str());
 		};
@@ -1254,10 +1255,10 @@ void OBSBasicFilters::delete_filter(OBSSource filter)
 
 		OBSDataAutoRelease dat =
 			obs_data_create_from_json(data.c_str());
-		OBSSourceAutoRelease source = obs_get_source_by_name(
+		OBSSourceAutoRelease source_name = obs_get_source_by_name(
 			obs_data_get_string(dat, "undo_name"));
 		OBSSourceAutoRelease filter = obs_load_source(dat);
-		obs_source_filter_add(source, filter);
+		obs_source_filter_add(source_name, filter);
 	};
 
 	OBSDataAutoRelease rwrapper = obs_data_create();
@@ -1271,11 +1272,11 @@ void OBSBasicFilters::delete_filter(OBSSource filter)
 
 		OBSDataAutoRelease dat =
 			obs_data_create_from_json(data.c_str());
-		OBSSourceAutoRelease source = obs_get_source_by_name(
+		OBSSourceAutoRelease source_name = obs_get_source_by_name(
 			obs_data_get_string(dat, "sname"));
 		OBSSourceAutoRelease filter = obs_source_get_filter_by_name(
-			source, obs_data_get_string(dat, "fname"));
-		obs_source_filter_remove(source, filter);
+			source_name, obs_data_get_string(dat, "fname"));
+		obs_source_filter_remove(source_name, filter);
 	};
 
 	std::string undo_data(obs_data_get_json(wrapper));

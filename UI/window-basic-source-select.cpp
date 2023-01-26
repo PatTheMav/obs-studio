@@ -420,8 +420,8 @@ OBSBasicSourceSelect::OBSBasicSourceSelect(OBSBasic *parent, const char *id_,
 		ui->sourceName->setEnabled(false);
 
 		int count = main->ui->scenes->count();
-		for (int i = 0; i < count; i++) {
-			QListWidgetItem *item = main->ui->scenes->item(i);
+		for (int j = 0; j < count; j++) {
+			QListWidgetItem *item = main->ui->scenes->item(j);
 			OBSScene scene = GetOBSRef<OBSScene>(item);
 			OBSSource sceneSource = obs_scene_get_source(scene);
 

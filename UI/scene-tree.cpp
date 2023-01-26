@@ -133,10 +133,10 @@ void SceneTree::dropEvent(QDropEvent *event)
 		QPoint point = event->pos();
 #endif
 
-		int x = (float)point.x() / wid * ceil(wid / maxWidth);
+		int x = (int)((float)point.x() / wid * ceil(wid / maxWidth));
 		int y = (point.y() + firstItemY) / itemHeight;
 
-		int r = x + y * ceil(wid / maxWidth);
+		int r = x + y * (int)ceil(wid / maxWidth);
 
 		QListWidgetItem *item = takeItem(selectedIndexes()[0].row());
 		insertItem(r, item);
@@ -178,10 +178,10 @@ void SceneTree::RepositionGrid(QDragMoveEvent *event)
 		QPoint point = event->pos();
 #endif
 
-		int x = (float)point.x() / wid * ceil(wid / maxWidth);
+		int x = (int)((float)point.x() / wid * ceil(wid / maxWidth));
 		int y = (point.y() + firstItemY) / itemHeight;
 
-		int r = x + y * ceil(wid / maxWidth);
+		int r = x + y * (int)ceil(wid / maxWidth);
 		int orig = selectedIndexes()[0].row();
 
 		for (int i = 0; i < count(); i++) {

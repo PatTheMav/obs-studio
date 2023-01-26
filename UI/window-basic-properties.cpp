@@ -271,7 +271,7 @@ static void CreateTransitionScene(OBSSource scene, const char *text,
 #ifdef _WIN32
 		 obs_source_get_height(scene));
 #else
-		 obs_source_get_height(scene) * 0.8);
+		 obs_source_get_height(scene) * 0.8f);
 #endif
 
 	obs_sceneitem_set_bounds(item, &size);
@@ -313,11 +313,12 @@ void OBSBasicProperties::on_buttonBox_clicked(QAbstractButton *button)
 		auto undo_redo = [scene_name](const std::string &data) {
 			OBSDataAutoRelease settings =
 				obs_data_create_from_json(data.c_str());
-			OBSSourceAutoRelease source = obs_get_source_by_name(
-				obs_data_get_string(settings, "undo_sname"));
-			obs_source_reset_settings(source, settings);
+			OBSSourceAutoRelease source_name =
+				obs_get_source_by_name(obs_data_get_string(
+					settings, "undo_sname"));
+			obs_source_reset_settings(source_name, settings);
 
-			obs_source_update_properties(source);
+			obs_source_update_properties(source_name);
 
 			OBSSourceAutoRelease scene_source =
 				obs_get_source_by_name(scene_name.c_str());

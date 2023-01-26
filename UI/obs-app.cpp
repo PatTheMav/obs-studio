@@ -298,7 +298,7 @@ static inline void LogStringChunk(fstream &logFile, char *str, int log_level)
 	timeString += ": ";
 
 	while (*nextLine) {
-		char *nextLine = strchr(str, '\n');
+		nextLine = strchr(str, '\n');
 		if (!nextLine)
 			break;
 
@@ -732,32 +732,33 @@ bool OBSApp::InitGlobalConfig()
 	}
 
 	if (!opt_starting_collection.empty()) {
-		string path = GetSceneCollectionFileFromName(
+		string collection_path = GetSceneCollectionFileFromName(
 			opt_starting_collection.c_str());
-		if (!path.empty()) {
+		if (!collection_path.empty()) {
 			config_set_string(globalConfig, "Basic",
 					  "SceneCollection",
 					  opt_starting_collection.c_str());
 			config_set_string(globalConfig, "Basic",
-					  "SceneCollectionFile", path.c_str());
+					  "SceneCollectionFile",
+					  collection_path.c_str());
 			changed = true;
 		}
 	}
 
 	if (!opt_starting_profile.empty()) {
-		string path =
+		string profile_path =
 			GetProfileDirFromName(opt_starting_profile.c_str());
-		if (!path.empty()) {
+		if (!profile_path.empty()) {
 			config_set_string(globalConfig, "Basic", "Profile",
 					  opt_starting_profile.c_str());
 			config_set_string(globalConfig, "Basic", "ProfileDir",
-					  path.c_str());
+					  profile_path.c_str());
 			changed = true;
 		}
 	}
 
-	uint32_t lastVersion =
-		config_get_int(globalConfig, "General", "LastVersion");
+	uint32_t lastVersion = (uint32_t)config_get_int(globalConfig, "General",
+							"LastVersion");
 
 	if (!config_has_user_value(globalConfig, "General", "Pre19Defaults")) {
 		bool useOldDefaults = lastVersion &&
@@ -1050,7 +1051,8 @@ void OBSApp::ParseExtraThemeData(const char *path)
 
 			if (cf_token_is(cfp, "#")) {
 				array = cfp->cur_token->str.array;
-				color = strtol(array + 1, nullptr, 16);
+				color = (uint32_t)strtol(array + 1, nullptr,
+							 16);
 
 			} else if (cf_token_is(cfp, "rgb")) {
 				ret = cf_next_token_should_be(cfp, "(", ";",
@@ -2362,8 +2364,6 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 		}
 
 		if (!multi) {
-			QMessageBox::StandardButtons buttons(
-				QMessageBox::Yes | QMessageBox::Cancel);
 			QMessageBox mb(QMessageBox::Question,
 				       QTStr("AlreadyRunning.Title"),
 				       QTStr("AlreadyRunning.Text"));
@@ -2429,8 +2429,8 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 			CheckPermission(kScreenCapture);
 
 		int permissionsDialogLastShown =
-			config_get_int(GetGlobalConfig(), "General",
-				       "MacOSPermissionsDialogLastShown");
+			(int)config_get_int(GetGlobalConfig(), "General",
+					    "MacOSPermissionsDialogLastShown");
 		if (permissionsDialogLastShown <
 		    MACOS_PERMISSIONS_DIALOG_VERSION) {
 			OBSPermissions *check = new OBSPermissions(

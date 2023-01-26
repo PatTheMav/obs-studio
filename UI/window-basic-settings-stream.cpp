@@ -168,7 +168,8 @@ void OBSBasicSettings::LoadStream1Settings()
 		bool bw_test = obs_data_get_bool(settings, "bwtest");
 		ui->bandwidthTestEnable->setChecked(bw_test);
 
-		idx = config_get_int(main->Config(), "Twitch", "AddonChoice");
+		idx = (int)config_get_int(main->Config(), "Twitch",
+					  "AddonChoice");
 		ui->twitchAddonDropdown->setCurrentIndex(idx);
 	}
 
@@ -239,8 +240,8 @@ void OBSBasicSettings::SaveStream1Settings()
 	if (!!auth && strcmp(auth->service(), "Twitch") == 0) {
 		bool choiceExists = config_has_user_value(
 			main->Config(), "Twitch", "AddonChoice");
-		int currentChoice =
-			config_get_int(main->Config(), "Twitch", "AddonChoice");
+		int currentChoice = (int)config_get_int(
+			main->Config(), "Twitch", "AddonChoice");
 		int newChoice = ui->twitchAddonDropdown->currentIndex();
 
 		config_set_int(main->Config(), "Twitch", "AddonChoice",
@@ -809,7 +810,7 @@ void OBSBasicSettings::UpdateVodTrackSetting()
 		SLOT(setEnabled(bool)));
 
 	int trackIndex =
-		config_get_int(main->Config(), "AdvOut", "VodTrackIndex");
+		(int)config_get_int(main->Config(), "AdvOut", "VodTrackIndex");
 	for (int i = 0; i < MAX_AUDIO_MIXES; i++) {
 		vodTrack[i]->setChecked((i + 1) == trackIndex);
 	}
@@ -1472,30 +1473,30 @@ void OBSBasicSettings::ResetEncoders(bool streamOnly)
 	/* Find fallback encoders                            */
 
 	if (!lastAdvEnc.isEmpty()) {
-		int idx = ui->advOutEncoder->findData(lastAdvEnc);
-		if (idx == -1) {
+		int _idx = ui->advOutEncoder->findData(lastAdvEnc);
+		if (_idx == -1) {
 			lastAdvEnc = get_adv_fallback(lastAdvEnc);
 			ui->advOutEncoder->setProperty("changed",
 						       QVariant(true));
 			OutputsChanged();
 		}
 
-		idx = ui->advOutEncoder->findData(lastAdvEnc);
+		_idx = ui->advOutEncoder->findData(lastAdvEnc);
 		s2.unblock();
-		ui->advOutEncoder->setCurrentIndex(idx);
+		ui->advOutEncoder->setCurrentIndex(_idx);
 	}
 
 	if (!lastEnc.isEmpty()) {
-		int idx = ui->simpleOutStrEncoder->findData(lastEnc);
-		if (idx == -1) {
+		int _idx = ui->simpleOutStrEncoder->findData(lastEnc);
+		if (_idx == -1) {
 			lastEnc = get_simple_fallback(lastEnc);
 			ui->simpleOutStrEncoder->setProperty("changed",
 							     QVariant(true));
 			OutputsChanged();
 		}
 
-		idx = ui->simpleOutStrEncoder->findData(lastEnc);
+		_idx = ui->simpleOutStrEncoder->findData(lastEnc);
 		s1.unblock();
-		ui->simpleOutStrEncoder->setCurrentIndex(idx);
+		ui->simpleOutStrEncoder->setCurrentIndex(_idx);
 	}
 }
