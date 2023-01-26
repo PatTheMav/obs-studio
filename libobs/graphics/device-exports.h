@@ -177,6 +177,15 @@ EXPORT void device_debug_marker_begin(gs_device_t *device,
 				      const char *markername,
 				      const float color[4]);
 EXPORT void device_debug_marker_end(gs_device_t *device);
+EXPORT bool device_is_monitor_hdr(gs_device_t *device, void *monitor);
+EXPORT bool device_shared_texture_available(void);
+
+#ifdef __APPLE__
+EXPORT gs_texture_t *device_texture_create_from_iosurface(gs_device_t *device,
+							  void *iosurf);
+EXPORT gs_texture_t *device_texture_open_shared(gs_device_t *device,
+						uint32_t handle);
+#endif
 
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__DragonFly__)
 
