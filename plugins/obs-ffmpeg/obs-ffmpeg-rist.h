@@ -16,6 +16,7 @@
  */
 
 #pragma once
+#include <inttypes.h>
 #include <obs-module.h>
 #include "obs-ffmpeg-url.h"
 #include <librist/librist.h>
