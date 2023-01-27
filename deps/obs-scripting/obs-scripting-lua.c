@@ -16,7 +16,6 @@
 ******************************************************************************/
 
 #include "obs-scripting-lua.h"
-#include "obs-scripting-config.h"
 #include <util/platform.h>
 #include <util/base.h>
 #include <util/dstr.h>
