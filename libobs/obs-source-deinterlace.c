@@ -35,7 +35,7 @@ static bool ready_deinterlace_frames(obs_source_t *source, uint64_t sys_time)
 		}
 
 		if (source->async_frames.num == 2) {
-			bool prev_frame = true;
+			bool has_prev_frame = true;
 			if (source->async_unbuffered &&
 			    source->deinterlace_offset) {
 				const uint64_t timestamp =
@@ -49,12 +49,13 @@ static bool ready_deinterlace_frames(obs_source_t *source, uint64_t sys_time)
 					duration;
 				if (sys_time < frame_end) {
 					// Don't skip ahead prematurely.
-					prev_frame = false;
+					has_prev_frame = false;
 					source->deinterlace_frame_ts =
 						timestamp - duration;
 				}
 			}
-			source->async_frames.array[0]->prev_frame = prev_frame;
+			source->async_frames.array[0]->prev_frame =
+				has_prev_frame;
 		}
 		source->deinterlace_offset = 0;
 		source->last_frame_ts = next_frame->timestamp;
@@ -400,6 +401,9 @@ void deinterlace_render(obs_source_t *s)
 		case GS_CS_709_SCRGB:
 			tech_name = "DrawMultiply";
 			multiplier = obs_get_video_sdr_white_level() / 80.0f;
+			break;
+		case GS_CS_709_EXTENDED:
+			break;
 		}
 		break;
 	case GS_CS_709_SCRGB:
@@ -412,6 +416,9 @@ void deinterlace_render(obs_source_t *s)
 		case GS_CS_709_EXTENDED:
 			tech_name = "DrawMultiply";
 			multiplier = 80.0f / obs_get_video_sdr_white_level();
+			break;
+		case GS_CS_709_SCRGB:
+			break;
 		}
 	}
 

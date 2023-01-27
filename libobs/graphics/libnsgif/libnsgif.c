@@ -1150,7 +1150,7 @@ void gif_init_LZW(gif_animation *gif) {
     do {
         gif->firstcode = gif->oldcode = gif_next_code(gif, gif->code_size);
     } while (gif->firstcode == gif->clear_code);
-    *gif->stack_pointer++ =gif->firstcode;
+    *gif->stack_pointer++ = (unsigned char)gif->firstcode;
 }
 
 
@@ -1183,7 +1183,7 @@ static bool gif_next_LZW(gif_animation *gif) {
 
     incode = code;
     if (code >= gif->max_code) {
-        *gif->stack_pointer++ = gif->firstcode;
+        *gif->stack_pointer++ = (unsigned char)gif->firstcode;
         code = gif->oldcode;
     }
 
@@ -1192,13 +1192,13 @@ static bool gif_next_LZW(gif_animation *gif) {
      *
      * Note: our gif->stack is always big enough to hold a complete decompressed chunk. */
     while (code >= gif->clear_code) {
-        *gif->stack_pointer++ = gif->table[1][code];
+        *gif->stack_pointer++ = (unsigned char)gif->table[1][code];
         new_code = gif->table[0][code];
         if (new_code < gif->clear_code) {
             code = new_code;
             break;
         }
-        *gif->stack_pointer++ = gif->table[1][new_code];
+        *gif->stack_pointer++ = (unsigned char)gif->table[1][new_code];
         code = gif->table[0][new_code];
         if (code == new_code) {
               gif->current_error = GIF_FRAME_DATA_ERROR;
@@ -1206,7 +1206,8 @@ static bool gif_next_LZW(gif_animation *gif) {
         }
     }
 
-    *gif->stack_pointer++ = gif->firstcode = gif->table[1][code];
+    gif->firstcode = gif->table[1][code];
+    *gif->stack_pointer++ = (unsigned char)gif->firstcode;
 
     if ((code = gif->max_code) < (1 << GIF_MAX_LZW)) {
         gif->table[0][code] = gif->oldcode;

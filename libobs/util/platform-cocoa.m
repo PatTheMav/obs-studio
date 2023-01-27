@@ -141,7 +141,7 @@ char *os_get_executable_path_ptr(const char *name)
 struct os_cpu_usage_info {
 	int64_t last_cpu_time;
 	int64_t last_sys_time;
-	int core_count;
+	long core_count;
 };
 
 static inline void add_time_value(time_value_t *dst, time_value_t *a,
@@ -233,14 +233,14 @@ void os_cpu_usage_info_destroy(os_cpu_usage_info_t *info)
 os_performance_token_t *os_request_high_performance(const char *reason)
 {
 	@autoreleasepool {
-		NSProcessInfo *pi = [NSProcessInfo processInfo];
+		NSProcessInfo *processInfo = [NSProcessInfo processInfo];
 		SEL sel = @selector(beginActivityWithOptions:reason:);
-		if (![pi respondsToSelector:sel])
+		if (![processInfo respondsToSelector:sel])
 			return nil;
 
 		//taken from http://stackoverflow.com/a/20100906
-		id activity = [pi beginActivityWithOptions:0x00FFFFFF
-						    reason:@(reason)];
+		id activity = [processInfo beginActivityWithOptions:0x00FFFFFF
+							     reason:@(reason)];
 
 		return CFBridgingRetain(activity);
 	}
@@ -249,12 +249,12 @@ os_performance_token_t *os_request_high_performance(const char *reason)
 void os_end_high_performance(os_performance_token_t *token)
 {
 	@autoreleasepool {
-		NSProcessInfo *pi = [NSProcessInfo processInfo];
+		NSProcessInfo *processInfo = [NSProcessInfo processInfo];
 		SEL sel = @selector(beginActivityWithOptions:reason:);
-		if (![pi respondsToSelector:sel])
+		if (![processInfo respondsToSelector:sel])
 			return;
 
-		[pi endActivity:CFBridgingRelease(token)];
+		[processInfo endActivity:CFBridgingRelease(token)];
 	}
 }
 

@@ -244,7 +244,8 @@ bool os_sleepto_ns_fast(uint64_t time_target)
 
 	do {
 		uint64_t remain_us = (time_target - current + 999) / 1000;
-		useconds_t us = remain_us >= 1000000 ? 999999 : remain_us;
+		useconds_t us = remain_us >= 1000000 ? 999999
+						     : (useconds_t)remain_us;
 		usleep(us);
 
 		current = os_gettime_ns();

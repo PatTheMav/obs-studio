@@ -116,8 +116,8 @@ static inline void do_audio_output(struct audio_output *audio, size_t mix_idx,
 	for (size_t i = mix->inputs.num; i > 0; i--) {
 		struct audio_input *input = mix->inputs.array + (i - 1);
 
-		for (size_t i = 0; i < audio->planes; i++)
-			data.data[i] = (uint8_t *)mix->buffer[i];
+		for (size_t j = 0; j < audio->planes; j++)
+			data.data[j] = (uint8_t *)mix->buffer[j];
 		data.frames = frames;
 		data.timestamp = timestamp;
 

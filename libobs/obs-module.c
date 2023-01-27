@@ -691,17 +691,18 @@ cleanup:
 		}                                                       \
 	} while (false)
 
-#define HANDLE_ERROR(size_var, structure, info)                            \
-	do {                                                               \
-		struct structure data = {0};                               \
-		if (!size_var)                                             \
-			return;                                            \
-                                                                           \
-		memcpy(&data, info,                                        \
-		       sizeof(data) < size_var ? sizeof(data) : size_var); \
-                                                                           \
-		if (data.type_data && data.free_type_data)                 \
-			data.free_type_data(data.type_data);               \
+#define HANDLE_ERROR(size_var, structure, info)                       \
+	do {                                                          \
+		struct structure new_data = {0};                      \
+		if (!size_var)                                        \
+			return;                                       \
+                                                                      \
+		memcpy(&new_data, info,                               \
+		       sizeof(new_data) < size_var ? sizeof(new_data) \
+						   : size_var);       \
+                                                                      \
+		if (new_data.type_data && new_data.free_type_data)    \
+			new_data.free_type_data(new_data.type_data);  \
 	} while (false)
 
 #define source_warn(format, ...) \

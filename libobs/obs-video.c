@@ -221,7 +221,6 @@ static const char *render_output_texture_name = "render_output_texture";
 static inline gs_texture_t *
 render_output_texture(struct obs_core_video_mix *mix)
 {
-	struct obs_core_video *video = &obs->video;
 	gs_texture_t *texture = mix->render_texture;
 	gs_texture_t *target = mix->output_texture;
 	uint32_t width = gs_texture_get_width(target);
@@ -827,15 +826,16 @@ static inline void video_sleep(struct obs_core_video *video, uint64_t *p_time,
 
 	pthread_mutex_lock(&obs->video.mixes_mutex);
 	for (size_t i = 0, num = obs->video.mixes.num; i < num; i++) {
-		struct obs_core_video_mix *video = obs->video.mixes.array[i];
-		bool raw_active = video->raw_was_active;
-		bool gpu_active = video->gpu_was_active;
+		struct obs_core_video_mix *mix_video =
+			obs->video.mixes.array[i];
+		bool raw_active = mix_video->raw_was_active;
+		bool gpu_active = mix_video->gpu_was_active;
 
 		if (raw_active)
-			circlebuf_push_back(&video->vframe_info_buffer,
+			circlebuf_push_back(&mix_video->vframe_info_buffer,
 					    &vframe_info, sizeof(vframe_info));
 		if (gpu_active)
-			circlebuf_push_back(&video->vframe_info_buffer_gpu,
+			circlebuf_push_back(&mix_video->vframe_info_buffer_gpu,
 					    &vframe_info, sizeof(vframe_info));
 	}
 	pthread_mutex_unlock(&obs->video.mixes_mutex);
@@ -1055,7 +1055,6 @@ static inline void update_active_state(struct obs_core_video_mix *video)
 		os_atomic_load_long(&video->gpu_encoder_active) > 0;
 	const bool active = raw_active || gpu_active;
 #else
-	const bool gpu_active = 0;
 	const bool active = raw_active;
 #endif
 
