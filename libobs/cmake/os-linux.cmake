@@ -20,10 +20,14 @@ target_sources(
 
 target_compile_definitions(libobs PRIVATE USE_XDG $<$<C_COMPILER_ID:GNU>:ENABLE_DARRAY_TYPE_TEST>)
 
-target_link_libraries(libobs PRIVATE X11::x11-xcb xcb::xcb LibUUID::LibUUID ${CMAKE_DL_LIBS})
-if(TARGET xcb::xcb-xinput)
-  target_link_libraries(libobs PRIVATE xcb::xcb-xinput)
-endif()
+set(CMAKE_M_LIBS "")
+include(CheckCSourceCompiles)
+set(LIBM_TEST_SOURCE "#include<math.h>\nfloat f; int main(){sqrt(f);return 0;}")
+check_c_source_compiles("${LIBM_TEST_SOURCE}" HAVE_MATH_IN_STD_LIB)
+
+target_link_libraries(
+  libobs PRIVATE X11::x11-xcb xcb::xcb LibUUID::LibUUID ${CMAKE_DL_LIBS} $<$<NOT:$<BOOL:HAVE_MATH_IN_STD_LIB>>:m>
+                 $<$<TARGET_EXISTS:xcb::xcb-input>:xcb::xcb-input>)
 
 if(ENABLE_PULSEAUDIO)
   find_package(PulseAudio REQUIRED)
@@ -50,9 +54,7 @@ if(TARGET gio::gio)
 endif()
 
 if(ENABLE_WAYLAND)
-  # cmake-format: off
-  find_package(Wayland COMPONENTS Client REQUIRED)
-  # cmake-format: on
+  find_package(Wayland REQUIRED Client)
   find_package(xkbcommon REQUIRED)
 
   target_sources(libobs PRIVATE obs-nix-wayland.c)
