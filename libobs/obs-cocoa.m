@@ -68,15 +68,15 @@ char *find_libobs_data_file(const char *file)
 {
 	struct dstr path;
 
-    NSBundle *frameworkBundle = [NSBundle
-        bundleWithIdentifier:@"com.obsproject.libobs"];
-    NSURL *bundleURL = [frameworkBundle bundleURL];
-    NSURL *libobsDataURL =
-        [bundleURL URLByAppendingPathComponent:@"Resources/"];
-    const char *libobsDataPath = [[libobsDataURL path]
-        cStringUsingEncoding:NSUTF8StringEncoding];
-    dstr_init_copy(&path, libobsDataPath);
-    dstr_cat(&path, "/");
+	NSBundle *frameworkBundle =
+		[NSBundle bundleWithIdentifier:@"com.obsproject.libobs"];
+	NSURL *bundleURL = [frameworkBundle bundleURL];
+	NSURL *libobsDataURL =
+		[bundleURL URLByAppendingPathComponent:@"Resources/"];
+	const char *libobsDataPath = [[libobsDataURL path]
+		cStringUsingEncoding:NSUTF8StringEncoding];
+	dstr_init_copy(&path, libobsDataPath);
+	dstr_cat(&path, "/");
 
 	dstr_cat(&path, file);
 	return path.array;
@@ -140,10 +140,10 @@ static void log_available_memory(void)
 
 static void log_os(void)
 {
-	NSProcessInfo *pi = [NSProcessInfo processInfo];
+	NSProcessInfo *processInfo = [NSProcessInfo processInfo];
 	blog(LOG_INFO, "OS Name: macOS");
 	blog(LOG_INFO, "OS Version: %s",
-	     [[pi operatingSystemVersionString] UTF8String]);
+	     [[processInfo operatingSystemVersionString] UTF8String]);
 }
 
 static void log_kernel_version(void)
@@ -346,7 +346,7 @@ obs_key_t obs_key_from_virtual_key(int code)
 		return OBS_KEY_META;
 	for (size_t i = 0; i < OBS_KEY_LAST_VALUE; i++) {
 		if (virtual_keys[i] == code) {
-			return i;
+			return (obs_key_t)i;
 		}
 	}
 	return OBS_KEY_NONE;
@@ -525,7 +525,7 @@ void obs_key_to_str(obs_key_t key, struct dstr *str)
 	UniCharCount len = 0;
 
 	OSStatus err =
-		UCKeyTranslate(plat->layout, code, kUCKeyActionDown,
+		UCKeyTranslate(plat->layout, (UInt16)code, kUCKeyActionDown,
 			       0x104, //caps lock for upper case letters
 			       LMGetKbdType(), kUCKeyTranslateNoDeadKeysBit,
 			       &dead_key_state, max_length, &len, buffer);

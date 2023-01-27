@@ -197,9 +197,8 @@ EXPORT bool device_query_dmabuf_modifiers_for_format(gs_device_t *device,
 						     size_t *n_modifiers);
 
 EXPORT gs_texture_t *device_texture_create_from_pixmap(
-		gs_device_t *device, uint32_t width, uint32_t height,
-		enum gs_color_format color_format, uint32_t target,
-		void *pixmap);
+	gs_device_t *device, uint32_t width, uint32_t height,
+	enum gs_color_format color_format, uint32_t target, void *pixmap);
 #endif
 
 #ifdef __cplusplus

@@ -121,7 +121,8 @@ void shader_sampler_convert(struct shader_sampler *ss,
 		else if (astrcmpi(state, "MaxAnisotropy") == 0)
 			info->max_anisotropy = (int)strtol(value, NULL, 10);
 		else if (astrcmpi(state, "BorderColor") == 0)
-			info->border_color = strtol(value + 1, NULL, 16);
+			info->border_color =
+				(uint32_t)strtol(value + 1, NULL, 16);
 	}
 }
 

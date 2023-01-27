@@ -196,9 +196,9 @@ static void insert(obs_hotkey_name_map_edge_t *edge,
 		obs_hotkey_name_map_node_t *new_node_ = new_node();
 		connect(edge, new_node_);
 
-		obs_hotkey_name_map_edge_t *edge =
+		obs_hotkey_name_map_edge_t *new_edge =
 			da_push_back_new(new_node_->children);
-		connect(edge, node);
+		connect(new_edge, node);
 		add_leaf(new_node_, key, l, v);
 		return;
 	}
@@ -304,7 +304,7 @@ static void show_node(obs_hotkey_name_map_node_t *node, int in)
 	printf("%lu:\n", (unsigned long)node->children.num);
 
 	for (size_t i = 0; i < node->children.num; i++) {
-		for (int i = 0; i < in; i += 2)
+		for (int j = 0; j < in; j += 2)
 			printf("| ");
 		printf("\\ ");
 

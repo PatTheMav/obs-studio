@@ -323,36 +323,42 @@ size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
 
 		case 2:
 			p[1] = _NXT | (oc[0] & 0x3f);
-			p[0] = _SEQ2 | (oc[0] >> 6) | ((oc[1] & 0x07) << 2);
+			p[0] = _SEQ2 | (unsigned char)((oc[0] >> 6) |
+						       ((oc[1] & 0x07) << 2));
 			break;
 
 		case 3:
 			p[2] = _NXT | (oc[0] & 0x3f);
-			p[1] = _NXT | (oc[0] >> 6) | ((oc[1] & 0x0f) << 2);
+			p[1] = _NXT | (unsigned char)((oc[0] >> 6) |
+						      ((oc[1] & 0x0f) << 2));
 			p[0] = _SEQ3 | ((oc[1] & 0xf0) >> 4);
 			break;
 
 		case 4:
 			p[3] = _NXT | (oc[0] & 0x3f);
-			p[2] = _NXT | (oc[0] >> 6) | ((oc[1] & 0x0f) << 2);
-			p[1] = _NXT | ((oc[1] & 0xf0) >> 4) |
-			       ((oc[2] & 0x03) << 4);
+			p[2] = _NXT | (unsigned char)((oc[0] >> 6) |
+						      ((oc[1] & 0x0f) << 2));
+			p[1] = _NXT | (unsigned char)(((oc[1] & 0xf0) >> 4) |
+						      ((oc[2] & 0x03) << 4));
 			p[0] = _SEQ4 | ((oc[2] & 0x1f) >> 2);
 			break;
 
 		case 5:
 			p[4] = _NXT | (oc[0] & 0x3f);
-			p[3] = _NXT | (oc[0] >> 6) | ((oc[1] & 0x0f) << 2);
-			p[2] = _NXT | ((oc[1] & 0xf0) >> 4) |
-			       ((oc[2] & 0x03) << 4);
+			p[3] = _NXT | (unsigned char)((oc[0] >> 6) |
+						      ((oc[1] & 0x0f) << 2));
+			p[2] = _NXT | (unsigned char)(((oc[1] & 0xf0) >> 4) |
+						      ((oc[2] & 0x03) << 4));
 			p[1] = _NXT | (oc[2] >> 2);
 			p[0] = _SEQ5 | (oc[3] & 0x03);
 			break;
 
 		case 6:
 			p[5] = _NXT | (oc[0] & 0x3f);
-			p[4] = _NXT | (oc[0] >> 6) | ((oc[1] & 0x0f) << 2);
-			p[3] = _NXT | (oc[1] >> 4) | ((oc[2] & 0x03) << 4);
+			p[4] = _NXT | (unsigned char)((oc[0] >> 6) |
+						      ((oc[1] & 0x0f) << 2));
+			p[3] = _NXT | (unsigned char)((oc[1] >> 4) |
+						      ((oc[2] & 0x03) << 4));
 			p[2] = _NXT | (oc[2] >> 2);
 			p[1] = _NXT | (oc[3] & 0x3f);
 			p[0] = _SEQ6 | ((oc[3] & 0x40) >> 6);

@@ -556,7 +556,7 @@ obs_source_t *obs_source_duplicate(obs_source_t *source, const char *new_name,
 			scene, new_name,
 			create_private ? OBS_SCENE_DUP_PRIVATE_COPY
 				       : OBS_SCENE_DUP_COPY);
-		obs_source_t *new_source = obs_scene_get_source(new_scene);
+		new_source = obs_scene_get_source(new_scene);
 		return new_source;
 	}
 
@@ -2516,6 +2516,9 @@ static inline void obs_source_render_async_video(obs_source_t *source)
 				tech_name = "DrawMultiply";
 				multiplier =
 					obs_get_video_sdr_white_level() / 80.0f;
+				break;
+			case GS_CS_709_EXTENDED:
+				break;
 			}
 			break;
 		case GS_CS_709_SCRGB:
@@ -2531,6 +2534,9 @@ static inline void obs_source_render_async_video(obs_source_t *source)
 				tech_name = "DrawMultiply";
 				multiplier =
 					80.0f / obs_get_video_sdr_white_level();
+				break;
+			case GS_CS_709_SCRGB:
+				break;
 			}
 		}
 
@@ -2655,6 +2661,11 @@ static void source_render(obs_source_t *source, gs_effect_t *effect)
 		case GS_CS_709_SCRGB:
 			convert_tech = "DrawMultiply";
 			multiplier = obs_get_video_sdr_white_level() / 80.0f;
+			break;
+		case GS_CS_SRGB:
+			break;
+		case GS_CS_SRGB_16F:
+			break;
 		}
 		break;
 	case GS_CS_709_EXTENDED:
@@ -2666,6 +2677,9 @@ static void source_render(obs_source_t *source, gs_effect_t *effect)
 		case GS_CS_709_SCRGB:
 			convert_tech = "DrawMultiply";
 			multiplier = obs_get_video_sdr_white_level() / 80.0f;
+			break;
+		case GS_CS_709_EXTENDED:
+			break;
 		}
 		break;
 	case GS_CS_709_SCRGB:
@@ -2678,6 +2692,9 @@ static void source_render(obs_source_t *source, gs_effect_t *effect)
 		case GS_CS_709_EXTENDED:
 			convert_tech = "DrawMultiply";
 			multiplier = 80.0f / obs_get_video_sdr_white_level();
+			break;
+		case GS_CS_709_SCRGB:
+			break;
 		}
 	}
 
@@ -3908,10 +3925,11 @@ static void process_audio_balancing(struct obs_source *source, uint32_t frames,
 	switch (type) {
 	case OBS_BALANCE_TYPE_SINE_LAW:
 		for (uint32_t frame = 0; frame < frames; frame++) {
-			data[0][frame] = data[0][frame] *
-					 sinf((1.0f - balance) * (M_PI / 2.0f));
-			data[1][frame] =
-				data[1][frame] * sinf(balance * (M_PI / 2.0f));
+			data[0][frame] =
+				data[0][frame] *
+				sinf((1.0f - balance) * (float)(M_PI / 2.0f));
+			data[1][frame] = data[1][frame] *
+					 sinf(balance * (float)(M_PI / 2.0f));
 		}
 		break;
 	case OBS_BALANCE_TYPE_SQUARE_LAW:

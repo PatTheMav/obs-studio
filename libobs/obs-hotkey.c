@@ -178,10 +178,10 @@ obs_hotkey_register_internal(obs_hotkey_registerer_t type, void *registerer,
 	hotkey->pair_partner_id = OBS_INVALID_HOTKEY_PAIR_ID;
 
 	if (context) {
-		obs_data_array_t *data =
+		obs_data_array_t *new_data =
 			obs_data_get_array(context->hotkey_data, name);
-		load_bindings(hotkey, data);
-		obs_data_array_release(data);
+		load_bindings(hotkey, new_data);
+		obs_data_array_release(new_data);
 
 		context_add_hotkey(context, result);
 	}

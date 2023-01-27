@@ -320,7 +320,7 @@ static void lookup_addfiledata(struct text_lookup *lookup,
 		leaf->value = convert_string(value.array, value.len);
 
 		for (size_t i = 0; i < name.len; i++)
-			leaf->lookup[i] = toupper(leaf->lookup[i]);
+			leaf->lookup[i] = (char)toupper(leaf->lookup[i]);
 
 		lookup_addstring(leaf->lookup, leaf, lookup->top);
 

@@ -1559,10 +1559,10 @@ EXPORT void obs_source_media_ended(obs_source_t *source);
 
 /* ------------------------------------------------------------------------- */
 /* Transition-specific functions */
-enum obs_transition_target {
+typedef enum obs_transition_target {
 	OBS_TRANSITION_SOURCE_A,
 	OBS_TRANSITION_SOURCE_B,
-};
+} obs_transition_target_t;
 
 EXPORT obs_source_t *
 obs_transition_get_source(obs_source_t *transition,
