@@ -26,7 +26,7 @@
 #include <string.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-int eia608_row_map[] = { 10, -1, 0, 1, 2, 3, 11, 12, 13, 14, 4, 5, 6, 7, 8, 9 };
+int8_t eia608_row_map[] = { 10, -1, 0, 1, 2, 3, 11, 12, 13, 14, 4, 5, 6, 7, 8, 9 };
 int eia608_reverse_row_map[] = { 2, 3, 4, 5, 10, 11, 12, 13, 14, 15, 0, 6, 7, 8, 9, 1 };
 
 const char* eia608_style_map[] = {
@@ -50,7 +50,7 @@ uint16_t eia608_row_column_pramble(int row, int col, int chan, int underline) { 
 uint16_t eia608_row_style_pramble(int row, int chan, eia608_style_t style, int underline) { return eia608_row_pramble(row, chan, style, underline); }
 uint16_t eia608_midrow_change(int chan, eia608_style_t style, int underline) { return eia608_parity(0x1120 | ((chan << 11) & 0x0800) | ((style << 1) & 0x000E) | (underline & 0x0001)); }
 
-int eia608_parse_preamble(uint16_t cc_data, int* row, int* col, eia608_style_t* style, int* chan, int* underline)
+int eia608_parse_preamble(uint16_t cc_data, int8_t* row, int8_t* col, eia608_style_t* style, int* chan, int* underline)
 {
     (*row) = eia608_row_map[((0x0700 & cc_data) >> 7) | ((0x0020 & cc_data) >> 5)];
     (*chan) = !!(0x0800 & cc_data);
@@ -91,15 +91,15 @@ eia608_control_t eia608_parse_control(uint16_t cc_data, int* cc)
     }
 }
 
-uint16_t eia608_control_command(eia608_control_t cmd, int cc)
+eia608_control_t eia608_control_command(eia608_control_t cmd, int cc)
 {
     uint16_t c = (cc & 0x01) ? 0x0800 : 0x0000;
     uint16_t f = (cc & 0x02) ? 0x0100 : 0x0000;
 
     if (eia608_tab_offset_0 == (eia608_control_t)(cmd & 0xFFC0)) {
-        return (eia608_control_t)eia608_parity(cmd | c);
+        return eia608_parity((uint16_t)(cmd | c));
     } else {
-        return (eia608_control_t)eia608_parity(cmd | c | f);
+        return eia608_parity((uint16_t)(cmd | c | f));
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -198,7 +198,8 @@ void eia608_dump(uint16_t cc_data)
     const char* text = 0;
     char char1[5], char2[5];
     char1[0] = char2[0] = 0;
-    int row, col, chan, underline;
+    int8_t row, col;
+    int chan, underline;
 
     if (!eia608_parity_varify(cc_data)) {
         text = "parity failed";
