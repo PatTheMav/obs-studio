@@ -56,6 +56,7 @@ package() {
     macos-x86_64
     macos-arm64
     linux-x86_64
+    linux-aarch64
   )
   local -r -a _valid_configs=(Debug RelWithDebInfo Release MinSizeRel)
   local -i _skip_pack=0
@@ -176,6 +177,31 @@ Usage: %B${functrace[1]%:*}%b <option> [<options>]
         log_error "Notarization failed - use 'xcrun notarytool log <Submission ID>' to check for errors.'"
         return 2
       }
+    }
+  } elif [[ ${target_os} == 'linux' ]] {
+    if (( ! _skip_pack )) {
+      local -a cpack_args=()
+      if (( _loglevel > 1 )) cpack_args+=(--verbose)
+
+      pushd ${project_root}/build_${target##*-}
+      cpack -C ${BUILD_CONFIG:-RelWithDebInfo} ${cpack_args}
+
+      if (( ${+CI} )) {
+        deb_package=(obs-studio-*.deb(om))
+        deb_dbg_package=(obs-studio-*.ddeb(om))
+
+        if (( ! ${#deb_package} )) {
+          log_error 'No generated debian package found. Check the CPack output for errors.'
+          return 2
+        }
+
+        local ubuntu_version=$(lsb_release -sr)
+        mv ${deb_package[1]} ${${deb_package[1]}//-Linux.deb/-ubuntu-${ubuntu_version}-${target##*-}.deb}
+
+        if (( ${#deb_dbg_package} )) mv ${deb_dbg_package[1]} ${${deb_dbg_package[1]}//-Linux-dbgsym.ddeb/-ubuntu-${ubuntu_version}-${target##*-}-dbgsym.ddeb}
+      }
+
+      popd
     }
   }
 }
