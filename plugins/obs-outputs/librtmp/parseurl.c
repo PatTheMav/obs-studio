@@ -91,11 +91,11 @@ parsehost:
     {
         int hostlen;
         if(slash)
-            hostlen = slash - p;
+            hostlen = (int)(slash - p);
         else
-            hostlen = end - p;
+            hostlen = (int)(end - p);
         if(col && col -p < hostlen)
-            hostlen = col - p;
+            hostlen = (int)(col - p);
 
         if(hostlen < 256)
         {
@@ -189,7 +189,7 @@ void RTMP_ParsePlaypath(AVal *in, AVal *out)
         temp = strchr(ppstart, '&');
         if (temp)
         {
-            pplen = temp-ppstart;
+            pplen = (int)(temp - ppstart);
         }
     }
 
@@ -262,7 +262,7 @@ void RTMP_ParsePlaypath(AVal *in, AVal *out)
         {
             unsigned int c;
             sscanf(p+1, "%02x", &c);
-            *destptr++ = c;
+            *destptr++ = (char)c;
             pplen -= 3;
             p += 3;
         }
@@ -275,5 +275,5 @@ void RTMP_ParsePlaypath(AVal *in, AVal *out)
     *destptr = '\0';
 
     out->av_val = streamname;
-    out->av_len = destptr - streamname;
+    out->av_len = (int)(destptr - streamname);
 }

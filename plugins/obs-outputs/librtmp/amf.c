@@ -38,7 +38,7 @@ AMF_DecodeInt16(const char *data)
 {
     unsigned char *c = (unsigned char *) data;
     unsigned short val;
-    val = (c[0] << 8) | c[1];
+    val = (unsigned short)((c[0] << 8) | c[1]);
     return val;
 }
 
@@ -147,9 +147,9 @@ AMF_EncodeInt24(char *output, char *outend, int nVal)
     if (output+3 > outend)
         return NULL;
 
-    output[2] = nVal & 0xff;
-    output[1] = nVal >> 8;
-    output[0] = nVal >> 16;
+    output[2] = (char)(nVal & 0xff);
+    output[1] = (char)(nVal >> 8);
+    output[0] = (char)(nVal >> 16);
     return output+3;
 }
 
@@ -159,10 +159,10 @@ AMF_EncodeInt32(char *output, char *outend, int nVal)
     if (output+4 > outend)
         return NULL;
 
-    output[3] = nVal & 0xff;
-    output[2] = nVal >> 8;
-    output[1] = nVal >> 16;
-    output[0] = nVal >> 24;
+    output[3] = (char)(nVal & 0xff);
+    output[2] = (char)(nVal >> 8);
+    output[1] = (char)(nVal >> 16);
+    output[0] = (char)(nVal >> 24);
     return output+4;
 }
 
@@ -177,7 +177,7 @@ AMF_EncodeString(char *output, char *outend, const AVal *bv)
     {
         *output++ = AMF_STRING;
 
-        output = AMF_EncodeInt16(output, outend, bv->av_len);
+        output = AMF_EncodeInt16(output, outend, (short)bv->av_len);
     }
     else
     {
@@ -270,7 +270,7 @@ AMF_EncodeNamedString(char *output, char *outend, const AVal *strName, const AVa
 {
     if (output+2+strName->av_len > outend)
         return NULL;
-    output = AMF_EncodeInt16(output, outend, strName->av_len);
+    output = AMF_EncodeInt16(output, outend, (short)strName->av_len);
 
     memcpy(output, strName->av_val, strName->av_len);
     output += strName->av_len;
@@ -283,7 +283,7 @@ AMF_EncodeNamedNumber(char *output, char *outend, const AVal *strName, double dV
 {
     if (output+2+strName->av_len > outend)
         return NULL;
-    output = AMF_EncodeInt16(output, outend, strName->av_len);
+    output = AMF_EncodeInt16(output, outend, (short)strName->av_len);
 
     memcpy(output, strName->av_val, strName->av_len);
     output += strName->av_len;
@@ -296,7 +296,7 @@ AMF_EncodeNamedBoolean(char *output, char *outend, const AVal *strName, int bVal
 {
     if (output+2+strName->av_len > outend)
         return NULL;
-    output = AMF_EncodeInt16(output, outend, strName->av_len);
+    output = AMF_EncodeInt16(output, outend, (short)strName->av_len);
 
     memcpy(output, strName->av_val, strName->av_len);
     output += strName->av_len;
@@ -369,7 +369,7 @@ AMFProp_Encode(AMFObjectProperty *prop, char *pBuffer, char *pBufEnd)
 
     if (prop->p_type != AMF_NULL && prop->p_name.av_len)
     {
-        *pBuffer++ = prop->p_name.av_len >> 8;
+        *pBuffer++ = (char)(prop->p_name.av_len >> 8);
         *pBuffer++ = prop->p_name.av_len & 0xff;
         memcpy(pBuffer, prop->p_name.av_val, prop->p_name.av_len);
         pBuffer += prop->p_name.av_len;
@@ -694,7 +694,7 @@ AMFProp_Decode(AMFObjectProperty *prop, const char *pBuffer, int nSize,
     }
     case AMF_OBJECT:
     {
-        int nRes = AMF_Decode(&prop->p_vu.p_object, pBuffer, nSize, TRUE);
+        nRes = AMF_Decode(&prop->p_vu.p_object, pBuffer, nSize, TRUE);
         if (nRes == -1)
             return -1;
         nSize -= nRes;
@@ -784,7 +784,7 @@ AMFProp_Decode(AMFObjectProperty *prop, const char *pBuffer, int nSize,
     }
     case AMF_AVMPLUS:
     {
-        int nRes = AMF3_Decode(&prop->p_vu.p_object, pBuffer, nSize, TRUE);
+        nRes = AMF3_Decode(&prop->p_vu.p_object, pBuffer, nSize, TRUE);
         if (nRes == -1)
             return -1;
         nSize -= nRes;
@@ -1161,7 +1161,7 @@ AMF3_Decode(AMFObject *obj, const char *pBuffer, int nSize, int bAMFData)
             }
             if (cd.cd_dynamic)
             {
-                int len = 0;
+                len = 0;
 
                 do
                 {
