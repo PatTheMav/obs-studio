@@ -151,7 +151,8 @@ libcaption_stauts_t caption_frame_end(caption_frame_t* frame)
 libcaption_stauts_t caption_frame_decode_preamble(caption_frame_t* frame, uint16_t cc_data)
 {
     eia608_style_t sty;
-    int row, col, chn, uln;
+    int8_t row, col;
+    int chn, uln;
 
     if (eia608_parse_preamble(cc_data, &row, &col, &sty, &chn, &uln)) {
         frame->state.row = row;

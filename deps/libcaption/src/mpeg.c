@@ -274,8 +274,8 @@ size_t sei_render(sei_t* sei, uint8_t* data)
     ++data;
 
     for (msg = sei_message_head(sei); msg; msg = sei_message_next(msg)) {
-        int payloadType = sei_message_type(msg);
-        int payloadSize = (int)sei_message_size(msg);
+        sei_msgtype_t payloadType = sei_message_type(msg);
+        size_t payloadSize = sei_message_size(msg);
         uint8_t* payloadData = sei_message_data(msg);
 
         while (255 <= payloadType) {
@@ -285,7 +285,7 @@ size_t sei_render(sei_t* sei, uint8_t* data)
             payloadType -= 255;
         }
 
-        (*data) = payloadType;
+        (*data) = (uint8_t)payloadType;
         ++data;
         ++size;
 
@@ -296,7 +296,7 @@ size_t sei_render(sei_t* sei, uint8_t* data)
             payloadSize -= 255;
         }
 
-        (*data) = payloadSize;
+        (*data) = (uint8_t)payloadSize;
         ++data;
         ++size;
 
@@ -420,13 +420,13 @@ void sei_encode_eia608(sei_t* sei, cea708_t* cea708, uint16_t cc_data)
     }
 
     if (0 == cea708->user_data.cc_count) { // This is a new 708 header, but a continuation of a 608 stream
-        cea708_add_cc_data(cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
-        cea708_add_cc_data(cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
+        cea708_add_cc_data(cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
+        cea708_add_cc_data(cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
     }
 
     if (0 == cc_data) { // Finished
-        sei_encode_eia608(sei, cea708, eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
-        sei_encode_eia608(sei, cea708, eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
+        sei_encode_eia608(sei, cea708, (uint16_t)eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
+        sei_encode_eia608(sei, cea708, (uint16_t)eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
         sei_append_708(sei, cea708);
         return;
     }
@@ -446,8 +446,8 @@ libcaption_stauts_t sei_from_caption_frame(sei_t* sei, caption_frame_t* frame)
 
     sei_init(sei, frame->timestamp);
     cea708_init(&cea708, frame->timestamp); // set up a new popon frame
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_erase_non_displayed_memory, DEFAULT_CHANNEL));
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_erase_non_displayed_memory, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
 
     for (r = 0; r < SCREEN_ROWS; ++r) {
         prev_unl = 0, prev_styl = eia608_style_white;
@@ -514,7 +514,7 @@ libcaption_stauts_t sei_from_caption_frame(sei_t* sei, caption_frame_t* frame)
                 // specialna are treated as control charcters. Duplicated control charcters are discarded
                 // So we write a resume after a specialna as a noop to break repetition detection
                 // TODO only do this if the same charcter is repeated
-                sei_encode_eia608(sei, &cea708, eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
+                sei_encode_eia608(sei, &cea708, (uint16_t)eia608_control_command(eia608_control_resume_caption_loading, DEFAULT_CHANNEL));
             }
         }
 
@@ -554,12 +554,12 @@ libcaption_stauts_t sei_from_caption_clear(sei_t* sei)
 {
     cea708_t cea708;
     cea708_init(&cea708, sei->timestamp); // set up a new popon frame
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_erase_non_displayed_memory, DEFAULT_CHANNEL));
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_erase_non_displayed_memory, DEFAULT_CHANNEL));
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_erase_display_memory, DEFAULT_CHANNEL));
-    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, eia608_control_command(eia608_control_erase_display_memory, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_end_of_caption, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_erase_non_displayed_memory, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_erase_non_displayed_memory, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_erase_display_memory, DEFAULT_CHANNEL));
+    cea708_add_cc_data(&cea708, 1, cc_type_ntsc_cc_field_1, (uint16_t)eia608_control_command(eia608_control_erase_display_memory, DEFAULT_CHANNEL));
     sei_append_708(sei, &cea708);
     return LIBCAPTION_OK;
 }

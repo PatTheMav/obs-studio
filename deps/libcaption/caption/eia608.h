@@ -125,7 +125,7 @@ typedef enum {
 /*! \brief
     \param
 */
-int eia608_parse_preamble(uint16_t cc_data, int* row, int* col, eia608_style_t* style, int* chan, int* underline);
+int eia608_parse_preamble(uint16_t cc_data, int8_t* row, int8_t* col, eia608_style_t* style, int* chan, int* underline);
 /*! \brief
     \param
 */
@@ -169,11 +169,11 @@ typedef enum {
 /*! \brief
     \param
 */
-uint16_t eia608_control_command(eia608_control_t cmd, int cc);
+eia608_control_t eia608_control_command(eia608_control_t cmd, int cc);
 /*! \brief
     \param
 */
-static inline uint16_t eia608_tab(int size, int cc) { return eia608_control_command((eia608_control_t)(eia608_tab_offset_0 | (size & 0x0F)), cc); }
+static inline uint16_t eia608_tab(int size, int cc) { return (uint16_t)eia608_control_command((eia608_control_t)(eia608_tab_offset_0 | (size & 0x0F)), cc); }
 /*! \brief
     \param
 */
