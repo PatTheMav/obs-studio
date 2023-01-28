@@ -63,3 +63,8 @@ public:
 	static std::shared_ptr<Auth> Login(QWidget *parent,
 					   const std::string &service);
 };
+
+const char *youtubeClientId;
+const char *youtubeSecret;
+const uint64_t youtubeClientIdHash;
+const uint64_t youtubeSecretHash;

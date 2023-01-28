@@ -94,3 +94,8 @@ private:
 	QString lastErrorMessage;
 	QString lastErrorReason;
 };
+
+const char *youtubeClientId;
+const char *youtubeSecret;
+const uint64_t youtubeClientIdHash;
+const uint64_t youtubeSecretHash;
