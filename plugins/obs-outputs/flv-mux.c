@@ -146,7 +146,7 @@ void flv_meta_data(obs_output_t *context, uint8_t **output, size_t *size,
 		s_wb32(&s, 0);
 	}
 
-	start_pos = serializer_get_pos(&s);
+	start_pos = (uint32_t)serializer_get_pos(&s);
 
 	s_w8(&s, RTMP_PACKET_TYPE_INFO);
 
@@ -388,16 +388,16 @@ void flv_additional_meta_data(obs_output_t *context, uint8_t **data,
 static inline void s_u29(struct serializer *s, uint32_t val)
 {
 	if (val <= 0x7F) {
-		s_w8(s, val);
+		s_w8(s, (uint8_t)val);
 	} else if (val <= 0x3FFF) {
-		s_w8(s, 0x80 | (val >> 7));
+		s_w8(s, 0x80 | (uint8_t)(val >> 7));
 		s_w8(s, val & 0x7F);
 	} else if (val <= 0x1FFFFF) {
-		s_w8(s, 0x80 | (val >> 14));
+		s_w8(s, 0x80 | (uint8_t)(val >> 14));
 		s_w8(s, 0x80 | ((val >> 7) & 0x7F));
 		s_w8(s, val & 0x7F);
 	} else {
-		s_w8(s, 0x80 | (val >> 22));
+		s_w8(s, 0x80 | (uint8_t)(val >> 22));
 		s_w8(s, 0x80 | ((val >> 15) & 0x7F));
 		s_w8(s, 0x80 | ((val >> 8) & 0x7F));
 		s_w8(s, val & 0xFF);

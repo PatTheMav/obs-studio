@@ -442,10 +442,13 @@ static int send_packet(struct rtmp_stream *stream,
 
 	if (idx > 0) {
 		flv_additional_packet_mux(
-			packet, is_header ? 0 : stream->start_dts_offset, &data,
-			&size, is_header, idx);
+			packet,
+			is_header ? 0 : (int32_t)stream->start_dts_offset,
+			&data, &size, is_header, idx);
 	} else {
-		flv_packet_mux(packet, is_header ? 0 : stream->start_dts_offset,
+		flv_packet_mux(packet,
+			       is_header ? 0
+					 : (int32_t)stream->start_dts_offset,
 			       &data, &size, is_header);
 	}
 
@@ -893,8 +896,8 @@ static int init_send(struct rtmp_stream *stream)
 		if (vencoder) {
 			obs_data_t *params = obs_encoder_get_settings(vencoder);
 			if (params) {
-				int bitrate =
-					obs_data_get_int(params, "bitrate");
+				int bitrate = (int)obs_data_get_int(params,
+								    "bitrate");
 				if (!bitrate) {
 					warn("Video encoder didn't return a "
 					     "valid bitrate, new network "
@@ -913,8 +916,8 @@ static int init_send(struct rtmp_stream *stream)
 		if (aencoder) {
 			obs_data_t *params = obs_encoder_get_settings(aencoder);
 			if (params) {
-				int bitrate =
-					obs_data_get_int(params, "bitrate");
+				int bitrate = (int)obs_data_get_int(params,
+								    "bitrate");
 				if (!bitrate)
 					bitrate = 160;
 				total_bitrate += bitrate;

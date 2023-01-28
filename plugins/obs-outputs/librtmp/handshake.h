@@ -265,21 +265,21 @@ static void rtmpe8_sig(uint8_t *in, uint8_t *out, int keyid)
         v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + k[(sum>>11) & 3]);
     }
 
-    out[0] = v0;
+    out[0] = (uint8_t)v0;
     v0 >>= 8;
-    out[1] = v0;
+    out[1] = (uint8_t)v0;
     v0 >>= 8;
-    out[2] = v0;
+    out[2] = (uint8_t)v0;
     v0 >>= 8;
-    out[3] = v0;
+    out[3] = (uint8_t)v0;
 
-    out[4] = v1;
+    out[4] = (uint8_t)v1;
     v1 >>= 8;
-    out[5] = v1;
+    out[5] = (uint8_t)v1;
     v1 >>= 8;
-    out[6] = v1;
+    out[6] = (uint8_t)v1;
     v1 >>= 8;
-    out[7] = v1;
+    out[7] = (uint8_t)v1;
 }
 
 /* RTMPE type 9 uses Blowfish on the regular signature
