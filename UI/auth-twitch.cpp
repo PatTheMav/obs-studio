@@ -27,6 +27,11 @@ using namespace json11;
 
 #define TWITCH_SCOPE_VERSION 1
 
+const char *twitchClientId = "@TWITCH_CLIENTID@";
+// clang-format off
+const uint64_t twitchhash = 0x@TWITCH_HASH@;
+// clang-format on
+
 static Auth::Def twitchDef = {"Twitch", Auth::Type::OAuth_StreamKey};
 
 /* ------------------------------------------------------------------------- */
@@ -51,8 +56,8 @@ TwitchAuth::TwitchAuth(const Def &d) : OAuthStreamKey(d)
 
 bool TwitchAuth::MakeApiRequest(const char *path, Json &json_out)
 {
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
 	std::string url = "https://api.twitch.tv/helix/";
 	url += std::string(path);
@@ -104,8 +109,8 @@ bool TwitchAuth::MakeApiRequest(const char *path, Json &json_out)
 
 bool TwitchAuth::GetChannelInfo()
 try {
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
 	if (!GetToken(TWITCH_TOKEN_URL, client_id, TWITCH_SCOPE_VERSION))
 		return false;
@@ -453,8 +458,8 @@ bool TwitchAuth::RetryLogin()
 
 	std::shared_ptr<TwitchAuth> auth =
 		std::make_shared<TwitchAuth>(twitchDef);
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
 	return GetToken(TWITCH_TOKEN_URL, client_id, TWITCH_SCOPE_VERSION,
 			QT_TO_UTF8(login.GetCode()), true);
@@ -470,8 +475,8 @@ std::shared_ptr<Auth> TwitchAuth::Login(QWidget *parent, const std::string &)
 	std::shared_ptr<TwitchAuth> auth =
 		std::make_shared<TwitchAuth>(twitchDef);
 
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
 	if (!auth->GetToken(TWITCH_TOKEN_URL, client_id, TWITCH_SCOPE_VERSION,
 			    QT_TO_UTF8(login.GetCode()))) {

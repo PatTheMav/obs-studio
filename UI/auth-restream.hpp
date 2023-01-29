@@ -32,3 +32,6 @@ public:
 	static std::shared_ptr<Auth> Login(QWidget *parent,
 					   const std::string &service_name);
 };
+
+const char *restreamClientId;
+const uint64_t restreamHash;
