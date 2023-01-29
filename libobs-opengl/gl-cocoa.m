@@ -78,11 +78,10 @@ static NSOpenGLContext *gl_context_create(NSOpenGLContext *share)
 	return context;
 }
 
-struct gl_platform *gl_platform_create(gs_device_t *device, uint32_t adapter)
+struct gl_platform *gl_platform_create(gs_device_t *device
+				       __attribute__((unused)),
+				       uint32_t adapter __attribute__((unused)))
 {
-	UNUSED_PARAMETER(device);
-	UNUSED_PARAMETER(adapter);
-
 	NSOpenGLContext *context = gl_context_create(nil);
 	if (!context) {
 		blog(LOG_ERROR, "gl_context_create failed");
@@ -91,10 +90,8 @@ struct gl_platform *gl_platform_create(gs_device_t *device, uint32_t adapter)
 
 	[context makeCurrentContext];
 	GLint interval = 0;
-	PRAGMA_WARN_PUSH
-	PRAGMA_WARN_DEPRECATION
-	[context setValues:&interval forParameter:NSOpenGLCPSwapInterval];
-	PRAGMA_WARN_POP
+	[context setValues:&interval
+		forParameter:NSOpenGLContextParameterSwapInterval];
 	const bool success = gladLoadGL() != 0;
 
 	if (!success) {
@@ -140,13 +137,14 @@ bool gl_platform_init_swapchain(struct gs_swap_chain *swap)
 		CGLLockContext(context_obj);
 
 		[context makeCurrentContext];
-		PRAGMA_WARN_PUSH
-		PRAGMA_WARN_DEPRECATION
+
+#pragma clang diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		[context setView:swap->wi->view];
+#pragma clang diagnostic pop
 		GLint interval = 0;
 		[context setValues:&interval
-			forParameter:NSOpenGLCPSwapInterval];
-		PRAGMA_WARN_POP
+			forParameter:NSOpenGLContextParameterSwapInterval];
 		gl_gen_framebuffers(1, &swap->wi->fbo);
 		gl_bind_framebuffer(GL_FRAMEBUFFER, swap->wi->fbo);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
@@ -352,10 +350,17 @@ gs_texture_t *device_texture_create_from_iosurface(gs_device_t *device,
 	struct gs_texture_2d *tex = bzalloc(sizeof(struct gs_texture_2d));
 
 	OSType pf = IOSurfaceGetPixelFormat(ref);
-	const bool l10r = pf == 'l10r';
+
+	FourCharCode l10r_code = 0;
+	l10r_code = ('l' << 24) | ('1' << 16) | ('0' << 8) | 'r';
+
+	FourCharCode bgra_code = 0;
+	bgra_code = ('B' << 24) | ('G' << 16) | ('R' << 8) | 'A';
+
+	const bool l10r = pf == l10r_code;
 	if (pf == 0)
 		blog(LOG_ERROR, "Invalid IOSurface Buffer");
-	else if ((pf != 'BGRA') && !l10r)
+	else if ((pf != bgra_code) && !l10r)
 		blog(LOG_ERROR, "Unexpected pixel format: %d (%c%c%c%c)", pf,
 		     pf >> 24, pf >> 16, pf >> 8, pf);
 
@@ -374,8 +379,8 @@ gs_texture_t *device_texture_create_from_iosurface(gs_device_t *device,
 	tex->base.is_dynamic = false;
 	tex->base.is_render_target = false;
 	tex->base.gen_mipmaps = false;
-	tex->width = IOSurfaceGetWidth(ref);
-	tex->height = IOSurfaceGetHeight(ref);
+	tex->width = (uint32_t)IOSurfaceGetWidth(ref);
+	tex->height = (uint32_t)IOSurfaceGetHeight(ref);
 
 	if (!gl_gen_textures(1, &tex->base.texture))
 		goto fail;
@@ -434,19 +439,25 @@ bool gs_texture_rebind_iosurface(gs_texture_t *texture, void *iosurf)
 	if (!iosurf)
 		return false;
 
+	FourCharCode l10r_code = 0;
+	l10r_code = ('l' << 24) | ('1' << 16) | ('0' << 8) | 'r';
+
+	FourCharCode bgra_code = 0;
+	bgra_code = ('B' << 24) | ('G' << 16) | ('R' << 8) | 'A';
+
 	struct gs_texture_2d *tex = (struct gs_texture_2d *)texture;
 	IOSurfaceRef ref = (IOSurfaceRef)iosurf;
 
 	OSType pf = IOSurfaceGetPixelFormat(ref);
 	if (pf == 0) {
 		blog(LOG_ERROR, "Invalid IOSurface buffer");
-	} else if ((pf != 'BGRA') && (pf != 'l10r')) {
+	} else if ((pf != bgra_code) && (pf != l10r_code)) {
 		blog(LOG_ERROR, "Unexpected pixel format: %d (%c%c%c%c)", pf,
 		     pf >> 24, pf >> 16, pf >> 8, pf);
 	}
 
-	tex->width = IOSurfaceGetWidth(ref);
-	tex->height = IOSurfaceGetHeight(ref);
+	tex->width = (uint32_t)IOSurfaceGetWidth(ref);
+	tex->height = (uint32_t)IOSurfaceGetHeight(ref);
 
 	if (!gl_bind_texture(tex->base.gl_target, tex->base.texture))
 		return false;
