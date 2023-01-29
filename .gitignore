@@ -3,18 +3,14 @@
 *.dll
 *.dylib
 *.so
+*.plugin
+*.framework
+*.systemextension
 
 #cmake
-/cmbuild/
-/build/
-/build32/
-/build64/
-/release/
-/release32/
-/release64/
-/debug/
-/debug32/
-/debug64/
+/build*/
+/release*/
+/debug*/
 /builds/
 .vs/
 *.o.d
