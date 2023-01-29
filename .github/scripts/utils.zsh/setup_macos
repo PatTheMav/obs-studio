@@ -67,7 +67,12 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
           typeset -g OBS_DEPS_VERSION=${deps_version}
           ;;
         qt*)
-          _filename="macos-deps-qt${QT_VERSION}-${deps_version}-${target##*-}.tar.xz"
+          if (( ${+CI} )) {
+            _filename="macos-deps-qt${QT_VERSION}-${deps_version}-universal.tar.xz"
+            deps_hash="$(jq -r '.dependencies.qt6.hashes["macos-universal"]' ${buildspec_file})"
+          } else {
+            _filename="macos-deps-qt${QT_VERSION}-${deps_version}-${target##*-}.tar.xz"
+          }
           _url="${deps_baseurl}/${deps_version}/${_filename}"
           _target="obs-deps-${deps_version}-${target##*-}"
           ;;
@@ -105,9 +110,9 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
         mkdir -p ${_target} && pushd ${_target}
 
         if [[ ${dependency} == 'vlc' ]] {
-          XZ_OPT=-T0 tar --strip-components 1 -xzf ../${_filename} && log_status "${deps_label} extracted."
+          XZ_OPT=-T0 tar --strip-components 1 -xJf ../${_filename} && log_status "${deps_label} extracted."
         } elif [[ ${dependency} == 'sparkle' ]] {
-          XZ_OPT=-T0 tar -xzf ../${_filename} && log_status "${deps_label} extracted."
+          XZ_OPT=-T0 tar -xJf ../${_filename} && log_status "${deps_label} extracted."
 
           if (( ${+CODESIGN} )) {
             log_info "Codesigning Sparkle Framework..."
@@ -121,7 +126,7 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
             ditto -rsrc ${file} ../obs-deps-${OBS_DEPS_VERSION}-${target##*-}/lib/${file:A:t}
           }
         } else {
-          XZ_OPT=-T0 tar -xzf ../${_filename} && log_status "${deps_label} extracted."
+          XZ_OPT=-T0 tar -xJf ../${_filename} && log_status "${deps_label} extracted."
         }
         popd
       }
@@ -159,7 +164,7 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
         log_status "Checksum of downloaded ${deps_label} matches."
         mkdir -p ${_target} && pushd ${_target}
 
-        XZ_OPT=-T0 tar --strip-components 1 -xzf ../${_filename} && log_status "${deps_label} extracted."
+        XZ_OPT=-T0 tar --strip-components 1 -xJf ../${_filename} && log_status "${deps_label} extracted."
 
         log_info "Fixing test targets..."
         /usr/bin/sed -i '.orig' '/add_subdirectory(tests\/ceftests)/d' ./CMakeLists.txt
@@ -207,4 +212,15 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
   xattr -r -d com.apple.quarantine *
   log_status 'Removed quarantine flag from downloaded dependencies...'
   popd
+} else {
+  local deps_version
+  local vlc_version
+  local cef_version
+  read -r deps_version vlc_version cef_version <<< \
+    "$(jq -r '.dependencies | [.prebuilt.version, .vlc.version, .cef.version] | join(" ")' \
+    ${buildspec_file})"
+
+  typeset -g OBS_DEPS_VERSION=${deps_version}
+  typeset -g CEF_VERSION=${cef_version}
+  typeset -g VLC_VERSION=${vlc_version}
 }
