@@ -1,0 +1,92 @@
+name: 'Setup and build obs-studio'
+description: 'Builds obs-studio for specified architecture and build config.'
+inputs:
+  target:
+    description: 'Build target for dependencies'
+    required: true
+  config:
+    description: 'Build configuration'
+    required: false
+    default: 'Release'
+  codesign:
+    description: 'Enable codesigning (macOS only)'
+    required: false
+    default: 'false'
+  codesignIdent:
+    description: 'Developer ID for application codesigning (macOS only)'
+    required: false
+    default: '-'
+  codesignTeam:
+    description: 'Team ID for application codesigning (macOS only)'
+    required: false
+    default: ''
+  generator:
+    description: 'CMake generator'
+    required: false
+    default: 'Ninja'
+  release:
+    description: 'Enable release configuration'
+    required: false
+    default: 'false'
+  workingDirectory:
+    description: 'Working directory for packaging'
+    required: false
+    default: ${{ github.workspace }}
+runs:
+  using: composite
+  steps:
+    - name: Run macOS Build
+      if: ${{ runner.os == 'macOS' }}
+      shell: zsh {0}
+      env:
+        CODESIGN_TEAM: ${{ inputs.codesignTeam }}
+        CODESIGN_IDENT: ${{ inputs.codesignIdent }}
+      run: |
+        build_args=(
+          -c ${{ inputs.config }}
+          -t macos-${{ inputs.target }}
+          --generator ${{ inputs.generator }}
+        )
+
+        if [[ '${{ inputs.codesign }}' == 'true' ]] build_args+=(-s)
+        if [[ '${{ inputs.release }}' == 'true' ]] build_args+=(--ci-release)
+        if (( ${+CI} && ${+RUNNER_DEBUG} )) build_args+=(--debug)
+
+        git fetch origin --no-tags --no-recurse-submodules -q
+        ${{ inputs.workingDirectory }}/.github/scripts/build-macos.zsh ${build_args}
+
+    - name: Run Ubuntu Build
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        build_args=(
+          -c ${{ inputs.config }}
+          -t linux-${{ inputs.target }}
+          --generator ${{ inputs.generator }}
+        )
+
+        if [[ -n "${CI}" && -n "${RUNNER_DEBUG}" ]]; then
+          build_args+=(--debug)
+        fi
+
+        git fetch origin --no-tags --no-recurse-submodules -q
+        ${{ inputs.workingDirectory }}/.github/scripts/build-linux.sh "${build_args[@]}"
+
+    - name: Run Windows Build
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        $BuildArgs = @{
+          Target = '${{ inputs.target }}'
+          Configuration = '${{ inputs.config }}'
+          CMakeGenerator = '${{ inputs.generator }}'
+        }
+
+        if ( ( Test-Path env:CI ) -and ( Test-Path env:RUNNER_DEBUG ) ) {
+          $BuildArgs += @{
+            Debug = $true
+          }
+        }
+
+        git fetch origin --no-tags --no-recurse-submodules -q
+        ${{ inputs.workingDirectory }}/.github/scripts/Build-Windows.ps1 @BuildArgs
