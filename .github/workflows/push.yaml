@@ -1,0 +1,148 @@
+name: Push to master
+run-name: ${{ github.head_ref }} push run 🚀
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/sphinx/**'
+      - 'UI/forms/**'
+      - 'plugins/rtmp-services/data/services.json'
+      - 'plugins/rtmp-services/data/package.json'
+    branches: [master]
+env:
+  CACHE_REVISION: 001
+permissions:
+  contents: read
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  format-checks:
+    name: Check Code Formatting 🛠️
+    if: ${{ github.event.action != 'labeled' || (github.event.action == 'labeled' && github.event.label.name == 'Seeking Testers') }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: swift-format check 🔥
+        if: ${{ always() }}
+        id: swift-format
+        uses: ./.github/actions/run-swift-format
+        with:
+          failCondition: error
+      - name: clang-format check 🐉
+        if: ${{ always() }}
+        id: clang-format
+        uses: ./.github/actions/run-clang-format
+        with:
+          failCondition: error
+      - name: cmake-format check 🎛️
+        if: ${{ always() }}
+        id: cmake-format
+        uses: ./.github/actions/run-cmake-format
+        with:
+          failCondition: error
+      - name: Code passes formatting validation ✅
+        if: ${{ success() }}
+        run: exit 0
+  macos-check-build:
+    name: Check Compilation for macOS 
+    if: ${{ github.event.action != 'labeled' && ! contains(github.event.pull_request.labels.*.name, 'Seeking Testers') }}
+    runs-on: macos-12
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64, arm64]
+    defaults:
+      run:
+        shell: zsh {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        id: ccache-cache
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache-${{ matrix.target }}-pr-${{ github.head_ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-${{ matrix.target }}-master-
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          print '::group::Clean Homebrew Environment'
+          typeset -a to_remove=()
+
+          for formula (curl) {
+            if [[ -d ${HOMEBREW_PREFIX}/opt/${formula} ]] to_remove+=(${formula})
+          }
+
+          if (( #to_remove > 0 )) brew uninstall --ignore-dependencies ${to_remove}
+          print '::endgroup::'
+
+          print "commitHash=${"$(git rev-parse HEAD)"[0,9]}" >> $GITHUB_OUTPUT
+      - name: Build OBS-Studio 🔨
+        uses: ./.github/actions/build-obs
+        with:
+          target: ${{ matrix.target }}
+          config: RelWithDebInfo
+          codesign: false
+          generator: Ninja
+  ubuntu-check-build:
+    name: Check Compilation for Ubuntu 🐧
+    if: ${{ github.event.action != 'labeled' && ! contains(github.event.pull_request.labels.*.name, 'Seeking Testers') }}
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        id: ccache-cache
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache-x86_64-pr-${{ github.head_ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-x86_64-master-
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          echo "commitHash=$(git rev-parse --short=9 HEAD)" >> $GITHUB_OUTPUT
+      - name: Build OBS-Studio 🔨
+        uses: ./.github/actions/build-obs
+        with:
+          target: x86_64
+          config: RelWithDebInfo
+          generator: Ninja
+  windows-check-build:
+    name: Check Compilation for Windows 🪟
+    if: ${{ github.event.action != 'labeled' && ! contains(github.event.pull_request.labels.*.name, 'Seeking Testers') }}
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          "commitHash=$(git rev-parse --short=9 HEAD)" >> $env:GITHUB_OUTPUT
+      - name: Build OBS-Studio 🔨
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          generator: 'Visual Studio 17 2022'
