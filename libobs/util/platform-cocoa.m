@@ -334,6 +334,15 @@ bool os_get_emulation_status(void)
 #endif
 }
 
+bool is_apple_silicon(void)
+{
+#ifdef __aarch64__
+	return true;
+#else
+	return os_get_emulation_status();
+#endif
+}
+
 static void os_get_cores_internal(void)
 {
 	if (core_count_initialized)
