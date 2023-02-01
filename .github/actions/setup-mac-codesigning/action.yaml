@@ -1,0 +1,109 @@
+name: Setup macOS codesigning
+description: Sets up code signing certificates, provisioning profiles, and notarization information
+inputs:
+  codesignIdentity:
+    description: Codesigning identity
+    required: true
+  codesignCertificate:
+    description: pkcs12 certificate in base64 format
+    required: true
+  certificatePassword:
+    description: Password required to install pkcs12 certificate
+    required: true
+  keychainPassword:
+    description: Password to use for temporary keychain
+    required: false
+  notarizationUser:
+    description: Apple ID to use for notarization
+    required: false
+  notarizationPassword:
+    description: Application password for notarization
+  provisioningProfile:
+    description: Provisioning profile in base64 format
+    required: false
+outputs:
+  haveCodesignIdent:
+    description: True if necessary codesigning credentials were found
+    value: ${{ steps.codesign.outputs.haveCodesignIdent }}
+  haveProvisioningProfile:
+    description: True if necessary provisioning profile credentials were found
+    value: ${{ steps.provisioning.outputs.haveProvisioningProfile }}
+  haveNotarizationUser:
+    description: True if necessary notarization credentials were found
+    value: ${{ steps.notarization.outputs.haveNotarizationUser }}
+runs:
+  using: composite
+  steps:
+    - name: macOS Codesigning ✍️
+      shell: zsh {0}
+      id: codesign
+      env:
+        MACOS_SIGNING_IDENTITY: ${{ inputs.codesignIdentity }}
+        MACOS_SIGNING_CERT: ${{ inputs.codesignCertificate }}
+        MAOCS_SIGNING_CERT_PASSWORD: ${{ inputs.certificatePassword }}
+        MACOS_KEYCHAIN_PASSWORD: ${{ inputs.keychainPassword }}
+      run: |
+        if [[ ${MACOS_SIGNING_IDENTITY} && ${MACOS_SIGNING_CERT} ]] {
+          print 'haveCodesignIdent=true' >> $GITHUB_OUTPUT
+
+          CERTIFICATE_PATH="${RUNNER_TEMP}/build_certificate.p12"
+          KEYCHAIN_PATH="${RUNNER_TEMP}/app-signing.keychain-db"
+
+          print -n "${MACOS_SIGNING_CERT}" | base64 --decode --output "${CERTIFICATE_PATH}"
+
+          : "${MACOS_KEYCHAIN_PASSWORD:="$(LC_CTYPE=C LC_ALL=C tr -dc a-zA-Z0-9-_ < /dev/urandom | head -c 32)"}"
+
+          security create-keychain -p "${MACOS_KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
+          security unlock-keychain -p "${MACOS_KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+
+          security import "${CERTIFICATE_PATH}" -P "${MAOCS_SIGNING_CERT_PASSWORD}" -A \
+            -t cert -f pkcs12 -k "${KEYCHAIN_PATH}" \
+            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcrun
+          security set-key-partition-list -S 'apple-tool:,apple:' -k "${MACOS_KEYCHAIN_PASSWORD}" \
+            "${KEYCHAIN_PATH}" &> /dev/null
+          security list-keychain -d user -s "${KEYCHAIN_PATH}" 'login-keychain'
+
+          print "CODESIGN_IDENT=${MACOS_SIGNING_IDENTITY}" >> $GITHUB_ENV
+          print "MACOS_KEYCHAIN_PASSWORD=${MACOS_KEYCHAIN_PASSWORD}" >> $GITHUB_ENV
+        } else {
+          print 'haveCodesignIdent=false' >> $GITHUB_OUTPUT
+        }
+    - name: Provisioning Profile 👤
+      shell: zsh {0}
+      id: provisioning
+      if: ${{ steps.codesign.outputs.haveCodesignIdent == 'true' }}
+      env:
+          MACOS_SIGNING_PROVISIONING_PROFILE: ${{ inputs.provisioningProfile }}
+      run: |
+        if [[ "${MACOS_SIGNING_PROVISIONING_PROFILE}" ]] {
+          print 'haveProvisioningProfile=true' >> $GITHUB_OUTPUT
+
+          PROFILE_PATH="${RUNNER_TEMP}/build_profile.provisionprofile"
+          print -n "${MACOS_SIGNING_PROVISIONING_PROFILE}" \
+            | base64 --decode --output "${PROFILE_PATH}"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          security cms -D -i "${PROFILE_PATH}" -o "${RUNNER_TEMP}/build_profile.plist"
+          UUID="$(plutil -extract UUID raw "${RUNNER_TEMP}/build_profile.plist")"
+          TEAM_ID="$(plutil -extract TeamIdentifier.0 raw -expect string "${RUNNER_TEMP}/build_profile.plist")"
+
+          cp "${PROFILE_PATH}" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.provisionprofile
+          print "provisioningProfileUUID=${UUID}" >> $GITHUB_OUTPUT
+          print "CODESIGN_IDENT_TEAM=${TEAM_ID}" >> $GITHUB_ENV
+        } else {
+          print 'haveProvisioningProfile=false' >> $GITHUB_OUTPUT
+        }
+    - name: Notarization 🧑‍💼
+      shell: zsh {0}
+      id: notarization
+      if: ${{ steps.codesign.outputs.haveCodesignIdent == 'true' }}
+      env:
+          MACOS_NOTARIZATION_USERNAME: ${{ inputs.notarizationUser }}
+          MACOS_NOTARIZATION_PASSWORD: ${{ inputs.notarizationPassword }}
+      run: |
+        if [[ "${MACOS_NOTARIZATION_USERNAME}" && "${MACOS_NOTARIZATION_PASSWORD}" ]] {
+          print 'haveNotarizationUser=true' >> $GITHUB_OUTPUT
+        } else {
+          print 'haveNotarizationUser=false' >> $GITHUB_OUTPUT
+        }
