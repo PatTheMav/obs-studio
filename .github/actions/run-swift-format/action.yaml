@@ -1,0 +1,32 @@
+name: Run swift-format
+description: Runs swift-format and checks for any changes introduced by it
+inputs:
+  failCondition:
+    description: Should checks result in error response
+    required: false
+    default: 'never'
+  workingDirectory:
+    description: Working directory for checks
+    required: false
+    default: ${{ github.workspace }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System 🏃‍♂️
+      if: ${{ runner.os == 'Windows' }}
+      shell: bash
+      run: echo "services-validation action requires a macOS- or Linux-based runner."; exit 2
+    - name: Install Dependencies
+      run: brew install --quiet zsh
+      shell: bash
+    - run: |
+        git fetch origin --no-tags --no-recurse-submodules -q
+        local -a changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD))
+        if (( ${changes[(I)*.swift]} )) {
+          brew install --quiet swift-format
+          ./.github/scripts/run-swift-format --fail-${{ inputs.failCondition }} --check
+        }
+      id: result
+      name: run-swift-format
+      shell: zsh {0}
+      working-directory: ${{ github.workspace }}
