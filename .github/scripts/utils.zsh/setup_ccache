@@ -9,11 +9,11 @@ if (( ${+commands[ccache]} )) {
   sloppiness=(
     include_file_mtime
     include_file_ctime
-    time_macros
     pch_defines
-    file_stat_matches
     system_headers
   )
+
+  #file_stat_matches time_macros
 
   if [[ ${target_os} == 'macos' ]] {
     ccache --set-config=depend_mode=true
