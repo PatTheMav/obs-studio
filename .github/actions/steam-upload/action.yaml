@@ -1,0 +1,149 @@
+name: Steam Upload
+description: Creates and uploads stable and nightly builds of obs-studio and beta builds (if available)
+inputs:
+  steamSecret:
+    description: Steam auth code
+    required: true
+  steamUser:
+    description: Steam user name
+    required: true
+  steamPassword:
+    description: Steam user password
+    required: true
+  workflowSecret:
+    description: GitHub API token to use for API calls
+    required: true
+  sourcePath:
+    description: Path to obs-studio sources
+    required: false
+    default: ${{ github.workspace }}
+  tagName:
+    description: Tag name to use for packaging
+    required: false
+    default: ''
+  stableBranch:
+    description: Name of the stable branch to use
+    required: false
+    default: 'staging'
+  betaBranch:
+    description: Name of the beta branch to use
+    required: false
+    default: 'beta_staging'
+  nightlyBranch:
+    description: Name of the nightly branch to use
+    required: false
+    default: 'nightly'
+  playtestBranch:
+    description: Name of the playtest branch to use
+    required: false
+    default: 'staging'
+  customAssetWindows:
+    description: Custom asset for Windows
+    required: false
+    default: ''
+  customAssetMacOSApple:
+    description: Custom asset for macOS Apple Silicon
+    required: false
+    default: ''
+  customAssetMacOSIntel:
+    description: Custom asset for macOS Intel
+    required: false
+    default: ''
+  preview:
+    description: Enable preview mode (no uploads done)
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System 🏃‍♂️
+      if: ${{ runner.os == 'macos' || runner.os == 'windows' }}
+      shell: bash
+      run: echo "steam-upload action requires a Linux-based runner."; exit 2
+    - name: Setup Tools 🗜️
+      shell: bash
+      env:
+        SEVENZIP_ARCHIVE: 7z2200-linux-x64.tar.xz
+        SEVENZIP_HASH: 5290409e7bbe2f133d0bd7e7482548678157ea2be276b0f9cb440600f4be9a2d
+      run: ${{ github.workspace }}/.github/scripts/utils.steam/10-setup_tools.sh
+    - name: Compile Build Information 🏷️
+      id: build-info
+      env:
+        windows_asset_custom_url: ${{ inputs.customAssetWindows }}
+        macos_apple_asset_custom_url: ${{ inputs.customAssetMacOSApple }}
+        macos_intel_asset_custom_url: ${{ inputs.customAssetMacOSIntel }}
+      shell: bash
+      run: |
+        opts=()
+        if [[ '${{ inputs.tagName }}‘ != '' ]]; then
+          opts+=(--tag '${{ inputs.tagName }}')
+        fi
+        if [[ '${{ github.event.name == 'scheduled' ]]; then
+          opts+=(--commit "$(git --git-dir="${{ github.workspace }}/${{ inputs.sourcePath }}/.git" rev-parse HEAD)")
+        fi
+        ${{ github.workspace }}/.github/scripts/utils.steam/20-build_info.sh "${opts[@]}"
+    - name: Download nightly builds 📥
+      if: ${{ github.event.name == 'scheduled' }}
+      uses: actions/download-artifact@v3
+      with:
+        path: nightlies
+    - name: Download and prepare builds 📥
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.workflowSecret }}
+      run: |
+        opts=(
+          --windows-asset '${{ steps.build-info.outputs.windows_asset_url }}'
+          --macos-apple-asset '${{ steps.build-info.outputs.macos_apple_asset_url }}'
+          --macos-intel-asset '${{ steps.build-info.outputs.macos_intel_asset_url }}'
+        )
+        if [[ '${{ github.event.name == 'scheduled' ]]; then
+          opts+=(--commit "$(git --git-dir="${{ github.workspace }}/${{ inputs.sourcePath }}/.git" rev-parse --short=9 HEAD)")
+        fi
+        ${{ inputs.workingDirectory }}/.github/scripts/utils.steam/30-package_builds.sh "${opts[@]}"
+    - name: Setup steamcmd 🚂
+      uses: CyberAndrii/setup-steamcmd@e19cd1516315ce46dbfffa47193f92fe42d1419e
+    - name: Generate Steam auth code 🔐
+      id: steam-totp
+      uses: CyberAndrii/steam-totp@0fc9e59dc5bbf4368d23d5a33956f104248da31a
+      with:
+        shared_secret: ${{ inputs.steamSecret }}
+    - name: Upload to Steam 📤
+      shell: bash
+      env:
+        STEAM_USER: ${{ inputs.steamUser }}
+        STEAM_PASSWORD: ${{ inputs.steamPassword }}
+      run: |
+        opts=(
+          --mode release
+          --code '${{ steps.steam-totp.outputs.code }}'
+        )
+        case "${GITHUB_EVENT_NAME}" in
+          schedule) opts+=(--branch '${{ inputs.nightlyBranch }}') ;;
+          release|workflow_dispatch)
+            if [[ '${{ steps.build-info.outputs.is_prerelease' == 'true' ]]; then
+              opts+=(--branch '${{ inputs.betaBranch }}')
+            else
+              opts+=(--branch '${{ inputs.stableBranch }}')
+            fi
+            ;;
+        esac
+        ${{ inputs.workingDirectory }}/.github/scripts/utils.steam/40-steam_upload.sh "${opts[@]}"
+    - name: Upload to Steam (Playtest) 📤
+      shell: bash
+      if: ${{ steps.build-info.outputs.is_prerelease == 'true' }}
+      run: |
+        opts=(
+          --mode playtest
+          --code '${{ steps.steam-totp.outputs.code }}'
+          --branch '${{ inputs.playtestBranch }}'
+        )
+        if [[ '${{ inputs.preview }}' == 'true' ]]; then
+          opts+=(--preview)
+        fi
+        ${{ inputs.workingDirectory }}/.github/scripts/utils.steam/40-steam_upload.sh "${opts[@]}"
+    - name: Upload Steam build logs
+      uses: actions/upload-artifact@v3
+      with:
+        name: steam-build-logs
+        path: ${{ inputs.workingDirectory }}/steam/build/*.log
