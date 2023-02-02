@@ -60,6 +60,10 @@
         "linux-x86_64": {
             "qtVersion": 6,
             "generator": "Ninja"
+        },
+        "linux-aarch64": {
+            "qtVersion": 6,
+            "generator": "Ninja"
         }
     },
     "name": "obs-studio"
