@@ -1,0 +1,45 @@
+name: Scheduled
+run-name: Scheduled Repository Actions ⏰
+on:
+  schedule:
+    - cron: 0 0 * * *
+permissions:
+  contents: read
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  services-validation:
+    name: Check services configuration files 🕵️
+    if: ${{ github.repository_owner == 'obsproject' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check for defunct services 📉
+        uses: ./.github/actions/services-validation
+        with:
+          repositorySecret: ${{ secrets.GITHUB_TOKEN }}
+          runSchemaChecks: 'false'
+          runServiceChecks: 'true'
+  check-and-build:
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit
+  steam-upload:
+    name: Upload Steam builds 🚂
+    if: ${{ github.repository_owner == 'obsproject' }}
+    needs: [check-and-build]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: source
+      - uses: ./.github/actions/steam-upload
+        with:
+          steamSecret: ${{ secrets.STEAM_SHARED_SECRET }}
+          steamUser: ${{ secrets.STEAM_USER }}
+          steamPassword: ${{ secrets.STEAM_PASSWORD }}
+          workflowSecret: ${{ secrets.GITHUB_TOKEN }}
+          sourcePath: ${{ github.workspace }}/source
+          preview: 'true'

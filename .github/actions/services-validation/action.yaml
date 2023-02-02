@@ -1,0 +1,78 @@
+name: Services Validation
+description: Checks services configuration file and checks for defunct services
+inputs:
+  repositorySecret:
+    description: GitHub token for API access
+    required: true
+  runSchemaChecks:
+    description: Enable schema checking
+    required: false
+    default: 'true'
+  runServiceChecks:
+    description: Enable defunct service checking
+    required: false
+    default: 'false'
+outputs:
+  hasDefunctServices:
+    description: True if defunct services were found in configuration
+    value: ${{ steps.check.outputs.make_pr }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System 🏃‍♂️
+      if: ${{ runner.os == 'macos' || runner.os == 'windows' }}
+      shell: bash
+      run: echo "services-validation action requires a Linux-based runner."; exit 2
+    - name: Install and Configure Python 🐍
+      shell: bash
+      run: |
+        sudo apt install python3.9-dev
+        python3.9 -m pip install jsonschema json_source_map requests
+    - name: Validate services file JSON schema 🕵️
+      if: ${{ inputs.runSchemaChecks == 'true' }}
+      shell: bash
+      run: |
+        ## RUN JSON SCHEMA CHECK
+        shopt -s extglob
+        python3.9 ${{ github.workspace }}/.github/scripts/utils.py/check-jsonschema.py ${{ github.workspace }}/plugins/rtmp-services/data/@(services|package).json
+    - name: Annotate schema validation errors 🏷️
+      if: ${{ inputs.runSchemaChecks == 'true' && failure() }}
+      shell: bash
+      uses: yuzutech/annotations-actions@v0.4.0
+      with:
+        repo-token: ${{ inputs.repositorySecret }}
+        title: Service JSON Errors
+        input: ${{ github.workspace }}/validation_errors.json
+    - name: Restore Timestamp Cache ⏳
+      if: ${{ inputs.runServiceChecks == 'true' }}
+      shell: bash
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/other
+        key: service-check-${{ github.run_id }}
+        restore-keys: service-check-
+    - name: Check for defunct services 📉
+      if: ${{ inputs.runServiceChecks == 'true' }}
+      shell: bash
+      id: services-check
+      env:
+        GITHUB_TOKEN: ${{ inputs.repositorySecret }}
+        WORKFLOW_RUN_ID: ${{ github.run_id }}
+        REPOSITORY: ${{ github.repository }}
+      run: python3.9 -u ${{ github.workspace }}/.github/scripts/utils.py/check-services.py
+    - uses: actions/upload-artifact@v3
+      if: ${{ inputs.runServiceChecks == 'true' }}
+      shell: bash
+      with:
+        name: timestamps
+        path: ${{ github.workspace }}/other/*
+    - name: Create pull request 🔧
+      uses: peter-evans/create-pull-request@f094b77505fb89581e68a1163fbd2fffece39da1
+      if: ${{ inputs.runServiceChecks == 'true' && steps.services-check.outputs.make_pr == 'true' }}
+      with:
+        author: 'Service Checker <commits@obsproject.com>'
+        commit-message: 'rtmp-services: Remove defunct servers/services'
+        title: 'rtmp-services: Remove defunct servers/services'
+        branch: 'automated/clean-services'
+        body: ${{ fromJSON(steps.services-check.outputs.pr_message) }}
+        delete-branch: true
