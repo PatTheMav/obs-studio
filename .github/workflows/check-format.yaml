@@ -1,0 +1,78 @@
+name: Check Code Formatting 🛠️
+on:
+  workflow_call:
+jobs:
+  clang-format:
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: swift-format check 🔥
+        id: swift-format
+        uses: ./.github/actions/run-swift-format
+        with:
+          failCondition: error
+  swift-format:
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: swift-format check 🔥
+        id: swift-format
+        uses: ./.github/actions/run-swift-format
+        with:
+          failCondition: error
+  cmake-format:
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: cmake-format check 🎛️
+        id: cmake-format
+        uses: ./.github/actions/run-cmake-format
+        with:
+          failCondition: error
+  qt-xml-validator:
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Check for changed files ✅
+        id: checks
+        shell: bash
+        run: |
+          ## PRE CHECKS SCRIPT
+          git fetch origin --no-tags --no-recurse-submodules -q
+
+          changes=()
+          if [[ "${GITHUB_EVENT_NAME}" == 'push' ]]; then
+            changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- | grep -v 'cmake/*'))
+          else
+            changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- UI/forms))
+          fi
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Qt xml check 🖼️
+        if: ${{ steps.checks.outputs.passed == 'true' }}
+        id: qt-xml-check
+        uses: ./.github/actions/qt-xml-validator
+        with:
+          failCondition: error

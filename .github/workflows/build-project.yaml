@@ -1,0 +1,308 @@
+name: Check And Build
+on:
+  workflow_call:
+jobs:
+  macos-check-build:
+    name: Check Compilation for macOS 🍏
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'labeled' && ! contains(github.event.pull_request.labels.*.name, 'Seeking Testers')) }}
+    runs-on: macos-12
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64, arm64]
+    defaults:
+      run:
+        shell: zsh {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        id: ccache-cache
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache-${{ matrix.target }}-pr-${{ github.head_ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-${{ matrix.target }}-master-
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          print '::group::Clean Homebrew Environment'
+          typeset -a to_remove=()
+
+          for formula (curl) {
+            if [[ -d ${HOMEBREW_PREFIX}/opt/${formula} ]] to_remove+=(${formula})
+          }
+
+          if (( #to_remove > 0 )) brew uninstall --ignore-dependencies ${to_remove}
+          print '::endgroup::'
+
+          print "commitHash=${"$(git rev-parse HEAD)"[0,9]}" >> $GITHUB_OUTPUT
+      - name: Build OBS-Studio 🔨
+        uses: ./.github/actions/build-obs
+        with:
+          target: ${{ matrix.target }}
+          config: RelWithDebInfo
+          codesign: false
+          generator: Ninja
+  macos-app-build:
+    name: Build Application for macOS 🍏
+    runs-on: macos-12
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64, arm64]
+    if: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && ((github.event.action == 'labeled' && github.event.label.name == 'Seeking Testers') || contains(github.event.pull_request.labels.*.name, 'Seeking Testers'))) }}
+    defaults:
+      run:
+        shell: zsh {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        id: ccache-cache
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-xcode-ccache-${{ matrix.target }}-pr-${{ github.head_ref }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-ccache-${{ matrix.target }}-master-
+      - name: Setup Codesigning 🔑
+        uses: ./.github/actions/setup-mac-codesigning
+        id: codesign
+        with:
+          codesignIdentity: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          codesignCertificate: ${{ secrets.MACOS_SIGNING_CERT }}
+          certificatePassword: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+          keychainPassword: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+          provisioningProfile: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          print '::group::Clean Homebrew Environment'
+          typeset -a to_remove=()
+
+          for formula (curl) {
+            if [[ -d ${HOMEBREW_PREFIX}/opt/${formula} ]] to_remove+=(${formula})
+          }
+
+          if (( #to_remove > 0 )) brew uninstall --ignore-dependencies ${to_remove}
+          print '::endgroup::'
+
+          print '::group::Set up Xcode 14.1 🛠️'
+          sudo xcode-select -switch /Applications/Xcode_14.1.app
+          print '::endgroup::'
+
+          local -A arch_names=(x86_64 Intel arm64 Apple)
+          print "cpuName=${arch_names[${{ matrix.target }}]}" >> $GITHUB_OUTPUT
+          print "commitHash=${"$(git rev-parse HEAD)"[0,9]}" >> $GITHUB_OUTPUT
+      - name: Build OBS-Studio 🧱
+        uses: ./.github/actions/build-obs
+        with:
+          target: ${{ matrix.target }}
+          config: RelWithDebInfo
+          codesign: ${{ steps.codesign.outputs.haveCodesignIdent == 'true' }}
+          codesignIdent: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          generator: Xcode
+      - name: Package OBS-Studio 📀
+        uses: ./.github/actions/package-obs
+        with:
+          target: ${{ matrix.target }}
+          config: RelWithDebInfo
+          codesign: ${{ steps.codesign.outputs.haveCodesignIdent == 'true' }}
+          codesignIdent: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      - name: Upload artifacts 📡
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'obs-studio-macos-${{ matrix.target }}-${{ steps.setup.outputs.commitHash }}'
+          path: '${{ github.workspace }}/obs-studio-*-macOS-${{ steps.setup.outputs.cpuName }}.dmg'          
+  ubuntu-check-build:
+    name: Check Compilation for Ubuntu 🐧
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'labeled' && ! contains(github.event.pull_request.labels.*.name, 'Seeking Testers')) }}
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        id: ccache-cache
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache-x86_64-pr-${{ github.head_ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-x86_64-master-
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          echo "commitHash=$(git rev-parse --short=9 HEAD)" >> $GITHUB_OUTPUT
+      - name: Build OBS-Studio 🔨
+        uses: ./.github/actions/build-obs
+        with:
+          target: x86_64
+          config: RelWithDebInfo
+          generator: Ninja
+  ubuntu-app-build:
+    name: Build Application for Ubuntu 🐧
+    runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && ((github.event.action == 'labeled' && github.event.label.name == 'Seeking Testers') || contains(github.event.pull_request.labels.*.name, 'Seeking Testers'))) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        id: ccache-cache
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache-x86_64-pr-${{ github.head_ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-x86_64-master-
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          echo "commitHash=$(git rev-parse --short=9 HEAD)" >> $GITHUB_OUTPUT
+      - name: Build OBS-Studio 🧱
+        uses: ./.github/actions/build-obs
+        with:
+          target: x86_64
+          config: RelWithDebInfo
+      - name: Package OBS-Studio 📀
+        uses: ./.github/actions/package-obs
+        with:
+          target: x86_64
+          config: RelWithDebInfo
+      - name: Upload artifacts 📡
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'obs-studio-ubuntu-22.04-x86_64-${{ steps.setup.outputs.commitHash }}'
+          path: '${{ github.workspace }}/obs-studio-*-ubuntu-22.04-x86_64.deb'
+      - name: Upload debug symbol artifacts 🪲
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'obs-studio-ubuntu-22.04-x86_64-${{ steps.setup.outputs.commitHash }}-dbgsym'
+          path: '${{ github.workspace }}/obs-studio-*-ubuntu-22.04-x86_64-dbgsym.ddeb'
+  flatpak-check-build:
+    name: Build Application for Flatpak 📦
+    runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'labeled' && ! contains(github.event.pull_request.labels.*.name, 'Seeking Testers')) }}
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:kde-6.4
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          echo "commitHash=$(git rev-parse --short=9 HEAD)" >> $GITHUB_OUTPUT
+      - name: Build Flatpak Manifest 🧾
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v5
+        with:
+          build-bundle: false
+          bundle: obs-studio-flatpak-${{ steps.setup.outputs.commitHash }}.flatpak
+          manifest-path: ./.github/scripts/utils.flatpak/com.obsproject.Studio.json
+          cache-key: flatpak-builder-${{ hashFiles('./.github/scripts/utils.flatpak/com.obsproject.Studio.json') }}
+  flatpak-app-build:
+    name: Build Application for Flatpak 📦
+    runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && ((github.event.action == 'labeled' && github.event.label.name == 'Seeking Testers') || contains(github.event.pull_request.labels.*.name, 'Seeking Testers'))) }}
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:kde-6.4
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          echo "commitHash=$(git rev-parse --short=9 HEAD)" >> $GITHUB_OUTPUT
+      - name: Build Flatpak Manifest 🧾
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v5
+        with:
+          build-bundle: true
+          bundle: obs-studio-flatpak-${{ steps.setup.outputs.commitHash }}.flatpak
+          manifest-path: .github/scripts/utils.flatpak/com.obsproject.Studio.json
+          cache-key: flatpak-builder-${{ hashFiles('.github/scripts/utils.flatpak/com.obsproject.Studio.json') }}
+  windows-check-build:
+    name: Check Compilation for Windows 🪟
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'labeled' && ! contains(github.event.pull_request.labels.*.name, 'Seeking Testers')) }}
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          "commitHash=$(git rev-parse --short=9 HEAD)" >> $env:GITHUB_OUTPUT
+      - name: Build OBS-Studio 🔨
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          generator: 'Visual Studio 17 2022'
+  windows-app-build:
+    name: Build Application for Windows 🪟
+    runs-on: windows-2022
+    if: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'pull_request' && ((github.event.action == 'labeled' && github.event.label.name == 'Seeking Testers') || contains(github.event.pull_request.labels.*.name, 'Seeking Testers'))) }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          "commitHash=$(git rev-parse --short=9 HEAD)" >> $env:GITHUB_OUTPUT
+      - name: Build OBS-Studio 🧱
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          generator: 'Visual Studio 17 2022'
+      - name: Package OBS-Studio 📀
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+      - name: Upload artifacts 📡
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'obs-studio-windows-x64-${{ steps.setup.outputs.commitHash }}'
+          path: '${{ github.workspace }}/obs-studio-windows-x64-*.zip'
