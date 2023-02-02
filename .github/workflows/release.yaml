@@ -1,0 +1,47 @@
+name: Release
+run-name: Release Repository Actions 🛫
+on:
+  release:
+    types:
+      - published
+    branches:
+      - master
+      - 'release/**'
+  schedule:
+    - cron: 0,30 * * * *
+permissions:
+  contents: read
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  check-tag:
+    name: Check Release Tag
+    if: ${{ github.repository_owner == 'obsproject' }}
+    runs-on: ubuntu-22.04
+    outputs:
+      validTag: ${{ steps.check.outputs.validTag }}
+      flatpakMatrix: ${{ steps.check.outputs.flatpakMatrix }}
+    steps:
+      - name: Check release tag ☑️
+        id: check
+        run: |
+          shopt -s extglob
+
+          case "${GITHUB_REF##*/}" in
+            +([0-9]).+([0-9]).+([0-9]) )
+              echo 'validTag=true' >> $GITHUB_OUTPUT
+              echo 'flatpakMatrix=["beta", "stable"]' >> $GITHUB_OUTPUT
+              ;;
+            +([0-9]).+([0-9]).+([0-9])-@(beta|rc)*([0-9]) )
+              echo 'validTag=true' >> $GITHUB_OUTPUT
+              echo 'flatpakMatrix=["beta"]' >> $GITHUB_OUTPUT
+              ;;
+            *) echo 'validTag=false' >> $GITHUB_OUTPUT ;;
+          esac
+  publish-build:
+    needs: check-tag
+    if: ${{ needs.check-tag.outputs.validTag == 'true' }}
+    uses: ./.github/workflows/publish.yaml
+    with:
+      flatpakMatrix: ${{ needs.check-tag.outputs.flatpakMatrix }}
