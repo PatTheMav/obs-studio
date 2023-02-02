@@ -17,7 +17,7 @@ concurrency:
 jobs:
   check-tag:
     name: Check Release Tag
-    if: ${{ github.repository_owner == 'obsproject' }}
+    #if: ${{ github.repository_owner == 'obsproject' }}
     runs-on: ubuntu-22.04
     outputs:
       validTag: ${{ steps.check.outputs.validTag }}

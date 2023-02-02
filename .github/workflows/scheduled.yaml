@@ -2,7 +2,7 @@ name: Scheduled
 run-name: Scheduled Repository Actions ⏰
 on:
   schedule:
-    - cron: 0 0 * * *
+    - cron: 0,30 * * * *
 permissions:
   contents: read
 concurrency:
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   services-validation:
     name: Check services configuration files 🕵️
-    if: ${{ github.repository_owner == 'obsproject' }}
+    #if: ${{ github.repository_owner == 'obsproject' }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
@@ -28,7 +28,7 @@ jobs:
     secrets: inherit
   steam-upload:
     name: Upload Steam builds 🚂
-    if: ${{ github.repository_owner == 'obsproject' }}
+    #if: ${{ github.repository_owner == 'obsproject' }}
     needs: [check-and-build]
     runs-on: ubuntu-22.04
     steps:
