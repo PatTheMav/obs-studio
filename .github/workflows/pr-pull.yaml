@@ -1,0 +1,45 @@
+name: Pull Request
+run-name: ${{ github.head_ref }} pull request run 🚀
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'plugins/rtmp-services/data/services.json'
+      - 'plugins/rtmp-services/data/package.json'
+    branches: [master]
+    types: [ opened, synchronize, reopened, labeled ]
+env:
+  CACHE_REVISION: 001
+permissions:
+  contents: read
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  check-format:
+    uses: ./.github/workflows/check-format.yaml
+  build-project:
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit
+  update-documentation:
+    if: ${{ github.repository_owner == 'obsproject' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check for changed files ✅
+        id: checks
+        shell: bash
+        run: |
+          ## PRE CHECKS SCRIPT
+          git fetch origin --no-tags --no-recurse-submodules -q
+
+          changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- docs/sphinx))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - uses: ./.github/actions/generate-docs
+        if: ${{ steps.checks.outputs.passed == 'true' }}
