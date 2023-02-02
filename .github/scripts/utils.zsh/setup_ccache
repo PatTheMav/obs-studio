@@ -1,0 +1,39 @@
+autoload -Uz log_debug log_warning
+
+if (( ${+commands[ccache]} )) {
+  log_debug "Found ccache at ${commands[ccache]}"
+
+  ccache --set-config=run_second_cpp=true
+  ccache --set-config=inode_cache=true
+
+  sloppiness=(
+    include_file_mtime
+    include_file_ctime
+    time_macros
+    pch_defines
+    file_stat_matches
+    system_headers
+  )
+
+  if [[ ${target_os} == 'macos' ]] {
+    ccache --set-config=depend_mode=true
+    ccache --set-config=direct_mode=true
+    ccache --set-config=file_clone=true
+    sloppiness+=(
+      modules
+    )
+
+    if [[ ${generator} == 'Xcode' ]] sloppiness+=(clang_index_store)
+
+    ccache --set-config=sloppiness=${(j:,:)sloppiness}
+  }
+
+  if (( ${+CI} )) {
+    ccache --set-config=cache_dir="${GITHUB_WORKSPACE:-${HOME}}/.ccache"
+    ccache --set-config=max_size="${CCACHE_SIZE:-1G}"
+    ccache --set-config=compression=true
+    ccache -z > /dev/null
+  }
+} else {
+  log_warning "No ccache found on the system"
+}
