@@ -1,0 +1,73 @@
+name: Push to master
+run-name: ${{ github.ref }} push run 🚀
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - plugins/rtmp-services/data/services.json
+      - plugins/rtmp-services/data/package.json
+    branches:
+      - master
+      - 'release/**'
+env:
+  CACHE_REVISION: 001
+permissions:
+  contents: read
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  check-format:
+    uses: ./.github/workflows/check-format.yaml
+  build-project:
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit
+  upload-language-files:
+    if: ${{ github.base_ref == 'master' }}
+    #if: ${{ github.repository_owner == 'obsproject' && github.base_ref == 'master' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 100
+      - name: Check for changed files ✅
+        id: checks
+        shell: bash
+        run: |
+          ## PRE CHECKS SCRIPT
+          git fetch origin --no-tags --no-recurse-submodules -q
+
+          changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- | grep '/en-US.ini'))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Upload US english language files 🇺🇸
+        uses: obsproject/obs-crowdin-sync/upload@0.2.1
+        env:
+          CROWDIN_PAT: ${{ secrets.CROWDIN_SYNC_CROWDIN_PAT }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+  update-documentation:
+    if: ${{ github.repository_owner == 'obsproject' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check for changed files ✅
+        id: checks
+        shell: bash
+        run: |
+          ## PRE CHECKS SCRIPT
+          git fetch origin --no-tags --no-recurse-submodules -q
+
+          changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- docs/sphinx))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - uses: ./.github/actions/generate-docs
+        if: ${{ steps.checks.outputs.passed == 'true' }}
