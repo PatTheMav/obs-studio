@@ -59,6 +59,8 @@ build() {
   local -r -a _valid_targets=(
     macos-x86_64
     macos-arm64
+    linux-x86_64
+    linux-aarch64
   )
   local -r -a _valid_configs=(Debug RelWithDebInfo Release MinSizeRel)
   if [[ ${target_os} == 'macos' ]] {
@@ -236,6 +238,24 @@ Usage: %B${functrace[1]%:*}%b <option> [<options>]
           cmake_args+=(-DOBS_CODESIGN_IDENTITY:STRING="-")
         }
         num_procs=$(( $(sysctl -n hw.ncpu) + 1 ))
+        ;;
+      linux-*)
+        cmake_args+=(
+          -DCEF_ROOT_DIR:PATH="${project_root:h}/obs-build-dependencies/cef_binary_${CEF_VERSION}_${target//-/_}"
+          -DCMAKE_BUILD_TYPE:STRING=${BUILD_CONFIG:-RelWithDebInfo}
+        )
+
+        if (( ${+CI} )) {
+          cmake_args+=(
+            -DENABLE_PIPEWIRE:BOOL=OFF
+            -DENABLE_NEW_MPEGTS_OUTPUT:BOOL=OFF
+            -DENABLE_AJA:BOOL=OFF
+          )
+        } else {
+          cmake_args+=(-DENABLE_PIPEWIRE:BOOL=ON)
+        }
+
+        num_procs=$(( $(nproc) + 1 ))
         ;;
     }
 

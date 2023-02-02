@@ -1,0 +1,187 @@
+autoload -Uz log_error log_status log_info mkcd
+
+if (( ! ${+commands[curl]} )) {
+  log_error 'curl not found. Please install curl.'
+  return 2
+}
+
+if (( ! ${+commands[jq]} )) {
+  log_error 'jq not found. Please install jq.'
+  return 2
+}
+
+if (( ! ${+project_root} )) {
+  log_error "'project_root' not set. Please set before running ${0}."
+  return 2
+}
+
+if (( ! ${+target} )) {
+  log_error "'target' not set. Please set before running ${0}."
+  return 2
+}
+
+local -a curl_opts=()
+if (( ! ${+CI} )) {
+  curl_opts+=(--progress-bar --continue-at -)
+} else {
+  curl_opts+=(--show-error --silent)
+}
+curl_opts+=(--location -O ${@})
+
+pushd ${project_root}
+
+typeset -g QT_VERSION
+read -r QT_VERSION <<< \
+  "$(jq -r --arg target "${target}" \
+    '.platformConfig[$target] | { qtVersion } | join(" ")' \
+    ${project_root}/buildspec.json)"
+
+if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
+  mkdir -p ${project_root:h}/obs-build-dependencies
+  local deps_version
+  local deps_baseurl
+  local deps_label
+  local deps_hash
+  for dependency ('prebuilt' 'cef') {
+    IFS=';' read -r deps_version deps_baseurl deps_label deps_hash <<< \
+      "$(jq -r --arg dependency "${dependency}" --arg target "${target}" \
+        '.dependencies[$dependency] | {version, baseUrl, "label", "hash": .hashes[$target]} | join(";")' \
+        ${buildspec_file})"
+
+    if [[ -z "${deps_version}" ]] {
+      log_error "No ${dependency} spec found in buildspec.json."
+      return 2
+    }
+    log_info "Setting up ${deps_label}..."
+
+    pushd ${project_root:h}/obs-build-dependencies
+
+    if [[ ${dependency} != 'cef' ]] {
+      case ${dependency} {
+        prebuilt)
+          typeset -g OBS_DEPS_VERSION=${deps_version}
+          ;;
+      }
+    } else {
+      _filename="cef_binary_${deps_version}_${target//-/_}.tar.xz"
+      _url="${deps_baseurl}/${_filename}"
+      _target="cef_binary_${deps_version}_${target//-/_}"
+      typeset -g CEF_VERSION=${deps_version}
+
+      log_status "Checking for available wrapper library..."
+      local _skip=0
+      if (( ${+CI} + ${+RESTORED_CEF} > 1 )) {
+        _skip=1
+      } elif [[ -f ${_target}/build/libcef_dll_wrapper/libcef_dll_wrapper.a ]] {
+        _skip=1
+      }
+
+      if ! (( _skip )) {
+        if [[ ! -f ${_filename} ]] {
+          log_debug "Running curl ${curl_opts} ${_url}"
+          curl ${curl_opts} ${_url} && \
+            log_status "Downloaded ${deps_label} for ${target}."
+        } else {
+          log_status "Found downloaded ${deps_label}"
+        }
+
+        read -r artifact_checksum _ <<< "$(sha256sum ${_filename})"
+        if [[ ${deps_hash} != ${artifact_checksum} ]] {
+          log_error "Checksum of downloaded ${deps_label} does not match specification.
+    Expected : ${deps_hash}
+    Actual   : ${artifact_checksum}"
+          return 2
+        }
+        log_status "Checksum of downloaded ${deps_label} matches."
+        mkdir -p ${_target} && pushd ${_target}
+
+        XZ_OPT=-T0 tar --strip-components 1 -xJf ../${_filename} && log_status "${deps_label} extracted."
+
+        if [[ ! -f build/libcef_dll_wrapper/libcef_dll_wrapper.a ]] {
+          log_info "Configuring CEF wrapper library..."
+
+          local -a cmake_args=(
+            -DPROJECT_ARCH=${target##*-}
+            -DCEF_COMPILER_FLAGS="-Wno-deprecated-copy"
+            -DCMAKE_BUILD_TYPE=${BUILD_CONFIG:-RelWithDebInfo}
+            -DCMAKE_CXX_FLAGS="-std=c++11 -Wno-deprecated-declarations -Wno-unknown-warning-option"
+            -DCMAKE_EXE_LINKER_FLAGS="-std=c++11"
+          )
+
+          if (( _loglevel == 0 )) cmake_args+=(-Wno_deprecated -Wno-dev --log-level=ERROR)
+          if (( ${+commands[ccache]} )) {
+            cmake_args+=(
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            )
+          }
+
+          cmake -S . -B build -G Ninja ${cmake_args}
+          cmake --build build
+        }
+
+        mkdir -p build/libcef_dll
+        popd
+      } else {
+        log_info 'Found existing Chromium Embedded Framework and loader library...'
+      }
+    }
+    popd
+  }
+
+  log_info 'Installing obs dependencies...'
+
+  sudo apt-get install -y \
+    build-essential \
+    libcurl4-openssl-dev \
+    libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev \
+    libswresample-dev libswscale-dev \
+    libcurl4-openssl-dev \
+    libjansson-dev \
+    libx11-xcb-dev \
+    libgles2-mesa-dev libgles2-mesa \
+    libwayland-dev \
+    libpulse-dev \
+    libx264-dev \
+    libmbedtls-dev \
+    libgl1-mesa-dev \
+    libjansson-dev \
+    libluajit-5.1-dev python3-dev \
+    libx11-dev libxcb-randr0-dev libxcb-shm0-dev libxcb-xinerama0-dev \
+    libxcb-composite0-dev libxinerama-dev libxcb1-dev libx11-xcb-dev libxcb-xfixes0-dev \
+    swig libcmocka-dev libxss-dev libglvnd-dev \
+    libxkbcommon-dev \
+    libasound2-dev libfdk-aac-dev libfontconfig-dev libfreetype6-dev libjack-jackd2-dev \
+    libpulse-dev libsndio-dev libspeexdsp-dev libudev-dev libv4l-dev libva-dev libvlc-dev \
+    libpci-dev libdrm-dev
+
+  local -a _qt_packages=()
+
+  if (( QT_VERSION == 5 )) {
+    _qt_packages+=(
+      qtbase5-dev
+      libqt5svg5-dev
+      qtbase5-private-dev
+      libqt5x11extras5-dev
+    )
+  } elif (( QT_VERSION == 6 )) {
+    _qt_packages+=(
+      qt6-base-dev
+      libqt6svg6-dev
+      qt6-base-private-dev
+    )
+  } else {
+    log_error "Unsupported Qt version '${QT_VERSION}' specified."
+    return 2
+  }
+
+  sudo apt-get install -y ${_qt_packages}
+} else {
+  local deps_version
+  local cef_version
+  read -r deps_version cef_version <<< \
+    "$(jq -r '.dependencies | [.prebuilt.version, .cef.version] | join(" ")' ${buildspec_file})"
+
+  typeset -g OBS_DEPS_VERSION=${deps_version}
+  typeset -g CEF_VERSION=${cef_version}
+}
