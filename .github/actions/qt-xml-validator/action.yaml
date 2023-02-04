@@ -1,0 +1,57 @@
+name: Validate UI XML
+description: Validates Qt UI XML files
+inputs:
+  failCondition:
+    description: Controls whether failed checks also fail the workflow run
+    required: false
+    default: 'never'
+  workingDirectory:
+    description: Working directory for checks
+    required: false
+    default: ${{ github.workspace }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System 🏃‍♂️
+      if: ${{ contains(fromJSON('["macos","Windows"]'), runner.os) }}
+      shell: bash
+      run: |
+        : Check Runner Operating System 🏃‍♂️
+        echo "::notice::qt-xml-validator action requires a Linux-based runner."; exit 2
+    - name: Install xmllint 🕵️
+      shell: bash
+      run: |
+        : Install xmllint 🕵️
+        echo ::group::Installing libxml2-utils
+        sudo apt-get -qq update
+        sudo apt-get install --no-install-recommends -y libxml2-utils
+        echo ::endgroup::
+    - name: Register Annotations 📝
+      uses: korelstar/xmllint-problem-matcher@v1
+    - name: Validate XML 💯
+      shell: bash
+      run: |
+        : Validate XML 💯
+
+        if [[ '${{ inputs.failCondition }}' == 'error' ]]; then
+          set -e
+        fi
+
+        changes=()
+        if [[ "${GITHUB_EVENT_NAME}" == 'pull_request' ]]; then
+          changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- UI/forms))
+        elif [[ "${GITHUB_EVENT_NAME}" == 'push' ]]
+          changes=($(git diff --name-only ${{ github.event.push.before }} HEAD -- | { grep -v 'cmake/*' || true; }))
+        else
+          changes=($(git diff --name-only HEAD~1 HEAD -- | { grep -v 'cmake/*' || true; }))
+        fi
+        if (( ${#changes[@]} )); then
+          echo ::group::Running xmllint
+          xmllint \
+            --schema ${{ github.workspace }}/UI/forms/XML-Schema-Qt5.15.xsd \
+            --noout \
+              ${{ github.workspace }}/UI/forms/*.ui \
+              ${{ github.workspace }}/UI/forms/**/*.ui
+          echo ::endgroup::
+        fi
+        echo "Pass :white_check_mark:" >> $GITHUB_STEP_SUMMARY
