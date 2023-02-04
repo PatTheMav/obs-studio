@@ -1,0 +1,99 @@
+name: Pull Request
+run-name: ${{ github.head_ref }} pull request run 🚀
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+    branches: [master]
+    types: [ opened, synchronize, reopened, labeled, unlabeled ]
+permissions:
+  contents: read
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  check-format:
+    uses: ./.github/workflows/check-format.yaml
+  build-project:
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit
+  compatibility-validation:
+    if: ${{ github.repository_owner == 'obsproject' && github.ref_name == 'master' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Check for Changed Files ✅
+        id: checks
+        shell: bash
+        run: |
+          : Check for Changed Files ✅
+          changes=($(git diff --name-only ${{ github.event.push.before }} -- plugins/win-capture/data/*.json))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Set up Homebrew 🍺
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Check for Invalid Compatibility Data 📉
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: ./.github/actions/compatibility-validation
+  services-validation:
+    if: ${{ github.repository_owner == 'obsproject' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check for Changed Files ✅
+        id: checks
+        shell: bash
+        run: |
+          : Check for Changed Files ✅
+          changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- plugins/rtmp-services/data))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Set up Homebrew 🍺
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Check for defunct services 📉
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: ./.github/actions/services-validation
+        with:
+          repositorySecret: ${{ secrets.GITHUB_TOKEN }}
+          runSchemaChecks: true
+          runServiceChecks: false
+  update-documentation:
+    if: ${{ github.repository_owner == 'obsproject' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check for Changed Files ✅
+        id: checks
+        shell: bash
+        run: |
+          : Check for Changed Files ✅
+          changes=($(git diff --name-only origin/"${GITHUB_BASE_REF}" HEAD -- docs/sphinx))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+          echo "commitHash=${GITHUB_SHA:0:9}" >> $GITHUB_OUTPUT
+      - uses: ./.github/actions/generate-docs
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        with:
+          commitHash: ${{ steps.checks.checks.commitHash }}
+
