@@ -1,0 +1,62 @@
+name: Scheduled
+run-name: Scheduled Repository Actions ⏰
+on:
+  schedule:
+    - cron: 0 0 * * *
+permissions:
+  contents: write
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  services-validation:
+    name: Check Services Configuration Files 🕵️
+    if: ${{ github.repository_owner == 'obsproject' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Check for defunct services 📉
+        uses: ./.github/actions/services-validation
+        with:
+          repositorySecret: ${{ secrets.GITHUB_TOKEN }}
+          runSchemaChecks: false
+          runServiceChecks: true
+          createPullRequest: true
+  build-project:
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit
+  steam-upload:
+    name: Upload Steam Builds 🚂
+    needs: [check-and-build]
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check Nightly Runs ☑️
+        id: checks
+        run: |
+          : Check Nightly Runs ☑️
+          curl -s "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/scheduled.yaml" -o workflow_data.json
+          read -r workflow_id <<< "$(jq -r '.id' workflow_data.json)"
+          curl -s "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs" -o run_data.json
+          read -r last_nightly <<< "$(jq '.workflow_runs[] | {id, head_sha}' run_data.json | jq -r -s -c 'sort_by(.id) | reverse | .[0].head_sha')"
+
+          if [[ "${GITHUB_SHA}" == "${last_nightly}" ]]; then
+            echo "passed=false" >> $GITHUB_OUTPUT
+          else
+            echo "passed=true" >> $GITHUB_OUTPUT
+          fi
+      - uses: ./.github/actions/steam-upload
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        with:
+          steamSecret: ${{ secrets.STEAM_SHARED_SECRET }}
+          steamUser: ${{ secrets.STEAM_USER }}
+          steamPassword: ${{ secrets.STEAM_PASSWORD }}
+          workflowSecret: ${{ secrets.GITHUB_TOKEN }}
+          preview: ${{ github.repository_owner != 'obsproject' }}
