@@ -1,0 +1,286 @@
+name: Push to master
+run-name: ${{ github.ref_name }} push run 🚀
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+    branches:
+      - master
+      - 'release/**'
+    tags:
+      - '*'
+permissions:
+  contents: write
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.ref }}'
+  cancel-in-progress: true
+jobs:
+  check-format:
+    uses: ./.github/workflows/check-format.yaml
+    if: ${{ github.ref_name == 'master' }}
+  build-project:
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit
+  compatibility-validation:
+    if: ${{ github.repository_owner == 'obsproject' && github.ref_name == 'master' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Check for Changed Files ✅
+        id: checks
+        shell: bash
+        run: |
+          : Check for Changed Files ✅
+          changes=($(git diff --name-only ${{ github.event.push.before }} -- plugins/win-capture/data/*.json))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Set up Homebrew 🍺
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Check for invalid compatibility data 📉
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: ./.github/actions/compatibility-validation
+  services-validation:
+    if: ${{ github.repository_owner == 'obsproject' && github.ref_name == 'master' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Check for Changed Files ✅
+        id: checks
+        shell: bash
+        run: |
+          : Check for Changed Files ✅
+          changes=($(git diff --name-only ${{ github.event.push.before }} -- plugins/rtmp-services/data/*.json))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Set up Homebrew 🍺
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Check for defunct services 📉
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: ./.github/actions/services-validation
+        with:
+          repositorySecret: ${{ secrets.GITHUB_TOKEN }}
+          runSchemaChecks: true
+          runServiceChecks: false
+  upload-language-files:
+    if: ${{ github.repository_owner == 'obsproject' && github.ref_name == 'master' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 2
+      - name: Check for Changed Files ✅
+        id: checks
+        shell: bash
+        run: |
+          : Check for Changed Files ✅
+          git fetch origin --no-tags --no-recurse-submodules -q
+
+          changes=($(git diff --name-only ${{ github.event.push.before }} HEAD -- **/en_US.ini))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Upload US English Language Files 🇺🇸
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        uses: obsproject/obs-crowdin-sync/upload@0.2.1
+        env:
+          CROWDIN_PAT: ${{ secrets.CROWDIN_SYNC_CROWDIN_PAT }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+  update-documentation:
+    if: ${{ github.repository_owner == 'obsproject' && github.ref_name == 'master' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Check for Changed Files ✅
+        id: checks
+        shell: bash
+        run: |
+          : Check for Changed Files ✅
+          git fetch origin --no-tags --no-recurse-submodules -q
+
+          changes=($(git diff --name-only ${{ github.event.push.before }} HEAD -- | { grep -v 'cmake/*' || true; }))
+
+          if (( ${#changes[@]} )); then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+          echo "commitHash=${GITHUB_SHA:0:9}" >> $GITHUB_OUTPUT
+      - uses: ./.github/actions/generate-docs
+        if: ${{ fromJSON(steps.checks.outputs.passed) }}
+        with:
+          disableLinkExtensions: ${{ github.repository_owner == 'obsproject' && startsWith(github.ref, 'refs/tags') }}
+          commitHash: ${{ steps.checks.outputs.commitHash }}
+  deploy-documentation:
+    if: ${{ github.repository_owner == 'obsproject' && startsWith(github.ref, 'refs/tags') }}
+    runs-on: ubuntu-22.04
+    needs: update-documentation
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Get Commit Information 🆔
+        id: setup
+        run: |
+          : Get Commit Hash 🆔
+          echo "commitHash=${GITHUB_SHA:0:9}" >> $GITHUB_OUTPUT
+      - uses: actions/download-artifact@v3
+        with:
+          name: OBS Studio Docs (No Extensions) ${{ steps.setup.outputs.commitHash }}
+          path: docs
+      - name: Setup Redirects 🔄
+        run: |
+          : Setup Redirects 🔄
+          echo "/previous/27.2 https://obsproject.com/docs/27.2 302" >> docs/_redirects
+          echo "/previous/:major.:minor https://:major-:minor.${{ vars.CF_PAGES_PROJECT }}.pages.dev 302" >> docs/_redirects
+      - name: Publish To Live Page
+        uses: cloudflare/wrangler-action@4c10c1822abba527d820b29e6333e7f5dac2cabd
+        with:
+          workingDirectory: docs
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages publish . --project-name=${{ vars.CF_PAGES_PROJECT }} --commit-hash='${{ steps.setup.outputs.commitHash }}'
+  create-appcast:
+    if: ${{ github.repository_owner == 'obsproject' && startsWith(github.ref, 'refs/tags') }}
+    runs-on: macos-12
+    needs: build-project
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [arm64, x86_64]
+    defaults:
+      run:
+        shell: zsh -e {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+      - name: Setup Environment 🔧
+        id: setup
+        run: |
+          : Setup Environment 🔧
+
+          if [[ ${GITHUB_REF_NAME} == *beta* || ${GITHUB_REF_NAME} == *rc* ]] {
+            print "channel=beta" >> $GITHUB_OUTPUT
+          } else {
+            print "channel=stable" >> $GITHUB_OUTPUT
+          }
+
+          local -A arch_names=(x86_64 Intel arm64 Apple)
+          print "cpuName=${arch_names[${{ matrix.target }}]}" >> $GITHUB_OUTPUT
+          print "commitHash=$(git rev-parse --short=9 HEAD)" >> $GITHUB_OUTPUT
+      - name: Download Artifact 📥
+        uses: actions/download-artifact@v3
+        with:
+          name: obs-studio-macos-${{ matrix.target }}-${{ steps.setup.outputs.commitHash }}
+      - name: Generate Appcast 🎙️
+        id: generate-appcast
+        uses: ./.github/actions/sparkle-appcast
+        with:
+          target: ${{ matrix.target }}
+          baseImage: ${{ github.workspace }}/obs-studio-*-macos-${{ steps.setup.outputs.cpuName }}.dmg
+          channel: ${{ steps.setup.outputs.channel }}
+          count: 1
+          urlPrefix: 'https://cdn-fastly.obsproject.com/downloads'
+          customTitle: 'OBS Studio'
+          customLink: 'https://obsproject.com/'
+      - name: Upload artifacts 📡
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-sparkle-update-${{ matrix.target }}
+          path: ${{ github.workspace }}/output
+
+  create-release:
+    if: ${{ github.repository_owner == 'obsproject' && startsWith(github.ref, 'refs/tags') }}
+    runs-on: ubuntu-22.04
+    needs: build-project
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check Release Tag ☑️
+        id: check
+        run: |
+          : Check Release Tag ☑️
+          shopt -s extglob
+
+          case "${GITHUB_REF_NAME}" in
+            +([0-9]).+([0-9]).+([0-9]) )
+              echo 'validTag=true' >> $GITHUB_OUTPUT
+              echo 'prerelease=false' >> $GITHUB_OUTPUT
+              echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+              ;;
+            +([0-9]).+([0-9]).+([0-9])-@(beta|rc)*([0-9]) )
+              echo 'validTag=true' >> $GITHUB_OUTPUT
+              echo 'prerelease=true' >> $GITHUB_OUTPUT
+              echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+              ;;
+            *) echo 'validTag=false' >> $GITHUB_OUTPUT ;;
+          esac
+      - name: Download build artifacts 📥
+        uses: actions/download-artifact@v3
+        if: ${{ fromJSON(steps.check.outputs.validTag) }}
+      - name: Rename Files 🏷️
+        if: ${{ fromJSON(steps.check.outputs.validTag) }}
+        run: |
+          : Rename Files 🏷️
+
+          root_dir="${PWD}"
+
+          commit_hash="${GITHUB_SHA:0:9}"
+          macos_arm64_artifact_name="obs-studio-macos-arm64-${commit_hash}"
+          macos_intel_artifact_name="obs-studio-macos-x86_64-${commit_hash}"
+          ubuntu_x86_64_artifact_name="obs-studio-ubuntu-22.04-x86_64-${commit_hash}"
+          ubuntu_x86_64_debug_name="obs-studio-ubuntu-22.04-x86_64-${commit_hash}-dbgsym"
+
+          mv "${macos_arm64_artifact_name}/"obs-studio-*-macOS-Apple.dmg "${root_dir}"
+          mv "${macos_intel_artifact_name}/"obs-studio-*-macOS-Intel.dmg "${root_dir}"
+          mv "${ubuntu_x86_64_artifact_name}/"obs-studio-*-ubuntu-22.04-x86_64.deb "${root_dir}"
+          mv "${ubuntu_x86_64_debug_name}/"obs-studio-*-ubuntu-22.04-x86_64-dbgsym.ddeb "${root_dir}"
+
+      - name: Generate Checksums 🪪
+        if: ${{ fromJSON(steps.check.outputs.validTag) }}
+        run: |
+          : Generate Checksums 🪪
+          shopt -s extglob
+          echo "### Checksums" > ${{ github.workspace }}/CHECKSUMS.txt
+          for file in ${{ github.workspace }}/@(*.deb|*.ddeb|*.dmg|*.tar.xz); do
+            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" >> ${{ github.workspace }}/CHECKSUMS.txt
+          done
+
+      - name: Create Release 🛫
+        if: ${{ fromJSON(steps.check.outputs.validTag) }}
+        id: create_release
+        uses: softprops/action-gh-release@d4e8205d7e959a9107da6396278b2f1f07af0f9b
+        with:
+          draft: true
+          prerelease: ${{ fromJSON(steps.check.outputs.prerelease) }}
+          tag_name: ${{ steps.check.outputs.version }}
+          name: OBS Studio ${{ steps.check.outputs.version }}
+          body_path: ${{ github.workspace }}/CHECKSUMS.txt
+          files: |
+            ${{ github.workspace }}/obs-studio-*.dmg
+            ${{ github.workspace }}/obs-studio-*.deb
+            ${{ github.workspace }}/obs-studio-*.ddeb
+            ${{ github.workspace }}/obs-studio-*.tar.xz
