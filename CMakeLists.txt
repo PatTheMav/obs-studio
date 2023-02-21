@@ -5,7 +5,7 @@ if(CMAKE_HOST_SYSTEM_NAME MATCHES "(Darwin)" OR OBS_CMAKE_VERSION VERSION_GREATE
 
   project(obs-studio VERSION ${OBS_VERSION_CANONICAL})
 
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  if(CMAKE_HOST_SYSTEM_NAME MATCHES "(Windows)" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/32bit/projects.cmake")
     return()
   endif()

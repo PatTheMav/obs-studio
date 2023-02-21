@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 3,
   "cmakeMinimumRequired": {
     "major": 3,
     "minor": 22,
@@ -71,7 +71,8 @@
       "cacheVariables": {
         "ENABLE_WAYLAND": true,
         "ENABLE_VLC": true,
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OBS_CMAKE_VERSION": {"type": "STRING", "value": "3.0.0"}
       }
     },
     {
@@ -79,16 +80,8 @@
       "inherits": ["linux-aarch64"],
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-      }
-    },
-    {
-      "name": "linux-release-aarch64",
-      "displayName": "Linux aarch64 (Release)",
-      "description": "obs-studio for Linux (aarch64) - Release Configuration",
-      "inherits": "linux-aarch64",
-      "cacheVariables": {
-        "ENABLE_RELEASE_BUILD": true
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": true
       }
     },
     {
@@ -107,24 +100,16 @@
       "cacheVariables": {
         "ENABLE_WAYLAND": true,
         "ENABLE_VLC": true,
-        "CMAKE_BUILD_TYPE": {"type": "STRING", "value": "Debug"}
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OBS_CMAKE_VERSION": {"type": "STRING", "value": "3.0.0"}
       }
     },
     {
       "name": "linux-ci-x86_64",
       "inherits": ["linux-x86_64"],
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-      }
-    },
-    {
-      "name": "linux-release-x86_64",
-      "displayName": "Linux x86_64 (Release)",
-      "description": "obs-studio for Linux (x86_64) - Release Configuration",
-      "inherits": "linux-x86_64",
-      "cacheVariables": {
-        "ENABLE_RELEASE_BUILD": true,
-        "ENABLE_BROWSER": true
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": true
       }
     },
     {
