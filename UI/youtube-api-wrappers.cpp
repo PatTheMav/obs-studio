@@ -35,6 +35,12 @@ using namespace json11;
 
 #define DEFAULT_BROADCASTS_PER_QUERY \
 	"50" // acceptable values are 0 to 50, inclusive
+
+static const char *youtubeClientId = YOUTUBE_CLIENTID;
+static const char *youtubeSecret = YOUTUBE_SECRET;
+static const uint64_t youtubeClientIdHash = YOUTUBE_CLIENTID_HASH;
+static const uint64_t youtubeSecretHash = YOUTUBE_SECRET_HASH;
+
 /* ------------------------------------------------------------------------- */
 
 bool IsYouTubeService(const std::string &service)
@@ -109,10 +115,10 @@ bool YoutubeApiWrappers::UpdateAccessToken()
 		return false;
 	}
 
-	std::string clientid = YOUTUBE_CLIENTID;
-	std::string secret = YOUTUBE_SECRET;
-	deobfuscate_str(&clientid[0], YOUTUBE_CLIENTID_HASH);
-	deobfuscate_str(&secret[0], YOUTUBE_SECRET_HASH);
+	std::string clientid = youtubeClientId;
+	std::string secret = youtubeSecret;
+	deobfuscate_str(&clientid[0], youtubeClientIdHash);
+	deobfuscate_str(&secret[0], youtubeSecretHash);
 
 	std::string r_token =
 		QUrl::toPercentEncoding(refresh_token.c_str()).toStdString();

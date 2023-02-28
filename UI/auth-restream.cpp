@@ -29,6 +29,8 @@ using namespace json11;
 #define RESTREAM_CHANNELS_DOCK_NAME "restreamChannel"
 
 static Auth::Def restreamDef = {"Restream", Auth::Type::OAuth_StreamKey};
+static const char *restreamClientId = RESTREAM_CLIENTID;
+static const uint64_t restreamHash = RESTREAM_HASH;
 
 /* ------------------------------------------------------------------------- */
 
@@ -48,8 +50,8 @@ RestreamAuth::~RestreamAuth()
 
 bool RestreamAuth::GetChannelInfo()
 try {
-	std::string client_id = RESTREAM_CLIENTID;
-	deobfuscate_str(&client_id[0], RESTREAM_HASH);
+	std::string client_id = restreamClientId;
+	deobfuscate_str(&client_id[0], restreamHash);
 
 	if (!GetToken(RESTREAM_TOKEN_URL, client_id, RESTREAM_SCOPE_VERSION))
 		return false;
@@ -232,8 +234,8 @@ bool RestreamAuth::RetryLogin()
 	std::shared_ptr<RestreamAuth> auth =
 		std::make_shared<RestreamAuth>(restreamDef);
 
-	std::string client_id = RESTREAM_CLIENTID;
-	deobfuscate_str(&client_id[0], RESTREAM_HASH);
+	std::string client_id = restreamClientId;
+	deobfuscate_str(&client_id[0], restreamHash);
 
 	return GetToken(RESTREAM_TOKEN_URL, client_id, RESTREAM_SCOPE_VERSION,
 			QT_TO_UTF8(login.GetCode()), true);
@@ -251,8 +253,8 @@ std::shared_ptr<Auth> RestreamAuth::Login(QWidget *parent, const std::string &)
 	std::shared_ptr<RestreamAuth> auth =
 		std::make_shared<RestreamAuth>(restreamDef);
 
-	std::string client_id = RESTREAM_CLIENTID;
-	deobfuscate_str(&client_id[0], RESTREAM_HASH);
+	std::string client_id = restreamClientId;
+	deobfuscate_str(&client_id[0], restreamHash);
 
 	if (!auth->GetToken(RESTREAM_TOKEN_URL, client_id,
 			    RESTREAM_SCOPE_VERSION,

@@ -22,17 +22,20 @@ using namespace json11;
 
 /* ------------------------------------------------------------------------- */
 
-#define TWITCH_AUTH_URL OAUTH_BASE_URL "v1/twitch/redirect"
-#define TWITCH_TOKEN_URL OAUTH_BASE_URL "v1/twitch/token"
+static const char *twitchAuthUrl = OAUTH_BASE_URL "v1/twitch/redirect";
+static const char *twitchTokenUrl = OAUTH_BASE_URL "v1/twitch/token";
 
-#define TWITCH_SCOPE_VERSION 1
+static const int twitchScopeVersion = 1;
 
-#define TWITCH_CHAT_DOCK_NAME "twitchChat"
-#define TWITCH_INFO_DOCK_NAME "twitchInfo"
-#define TWITCH_STATS_DOCK_NAME "twitchStats"
-#define TWITCH_FEED_DOCK_NAME "twitchFeed"
+static const char *twitchDockNameChat = "twitchChat";
+static const char *twitchDockNameInfo = "twitchInfo";
+static const char *twitchDockNameStats = "twitchStats";
+static const char *twitchDockNameFeed = "twitchFeed";
 
 static Auth::Def twitchDef = {"Twitch", Auth::Type::OAuth_StreamKey};
+
+static const char *twitchClientId = TWITCH_CLIENTID;
+static const uint64_t twitchHash = TWITCH_HASH;
 
 /* ------------------------------------------------------------------------- */
 
@@ -61,16 +64,16 @@ TwitchAuth::~TwitchAuth()
 
 	OBSBasic *main = OBSBasic::Get();
 
-	main->RemoveDockWidget(TWITCH_CHAT_DOCK_NAME);
-	main->RemoveDockWidget(TWITCH_INFO_DOCK_NAME);
-	main->RemoveDockWidget(TWITCH_STATS_DOCK_NAME);
-	main->RemoveDockWidget(TWITCH_FEED_DOCK_NAME);
+	main->RemoveDockWidget(twitchDockNameChat);
+	main->RemoveDockWidget(twitchDockNameInfo);
+	main->RemoveDockWidget(twitchDockNameStats);
+	main->RemoveDockWidget(twitchDockNameFeed);
 }
 
 bool TwitchAuth::MakeApiRequest(const char *path, Json &json_out)
 {
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
 	std::string url = "https://api.twitch.tv/helix/";
 	url += std::string(path);
@@ -122,10 +125,10 @@ bool TwitchAuth::MakeApiRequest(const char *path, Json &json_out)
 
 bool TwitchAuth::GetChannelInfo()
 try {
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
-	if (!GetToken(TWITCH_TOKEN_URL, client_id, TWITCH_SCOPE_VERSION))
+	if (!GetToken(twitchTokenUrl, client_id, twitchScopeVersion))
 		return false;
 	if (token.empty())
 		return false;
@@ -252,7 +255,7 @@ void TwitchAuth::LoadUI()
 	QPoint pos = main->pos();
 
 	BrowserDock *chat = new BrowserDock();
-	chat->setObjectName(TWITCH_CHAT_DOCK_NAME);
+	chat->setObjectName(twitchDockNameChat);
 	chat->resize(300, 600);
 	chat->setMinimumSize(200, 300);
 	chat->setWindowTitle(QTStr("Auth.Chat"));
@@ -341,7 +344,7 @@ void TwitchAuth::LoadSecondaryUIPanes()
 	url += "/stream-manager/edit-stream-info";
 
 	BrowserDock *info = new BrowserDock();
-	info->setObjectName(TWITCH_INFO_DOCK_NAME);
+	info->setObjectName(twitchDockNameInfo);
 	info->resize(300, 650);
 	info->setMinimumSize(200, 300);
 	info->setWindowTitle(QTStr("Auth.StreamInfo"));
@@ -360,7 +363,7 @@ void TwitchAuth::LoadSecondaryUIPanes()
 	url += "/dashboard/live/stats";
 
 	BrowserDock *stats = new BrowserDock();
-	stats->setObjectName(TWITCH_STATS_DOCK_NAME);
+	stats->setObjectName(twitchDockNameStats);
 	stats->resize(200, 250);
 	stats->setMinimumSize(200, 150);
 	stats->setWindowTitle(QTStr("TwitchAuth.Stats"));
@@ -380,7 +383,7 @@ void TwitchAuth::LoadSecondaryUIPanes()
 	url += "?uuid=" + uuid;
 
 	BrowserDock *feed = new BrowserDock();
-	feed->setObjectName(TWITCH_FEED_DOCK_NAME);
+	feed->setObjectName(twitchDockNameFeed);
 	feed->resize(300, 650);
 	feed->setMinimumSize(200, 300);
 	feed->setWindowTitle(QTStr("TwitchAuth.Feed"));
@@ -460,23 +463,23 @@ void TwitchAuth::TryLoadSecondaryUIPanes()
 
 bool TwitchAuth::RetryLogin()
 {
-	OAuthLogin login(OBSBasic::Get(), TWITCH_AUTH_URL, false);
+	OAuthLogin login(OBSBasic::Get(), twitchAuthUrl, false);
 	if (login.exec() == QDialog::Rejected) {
 		return false;
 	}
 
 	std::shared_ptr<TwitchAuth> auth =
 		std::make_shared<TwitchAuth>(twitchDef);
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
-	return GetToken(TWITCH_TOKEN_URL, client_id, TWITCH_SCOPE_VERSION,
+	return GetToken(twitchTokenUrl, client_id, twitchScopeVersion,
 			QT_TO_UTF8(login.GetCode()), true);
 }
 
 std::shared_ptr<Auth> TwitchAuth::Login(QWidget *parent, const std::string &)
 {
-	OAuthLogin login(parent, TWITCH_AUTH_URL, false);
+	OAuthLogin login(parent, twitchAuthUrl, false);
 	if (login.exec() == QDialog::Rejected) {
 		return nullptr;
 	}
@@ -484,10 +487,10 @@ std::shared_ptr<Auth> TwitchAuth::Login(QWidget *parent, const std::string &)
 	std::shared_ptr<TwitchAuth> auth =
 		std::make_shared<TwitchAuth>(twitchDef);
 
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = twitchClientId;
+	deobfuscate_str(&client_id[0], twitchHash);
 
-	if (!auth->GetToken(TWITCH_TOKEN_URL, client_id, TWITCH_SCOPE_VERSION,
+	if (!auth->GetToken(twitchTokenUrl, client_id, twitchScopeVersion,
 			    QT_TO_UTF8(login.GetCode()))) {
 		return nullptr;
 	}

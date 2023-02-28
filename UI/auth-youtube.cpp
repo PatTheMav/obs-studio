@@ -47,6 +47,12 @@ using namespace json11;
 static const char allowedChars[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 static const int allowedCount = static_cast<int>(sizeof(allowedChars) - 1);
+
+static const char *youtubeClientId = YOUTUBE_CLIENTID;
+static const char *youtubeSecret = YOUTUBE_SECRET;
+static const uint64_t youtubeClientIdHash = YOUTUBE_CLIENTID_HASH;
+static const uint64_t youtubeSecretHash = YOUTUBE_SECRET_HASH;
+
 /* ------------------------------------------------------------------------- */
 
 static inline void OpenBrowser(const QString auth_uri)
@@ -248,10 +254,10 @@ std::shared_ptr<Auth> YoutubeAuth::Login(QWidget *owner,
 	dlg.setWindowFlags(dlg.windowFlags() & ~Qt::WindowCloseButtonHint);
 	dlg.setWindowTitle(QTStr("YouTube.Auth.WaitingAuth.Title"));
 
-	std::string clientid = YOUTUBE_CLIENTID;
-	std::string secret = YOUTUBE_SECRET;
-	deobfuscate_str(&clientid[0], YOUTUBE_CLIENTID_HASH);
-	deobfuscate_str(&secret[0], YOUTUBE_SECRET_HASH);
+	std::string clientid = youtubeClientId;
+	std::string secret = youtubeSecret;
+	deobfuscate_str(&clientid[0], youtubeClientIdHash);
+	deobfuscate_str(&secret[0], youtubeSecretHash);
 
 	QString state;
 	state = auth->GenerateState();
