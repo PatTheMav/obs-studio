@@ -1,9 +1,13 @@
-project(obs-nvenc-test)
+cmake_minimum_required(VERSION 3.22...3.25)
+
+legacy_check()
 
 add_executable(obs-nvenc-test)
-target_sources(obs-nvenc-test PRIVATE jim-nvenc-test.c ../jim-nvenc-ver.h)
-target_link_libraries(obs-nvenc-test d3d11 dxgi dxguid)
+add_executable(OBS::nvenc-test ALIAS obs-nvenc-test)
 
-set_target_properties(obs-nvenc-test PROPERTIES FOLDER "plugins/obs-ffmpeg")
+target_sources(obs-nvenc-test PRIVATE jim-nvenc-test.c)
+target_link_libraries(obs-nvenc-test PRIVATE OBS::nvenc-headers d3d11 dxgi dxguid)
 
-setup_binary_target(obs-nvenc-test)
+# cmake-format: off
+set_target_properties_obs(obs-nvenc-test PROPERTIES FOLDER plugins/obs-ffmpeg)
+# cmake-format: on

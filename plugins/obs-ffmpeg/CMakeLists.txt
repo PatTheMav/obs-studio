@@ -30,19 +30,21 @@ add_subdirectory(ffmpeg-mux)
 
 target_sources(
   obs-ffmpeg
-  PRIVATE obs-ffmpeg.c
-          obs-ffmpeg-video-encoders.c
+  PRIVATE # cmake-format: sortable
+          $<$<BOOL:${ENABLE_FFMPEG_LOGGING}>:obs-ffmpeg-logging.c>
           obs-ffmpeg-audio-encoders.c
           obs-ffmpeg-av1.c
-          obs-ffmpeg-nvenc.c
-          obs-ffmpeg-output.c
-          obs-ffmpeg-mux.c
-          obs-ffmpeg-mux.h
-          obs-ffmpeg-hls-mux.c
-          obs-ffmpeg-source.c
           obs-ffmpeg-compat.h
           obs-ffmpeg-formats.h
-          $<$<BOOL:${ENABLE_FFMPEG_LOGGING}>:obs-ffmpeg-logging.c>)
+          obs-ffmpeg-hls-mux.c
+          obs-ffmpeg-mux.c
+          obs-ffmpeg-mux.h
+          obs-ffmpeg-nvenc.c
+          obs-ffmpeg-output.c
+          obs-ffmpeg-source.c
+          obs-ffmpeg-video-encoders.c
+          obs-ffmpeg.c)
+
 target_compile_definitions(obs-ffmpeg PRIVATE $<$<BOOL:${ENABLE_FFMPEG_LOGGING}>:ENABLE_FFMPEG_LOGGING>)
 
 target_link_libraries(
@@ -100,13 +102,14 @@ if(OS_WINDOWS)
   configure_file(cmake/windows/obs-module.rc.in obs-ffmpeg.rc)
   target_sources(
     obs-ffmpeg
-    PRIVATE texture-amf.cpp
-            texture-amf-opts.hpp
-            jim-nvenc.c
-            jim-nvenc.h
+    PRIVATE # cmake-format: sortable
             jim-nvenc-helpers.c
             jim-nvenc-ver.h
-            obs-ffmpeg.rc)
+            jim-nvenc.c
+            jim-nvenc.h
+            obs-ffmpeg.rc
+            texture-amf-opts.hpp
+            texture-amf.cpp)
 elseif(OS_LINUX OR OS_FREEBSD)
   find_package(Libva REQUIRED)
   find_package(Libpci REQUIRED)
@@ -115,4 +118,6 @@ elseif(OS_LINUX OR OS_FREEBSD)
   target_link_libraries(obs-ffmpeg PRIVATE Libva::va Libva::drm Libpci::pci)
 endif()
 
+# cmake-format: off
 set_target_properties_obs(obs-ffmpeg PROPERTIES FOLDER plugins/obs-ffmpeg PREFIX "")
+# cmake-format: on

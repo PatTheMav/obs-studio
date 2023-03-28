@@ -2,8 +2,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef OBS_LEGACY
 #include "../external/nvEncodeAPI.h"
 #include "../jim-nvenc-ver.h"
+#else
+#include <nvEncodeAPI.h>
+#include <jim-nvenc-ver.h>
+#endif
 
 #include <dxgi.h>
 #include <d3d11.h>
