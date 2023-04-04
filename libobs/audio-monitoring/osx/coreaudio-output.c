@@ -21,7 +21,7 @@ struct audio_monitor {
 	struct circlebuf empty_buffers;
 	struct circlebuf new_data;
 	audio_resampler_t *resampler;
-	size_t buffer_size;
+	uint32_t buffer_size;
 	size_t wait_size;
 	uint32_t channels;
 
