@@ -124,7 +124,7 @@ fail:
 	return ret;
 }
 
-static uint16_t get_max_luminance(const AVStream *stream)
+static uint32_t get_max_luminance(const AVStream *stream)
 {
 	uint32_t max_luminance = 0;
 
