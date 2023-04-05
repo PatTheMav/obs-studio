@@ -57,13 +57,13 @@ static inline QSize GetPixelSize(QWidget *widget)
 	return widget->size() * widget->devicePixelRatioF();
 }
 
-#define OUTLINE_COLOR 0xFFD0D0D0
-#define LINE_LENGTH 0.1f
+constexpr uint32_t OutlineColor = 0xFFD0D0D0;
+constexpr float LineLength = 0.1f;
 
 // Rec. ITU-R BT.1848-1 / EBU R 95
-#define ACTION_SAFE_PERCENT 0.035f       // 3.5%
-#define GRAPHICS_SAFE_PERCENT 0.05f      // 5.0%
-#define FOURBYTHREE_SAFE_PERCENT 0.1625f // 16.25%
+constexpr float ActionSafePercent = 0.035f;
+constexpr float GraphcsSafePercent = 0.05f;
+constexpr float FourByThreeSafePercent = 0.1625f;
 
 static inline void InitSafeAreas(gs_vertbuffer_t **actionSafeMargin,
 				 gs_vertbuffer_t **graphicsSafeMargin,
@@ -76,44 +76,44 @@ static inline void InitSafeAreas(gs_vertbuffer_t **actionSafeMargin,
 
 	// All essential action should be placed inside this area
 	gs_render_start(true);
-	gs_vertex2f(ACTION_SAFE_PERCENT, ACTION_SAFE_PERCENT);
-	gs_vertex2f(ACTION_SAFE_PERCENT, 1 - ACTION_SAFE_PERCENT);
-	gs_vertex2f(1 - ACTION_SAFE_PERCENT, 1 - ACTION_SAFE_PERCENT);
-	gs_vertex2f(1 - ACTION_SAFE_PERCENT, ACTION_SAFE_PERCENT);
-	gs_vertex2f(ACTION_SAFE_PERCENT, ACTION_SAFE_PERCENT);
+	gs_vertex2f(ActionSafePercent, ActionSafePercent);
+	gs_vertex2f(ActionSafePercent, 1 - ActionSafePercent);
+	gs_vertex2f(1 - ActionSafePercent, 1 - ActionSafePercent);
+	gs_vertex2f(1 - ActionSafePercent, ActionSafePercent);
+	gs_vertex2f(ActionSafePercent, ActionSafePercent);
 	*actionSafeMargin = gs_render_save();
 
 	// All graphics should be placed inside this area
 	gs_render_start(true);
-	gs_vertex2f(GRAPHICS_SAFE_PERCENT, GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(GRAPHICS_SAFE_PERCENT, 1 - GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(1 - GRAPHICS_SAFE_PERCENT, 1 - GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(1 - GRAPHICS_SAFE_PERCENT, GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(GRAPHICS_SAFE_PERCENT, GRAPHICS_SAFE_PERCENT);
+	gs_vertex2f(GraphcsSafePercent, GraphcsSafePercent);
+	gs_vertex2f(GraphcsSafePercent, 1 - GraphcsSafePercent);
+	gs_vertex2f(1 - GraphcsSafePercent, 1 - GraphcsSafePercent);
+	gs_vertex2f(1 - GraphcsSafePercent, GraphcsSafePercent);
+	gs_vertex2f(GraphcsSafePercent, GraphcsSafePercent);
 	*graphicsSafeMargin = gs_render_save();
 
 	// 4:3 safe area for widescreen
 	gs_render_start(true);
-	gs_vertex2f(FOURBYTHREE_SAFE_PERCENT, GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(1 - FOURBYTHREE_SAFE_PERCENT, GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(1 - FOURBYTHREE_SAFE_PERCENT, 1 - GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(FOURBYTHREE_SAFE_PERCENT, 1 - GRAPHICS_SAFE_PERCENT);
-	gs_vertex2f(FOURBYTHREE_SAFE_PERCENT, GRAPHICS_SAFE_PERCENT);
+	gs_vertex2f(FourByThreeSafePercent, GraphcsSafePercent);
+	gs_vertex2f(1 - FourByThreeSafePercent, GraphcsSafePercent);
+	gs_vertex2f(1 - FourByThreeSafePercent, 1 - GraphcsSafePercent);
+	gs_vertex2f(FourByThreeSafePercent, 1 - GraphcsSafePercent);
+	gs_vertex2f(FourByThreeSafePercent, GraphcsSafePercent);
 	*fourByThreeSafeMargin = gs_render_save();
 
 	gs_render_start(true);
 	gs_vertex2f(0.0f, 0.5f);
-	gs_vertex2f(LINE_LENGTH, 0.5f);
+	gs_vertex2f(LineLength, 0.5f);
 	*leftLine = gs_render_save();
 
 	gs_render_start(true);
 	gs_vertex2f(0.5f, 0.0f);
-	gs_vertex2f(0.5f, LINE_LENGTH);
+	gs_vertex2f(0.5f, LineLength);
 	*topLine = gs_render_save();
 
 	gs_render_start(true);
 	gs_vertex2f(1.0f, 0.5f);
-	gs_vertex2f(1 - LINE_LENGTH, 0.5f);
+	gs_vertex2f(1 - LineLength, 0.5f);
 	*rightLine = gs_render_save();
 
 	obs_leave_graphics();
@@ -137,7 +137,7 @@ static inline void RenderSafeAreas(gs_vertbuffer_t *vb, int cx, int cy)
 	gs_effect_t *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 	gs_eparam_t *color = gs_effect_get_param_by_name(solid, "color");
 
-	gs_effect_set_color(color, OUTLINE_COLOR);
+	gs_effect_set_color(color, OutlineColor);
 	while (gs_effect_loop(solid, "Solid"))
 		gs_draw(GS_LINESTRIP, 0, 0);
 
