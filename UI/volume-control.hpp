@@ -110,7 +110,7 @@ private:
 	inline void calculateBallisticsForChannel(int channelNr, uint64_t ts,
 						  qreal timeSinceLastRedraw);
 
-	inline int convertToInt(float number);
+	template<typename T> inline int convertToInt(T number);
 	void paintInputMeter(QPainter &painter, int x, int y, int width,
 			     int height, float peakHold);
 	void paintHMeter(QPainter &painter, int x, int y, int width, int height,

@@ -288,6 +288,21 @@ void OBSAdvAudioCtrl::ShowAudioControl(QGridLayout *layout)
 	layout->setHorizontalSpacing(15);
 }
 
+template<typename T> inline int OBSAdvAudioCtrl::convertToInt(T number)
+{
+	constexpr int min = std::numeric_limits<int>::min();
+	constexpr int max = std::numeric_limits<int>::max();
+
+	if (number > max)
+		return max;
+	else if (number < min)
+		return min;
+	else
+		return static_cast<int>(number);
+}
+template int OBSAdvAudioCtrl::convertToInt<double>(double);
+template int OBSAdvAudioCtrl::convertToInt<float>(float);
+
 /* ------------------------------------------------------------------------- */
 /* OBS source callbacks */
 
@@ -343,7 +358,8 @@ void OBSAdvAudioCtrl::OBSSourceMixersChanged(void *param, calldata_t *calldata)
 
 void OBSAdvAudioCtrl::OBSSourceBalanceChanged(void *param, calldata_t *calldata)
 {
-	int balance = (float)calldata_float(calldata, "balance") * 100.0f;
+	int balance =
+		convertToInt(calldata_float(calldata, "balance") * 100.0f);
 	QMetaObject::invokeMethod(reinterpret_cast<OBSAdvAudioCtrl *>(param),
 				  "SourceBalanceChanged", Q_ARG(int, balance));
 }

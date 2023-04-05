@@ -1155,7 +1155,7 @@ void VolumeMeter::ClipEnding()
 	clipping = false;
 }
 
-inline int VolumeMeter::convertToInt(float number)
+template<typename T> inline int VolumeMeter::convertToInt(T number)
 {
 	constexpr int min = std::numeric_limits<int>::min();
 	constexpr int max = std::numeric_limits<int>::max();
@@ -1166,8 +1166,10 @@ inline int VolumeMeter::convertToInt(float number)
 	else if (number < min)
 		return min;
 	else
-		return int(number);
+		return static_cast<int>(number);
 }
+template int VolumeMeter::convertToInt<double>(double);
+template int VolumeMeter::convertToInt<float>(float);
 
 void VolumeMeter::paintHMeter(QPainter &painter, int x, int y, int width,
 			      int height, float magnitude, float peak,
