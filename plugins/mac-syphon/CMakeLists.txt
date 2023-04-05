@@ -64,7 +64,7 @@ target_sources(
 target_compile_options(
   syphon-framework
   PRIVATE -include "${CMAKE_CURRENT_SOURCE_DIR}/syphon-framework/Syphon_Prefix.pch" -Wno-error=deprecated-declarations
-  PUBLIC -Wno-error=newline-eof -Wno-error=deprecated-implementations)
+  PUBLIC -Wno-newline-eof -Wno-deprecated-implementations -Wno-strict-prototypes)
 
 target_compile_definitions(syphon-framework PUBLIC "SYPHON_UNIQUE_CLASS_NAME_PREFIX=OBS_")
 
