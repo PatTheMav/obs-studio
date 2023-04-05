@@ -109,16 +109,16 @@ static Json::object translate_source(const Json &in, const Json &sources)
 	if (id == "TextSource") {
 		out["id"] = "text_gdiplus";
 
-		int color = in_settings["color"].int_value() + 16777216;
-		color = red_blue_swap(color) + 4278190080;
+		int color = in_settings["color"].int_value() + 0x1000000;
+		color = red_blue_swap(color) + 0xFF000000;
 		settings["color"] = color;
 
 		color = in_settings["backgroundColor"].int_value();
-		color = red_blue_swap(color + 16777216) + 4278190080;
+		color = red_blue_swap(color + 0x1000000) + 0xFF000000;
 		settings["bk_color"] = color;
 
 		color = in_settings["outlineColor"].int_value();
-		color = red_blue_swap(color + 16777216) + 4278190080;
+		color = red_blue_swap(color + 0x1000000) + 0xFF000000;
 		settings["outline_color"] = color;
 
 		translate_string("text", in_settings, "text", settings);
