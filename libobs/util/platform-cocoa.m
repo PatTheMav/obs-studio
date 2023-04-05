@@ -141,7 +141,7 @@ char *os_get_executable_path_ptr(const char *name)
 struct os_cpu_usage_info {
 	int64_t last_cpu_time;
 	int64_t last_sys_time;
-	int core_count;
+	long core_count;
 };
 
 static inline void add_time_value(time_value_t *dst, time_value_t *a,
