@@ -43,3 +43,6 @@ public slots:
 	void TryLoadSecondaryUIPanes();
 	void LoadSecondaryUIPanes();
 };
+
+const char *twitchClientId;
+const uint64_t twitchhash;
