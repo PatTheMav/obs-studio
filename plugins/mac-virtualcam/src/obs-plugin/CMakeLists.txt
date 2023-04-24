@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.22...3.25)
 
-legacy_check()
-
 find_library(APPKIT AppKit)
 find_library(COREVIDEO CoreVideo)
 find_library(IOSURFACE IOSurface)
