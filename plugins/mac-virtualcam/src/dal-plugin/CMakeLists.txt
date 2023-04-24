@@ -32,9 +32,7 @@ target_sources(
           Defines.h
           Logging.h)
 
-if(NOT XCODE)
-  target_compile_options(obs-dal-plugin PRIVATE -fobjc-arc -fobjc-weak)
-endif()
+target_compile_options(obs-dal-plugin PRIVATE -fobjc-arc -fobjc-weak)
 
 set(_placeholder_location "${CMAKE_CURRENT_SOURCE_DIR}/../common/data/placeholder.png")
 
