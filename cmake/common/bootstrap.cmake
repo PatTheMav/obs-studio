@@ -25,6 +25,10 @@ endif()
 if(POLICY CMP0090)
   cmake_policy(SET CMP0090 NEW)
 endif()
+
+set(CMAKE_C_EXTENSIONS FALSE)
+set(CMAKE_CXX_EXTENSIONS FALSE)
+
 # Prohibit in-source builds
 if("${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   message(FATAL_ERROR "OBS: In-source builds of OBS are not supported. "
