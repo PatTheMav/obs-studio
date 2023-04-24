@@ -7,6 +7,7 @@
             "hashes": {
                 "macos-universal": "9535c6e1ad96f7d49960251e85a245774088d48da1d602bb82f734b10219125a",
                 "windows-x64": "c13a14a1acc4224b21304d97b63da4121de1ed6981297e50496fbc474abc0503",
+                "windows-x86": "cf43e5873639c95fc3eaaae910f554524c3f4e8b6533c71d10406093b44f3a60",
                 "linux-x86_64": "056425a8a7a4a0c242ed5ab9c1eba4dd6b004386877de4304524e7bea11c0ee2"
             }
         },
@@ -37,14 +38,14 @@
                 "macos-x86_64": 2,
                 "macos-arm64": 2
             }
-        },
-        "vlc": {
-            "version": "3.0.8",
-            "baseUrl": "https://downloads.videolan.org/vlc",
-            "label": "VLC",
-            "hashes": {
-                "windows-x64": "91f589ef69fce51645a3ecbb215b405c98db7b891479474ec3b5ed3b63c25e4a"
-            }
+        }
+    },
+    "tools": {
+        "ccache-win": {
+            "version": "4.8.1",
+            "baseUrl": "https://github.com/ccache/ccache/releases/download/",
+            "label": "Ccache for Windows x64",
+            "hash": "ca59770e9f46b59d6bec6e7036a17a27d601a0a5a0a721fe8e03fea734ccf732"
         }
     },
     "platformConfig": {
