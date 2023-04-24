@@ -41,29 +41,29 @@ target_link_libraries(
           "$<LINK_LIBRARY:FRAMEWORK,CoreMediaIO.framework>"
           "$<LINK_LIBRARY:FRAMEWORK,CoreVideo.framework>"
           "$<LINK_LIBRARY:FRAMEWORK,IOSurface.framework>")
-# cmake-format: on
 
 set_target_properties_obs(
   obs-dal-plugin
   PROPERTIES OUTPUT_NAME obs-mac-virtualcam
              FOLDER plugins
-             PREFIX "")
-
-string(TIMESTAMP CURRENT_YEAR "%Y")
-set_target_properties(
-  obs-dal-plugin
-  PROPERTIES BUNDLE TRUE
+             PREFIX ""
+             BUNDLE TRUE
              BUNDLE_EXTENSION plugin
              MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/Info.plist"
              OSX_ARCHITECTURES "x86_64;arm64;arm64e"
-             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/../../"
-             XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-             XCODE_ATTRIBUTE_CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION YES
-             XCODE_ATTRIBUTE_GCC_WARN_SHADOW YES
-             XCODE_ATTRIBUTE_PRODUCT_NAME obs-mac-virtualcam
-             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.obsproject.obs-mac-virtualcam
-             XCODE_ATTRIBUTE_CURRENT_PROJECT_VERSION ${OBS_BUILD_NUMBER}
-             XCODE_ATTRIBUTE_MARKETING_VERSION ${OBS_VERSION_CANONICAL}
-             XCODE_ATTRIBUTE_GENERATE_INFOPLIST_FILE YES
-             XCODE_ATTRIBUTE_INFOPLIST_KEY_CFBundleDisplayName obs-mac-virtualcam
-             XCODE_ATTRIBUTE_INFOPLIST_KEY_NSHumanReadableCopyright "(c) 2012-${CURRENT_YEAR} Hugh Bailey")
+             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/../../")
+
+string(TIMESTAMP CURRENT_YEAR "%Y")
+set_target_xcode_properties(
+  obs-dal-plugin
+  PROPERTIES CLANG_ENABLE_OBJC_ARC YES
+             CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION YES
+             GCC_WARN_SHADOW YES
+             PRODUCT_NAME obs-mac-virtualcam
+             PRODUCT_BUNDLE_IDENTIFIER com.obsproject.obs-mac-virtualcam
+             CURRENT_PROJECT_VERSION ${OBS_BUILD_NUMBER}
+             MARKETING_VERSION ${OBS_VERSION_CANONICAL}
+             GENERATE_INFOPLIST_FILE YES
+             INFOPLIST_KEY_CFBundleDisplayName obs-mac-virtualcam
+             INFOPLIST_KEY_NSHumanReadableCopyright "(c) 2012-${CURRENT_YEAR} Hugh Bailey")
+# cmake-format: on
