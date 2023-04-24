@@ -7,6 +7,7 @@
             "hashes": {
                 "macos-universal": "9535c6e1ad96f7d49960251e85a245774088d48da1d602bb82f734b10219125a",
                 "windows-x64": "c13a14a1acc4224b21304d97b63da4121de1ed6981297e50496fbc474abc0503",
+                "windows-x86": "cf43e5873639c95fc3eaaae910f554524c3f4e8b6533c71d10406093b44f3a60",
                 "linux-x86_64": "056425a8a7a4a0c242ed5ab9c1eba4dd6b004386877de4304524e7bea11c0ee2"
             }
         },
