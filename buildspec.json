@@ -38,14 +38,6 @@
                 "macos-x86_64": 2,
                 "macos-arm64": 2
             }
-        },
-        "vlc": {
-            "version": "3.0.8",
-            "baseUrl": "https://downloads.videolan.org/vlc",
-            "label": "VLC",
-            "hashes": {
-                "windows-x64": "91f589ef69fce51645a3ecbb215b405c98db7b891479474ec3b5ed3b63c25e4a"
-            }
         }
     },
     "platformConfig": {
@@ -53,9 +45,6 @@
             "qtVersion": 6,
             "deploymentTarget": "11.0",
             "buildTarget": "11.0"
-        },
-        "windows-x64": {
-            "qtVersion": 6
         },
         "linux-x86_64": {
             "qtVersion": 6,
