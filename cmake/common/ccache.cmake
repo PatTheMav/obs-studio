@@ -1,5 +1,7 @@
 # OBS CMake ccache module
 
+include_guard(GLOBAL)
+
 if(NOT DEFINED CCACHE_PROGRAM)
   message(DEBUG "Trying to find ccache on build host...")
   find_program(CCACHE_PROGRAM "ccache")
