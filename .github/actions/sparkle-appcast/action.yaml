@@ -1,0 +1,186 @@
+name: Generate Sparkle Appcast
+description: Creates Sparkle Appcast for a new release and generates delta patch files
+inputs:
+  baseImage:
+    description: Disk image to base the the Sparkle Appcast on
+    required: true
+  channel:
+    description: Sparkle Appcast channel to use
+    required: false
+    default: stable
+  count:
+    description: Number of old versions to generate deltas for
+    required: false
+    default: '1'
+  urlPrefix:
+    description: URL prefix to use for Sparkle downloads
+    required: true
+  customTitle:
+    description: Custom title to use for Appcast
+    required: false
+  customLink:
+    description: Custom link to use for Appcast
+    required: false
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System 🏃‍♂️
+      if: ${{ contains(fromJSON('["Linux", "Windows"]'),runner.os) }}
+      shell: zsh -e {0}
+      run: |
+        : Check Runner Operating System 🏃‍♂️
+        print '::notice::sparkle-appcast action requires a macOS-based runner.'
+        exit 2
+    - name: Install Dependencies
+      shell: zsh -e {0}
+      run: |
+        : Install Dependencies
+        echo ::group::Install Dependencies
+        brew install --quiet coreutils pandoc
+        echo ::endgroup::
+    - name: Setup Sparkle ✨
+      shell: zsh -e {0}
+      run: |
+        : Setup Sparkle ✨
+
+        local version
+        local base_url
+        local hash
+        IFS=';' read -r version base_url hash <<< "$(jq -r '.tools.sparkle \
+          | {version, baseUrl, hash} \
+          | join(";")' buildspec.json")
+
+        mkdir -p Sparkle && pushd Sparkle
+        curl -s -L -O "${base_url}/${version}/Sparkle-${version}.tar.xz"
+
+        local checksum="$(sha256sum Sparkle-${version}.tar.xz | cut -d " " -f 1)"
+
+        if [[ ${hash} != "${checksum}" ]] {
+          print "::error::Sparkle-${version}.tar.xz checksum mismatch: ${checksum} (expected: ${hash})"
+          exit 2
+        }
+
+        tar -xJf "Sparkle-${version}.tar.xz"
+        popd
+
+        mkdir builds
+        mkdir -p output/appcasts/stable
+        mkdir -p output/sparkle_deltas
+    - name: Download Builds 📥
+      id: builds
+      shell: zsh -e {0}
+      run: |
+        : Download Builds 📥
+
+        pushd builds
+        local image_location=(${{ inputs.baseImage }})
+        hdiutil attach -readonly -noverify -noautoopen -plist ${image_location} > result.plist
+
+        local num_entities=$(plutil -extract system-entities raw -- result.plist)
+        local keys
+        local mount_point
+        for i ({1..${num_entities}}) {
+          keys=$(plutil -extract system-entities.${num_entities} raw -- result.plist)
+          if [[ ${keys} == *mount-point* ]] {
+            mount_point=$(plutil -extract system-entities.${num_entities}.mount-point raw -- result.plist)
+            break
+          }
+        }
+
+        local feed_url
+        local info_plist=(${mount_point}/*.app/Contents/Info.plist)
+
+        if [[ -f ${info_plist} ]] {
+          feed_url=$(plutil -extract SUFeedURL raw -- ${info_plist})
+        } else {
+          print '::error:: No Info.plist file found in specified disk image.'
+          hdiutil detach ${mount_point}
+          exit 2
+        }
+
+        print "feedUrl=${feed_url}" >> $GITHUB_OUTPUT
+        hdiutil detach ${mount_point}
+
+        curl -s -L ${feed_url} -o release_appcast.xml
+        local -a artifacts=($(\
+          xmllint \
+            -xpath "//rss/channel/item[*[local-name()='channel'][text()='${{ inputs.channel }}']]/enclosure/@url" \
+            release_appcast.xml \
+          | sed -n 's/.*url="\(.*\)"/\1/p')
+        )
+
+        local url
+        local file_name
+        for i ({1..${{ inputs.count }}}) {
+          url="${artifacts[${i}]}"
+          file_name="${artifacts[${i}]:t}"
+          curl -s -L -o ${url}
+        }
+        popd
+    - name: Prepare Release Notes 📝
+      shell: zsh -e {0}
+      run: |
+        : Prepare Release Notes 📝
+        git tag -l --format='%(contents)' ${{ inputs.version }} > notes.rst
+
+        sed -i '' '2i\'$'\n''###################################################' notes.rst
+        pandoc -f rst -t html notes.rst -o output/appcasts/notes_${{ inputs.channel }}.html
+    - name: Generate Appcast 🎙️
+      shell: zsh -e {0}
+      run: |
+        : Generate Appcast 🎙️
+        print -n '${{ secrets.SPARKLE_PRIVATE_KEY }}' >> eddsa_private.key
+        local feed_url='${{ steps.builds.outputs.feedUrl }}'
+
+        Sparkle/bin/generate_appcast \
+          --verbose \
+          --ed-key-file eddsa_private.key \
+          --download-url-prefix '${{ inputs.urlPrefix }}/' \
+          --full-release-notes-url "${feed_url//updates_*/notes_${{ inputs.channel }}.html}" \
+          --maximum-version 0 \
+          --maximum-deltas ${{ inputs.count }} \
+          --channel '${{ inputs.channel }}' \\
+          builds
+
+        local -a deltas=(builds/*.delta(N))
+
+        if (( #deltas )) {
+          mv ${deltas} output/sparkle_deltas
+        }
+
+        mv builds/*.xml output/appcasts
+    - name: Adjust Appcast 🎙️
+      shell: zsh -e {0}
+      run: |
+        : Adjust Appcast 🎙️
+
+        local -a appcasts=(output/appcasts/*_v2.xml)
+        local adjusted
+        for appcast (${appcasts}) {
+          adjusted="${appcast//.xml/-adjusted.xml}"
+          xsltproc \
+            --stringparam pDeltaUrl '${{ inputs.urlPrefix }}/sparkle_deltas/${{ inputs.target }}/' \
+            --stringparam pSparkleUrl '${{ inputs.urlPrefix }}/' \
+            --stringparam pCustomTitle '${{ inputs.customTitle }}' \
+            --stringparam pCustomLink '${{ inputs.customLink }}' \
+            -o ${adjusted} ${GITHUB_ACTION_PATH}/appcast_adjust.xslt ${appcast}
+
+          xmllint --format ${adjusted} >! ${appcast}
+          rm ${adjusted}
+        }
+    - name: Create Legacy Appcast 📟
+      shell: zsh -e {0}
+      run: |
+        : Create Legacy Appcast 📟
+
+        local -a appcasts=(output/appcasts/*_v2.xml)
+        local legacy
+
+        for appcast (${appcasts}) {
+          legacy="${appcast//.xml/-legacy.xml}"
+          xsltproc \
+            -o ${legacy} ${GITHUB_ACTION_PATH}/appcast_legacy.xslt ${appcast}
+
+          xmllint --format ${legacy} >! output/appcasts/stable/${${appcast:t}//-v2.xml/.xml}
+          rm ${legacy}
+        }
