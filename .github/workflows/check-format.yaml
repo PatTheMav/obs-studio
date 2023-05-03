@@ -1,0 +1,58 @@
+name: Check Code Formatting 🛠️
+on:
+  workflow_call:
+jobs:
+  clang-format:
+    if: ${{ contains(fromJSON('["push", "pull_request"]'), github.event_name) }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: clang-format Check 🐉
+        id: clang-format
+        uses: ./.github/actions/run-clang-format
+        with:
+          failCondition: error
+  swift-format:
+    if: ${{ contains(fromJSON('["push", "pull_request"]'), github.event_name) }}
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: swift-format Check 🔥
+        id: swift-format
+        uses: ./.github/actions/run-swift-format
+        with:
+          failCondition: error
+  cmake-format:
+    if: ${{ contains(fromJSON('["push", "pull_request"]'), github.event_name) }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Homebrew 🍺
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: cmake-format Check 🎛️
+        id: cmake-format
+        uses: ./.github/actions/run-cmake-format
+        with:
+          failCondition: error
+  qt-xml-validator:
+    if: ${{ contains(fromJSON('["push", "pull_request"]'), github.event_name) }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Qt Xml Check 🖼️
+        id: qt-xml-check
+        uses: ./.github/actions/qt-xml-validator
+        with:
+          failCondition: error
