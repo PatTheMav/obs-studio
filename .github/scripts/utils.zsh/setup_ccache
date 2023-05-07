@@ -13,6 +13,7 @@ if (( ${+commands[ccache]} )) {
     pch_defines
     file_stat_matches
     system_headers
+    clang_index_store
   )
 
   if [[ ${host_os} == macos ]] {
