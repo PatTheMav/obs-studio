@@ -194,6 +194,7 @@ class OBSBasic : public OBSMainWindow {
 	friend class DeviceToolbarPropertiesThread;
 	friend class OBSBasicSourceSelect;
 	friend class OBSYoutubeActions;
+	friend class OBSFacebookActions;
 	friend class OBSPermissions;
 	friend struct BasicOutputHandler;
 	friend struct OBSStudioAPI;
@@ -643,6 +644,11 @@ private:
 				   const QString &stream_id, const QString &key,
 				   bool autostart, bool autostop,
 				   bool start_now);
+#endif
+	QScopedPointer<QThread> facebookStreamCheckThread;
+#if FACEBOOK_ENABLED
+	void FacebookStreamCheck(const std::string &key);
+	void FacebookActionDialogOk(const QString &id, const QString &key);
 #endif
 	void BroadcastButtonClicked();
 	void SetBroadcastFlowEnabled(bool enabled);

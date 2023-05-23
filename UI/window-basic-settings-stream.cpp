@@ -20,6 +20,10 @@
 #include "youtube-api-wrappers.hpp"
 #endif
 
+#if FACEBOOK_ENABLED
+#include "facebook-api-wrappers.hpp"
+#endif
+
 struct QCef;
 struct QCefCookieManager;
 
@@ -311,8 +315,7 @@ void OBSBasicSettings::UpdateKeyLink()
 	streamKeyLink = obs_data_get_string(settings, "stream_key_link");
 
 	if (customServer.contains("fbcdn.net") && IsCustomService()) {
-		streamKeyLink =
-			"https://www.facebook.com/live/producer?ref=OBS";
+		streamKeyLink = FACEBOOK_DASHBOARD_URL;
 	}
 
 	if (serviceName == "Dacast") {
@@ -477,6 +480,24 @@ static void get_yt_ch_title(Ui::OBSBasicSettings *ui)
 }
 #endif
 
+#if FACEBOOK_ENABLED
+static void get_fb_ch_title(Ui::OBSBasicSettings *ui)
+{
+	const char *name = config_get_string(OBSBasic::Get()->Config(),
+					     FACEBOOK_SECTION_NAME,
+					     FACEBOOK_USER_NAME);
+	if (name) {
+		ui->connectedAccountText->setText(name);
+	} else {
+		// if we still not changed the service page
+		if (IsFacebookService(QT_TO_UTF8(ui->service->currentText()))) {
+			ui->connectedAccountText->setText(
+				QTStr("Auth.LoadingChannel.Error"));
+		}
+	}
+}
+#endif
+
 void OBSBasicSettings::UseStreamKeyAdvClicked()
 {
 	ui->streamKeyWidget->setVisible(true);
@@ -566,6 +587,12 @@ void OBSBasicSettings::ServiceChanged(bool resetFields)
 	service_check = service_check ? service_check
 				      : IsYouTubeService(system_auth_service) &&
 						IsYouTubeService(service);
+#endif
+#if FACEBOOK_ENABLED
+	service_check = service_check
+				? service_check
+				: IsFacebookService(system_auth_service) &&
+					  IsFacebookService(service);
 #endif
 	if (service_check) {
 		auth = main->auth;
@@ -741,6 +768,19 @@ void OBSBasicSettings::OnOAuthStreamKeyConnected()
 				QTStr("Auth.LoadingChannel.Title"));
 
 			get_yt_ch_title(ui.get());
+		}
+#endif
+#if FACEBOOK_ENABLED
+		if (IsFacebookService(a->service())) {
+			ui->key->clear();
+
+			ui->connectedAccountLabel->setVisible(true);
+			ui->connectedAccountText->setVisible(true);
+
+			ui->connectedAccountText->setText(
+				QTStr("Facebook.Auth.LoadingChannel.Title"));
+
+			get_fb_ch_title(ui.get());
 		}
 #endif
 	}

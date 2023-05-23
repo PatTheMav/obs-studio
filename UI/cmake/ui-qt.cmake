@@ -34,6 +34,7 @@ set(_qt_sources
     forms/OBSBasicTransform.ui
     forms/OBSBasicVCamConfig.ui
     forms/OBSExtraBrowsers.ui
+    forms/OBSFacebookActions.ui
     forms/OBSImporter.ui
     forms/OBSLogReply.ui
     forms/OBSLogViewer.ui

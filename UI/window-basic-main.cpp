@@ -66,6 +66,10 @@
 #include "window-youtube-actions.hpp"
 #include "youtube-api-wrappers.hpp"
 #endif
+#if FACEBOOK_ENABLED
+#include "auth-facebook.hpp"
+#include "window-facebook-actions.hpp"
+#endif
 #include "qt-wrappers.hpp"
 #include "context-bar-controls.hpp"
 #include "obs-proxy-style.hpp"
@@ -306,6 +310,9 @@ extern void RegisterRestreamAuth();
 #ifdef YOUTUBE_ENABLED
 extern void RegisterYoutubeAuth();
 #endif
+#if FACEBOOK_ENABLED
+extern void RegisterFacebookAuth();
+#endif
 
 OBSBasic::OBSBasic(QWidget *parent)
 	: OBSMainWindow(parent),
@@ -322,6 +329,9 @@ OBSBasic::OBSBasic(QWidget *parent)
 #endif
 #ifdef YOUTUBE_ENABLED
 	RegisterYoutubeAuth();
+#endif
+#if FACEBOOK_ENABLED
+	RegisterFacebookAuth();
 #endif
 
 	setAcceptDrops(true);
@@ -5040,6 +5050,15 @@ void OBSBasic::closeEvent(QCloseEvent *event)
 	}
 #endif
 
+#if FACEBOOK_ENABLED
+	/* Also don't close the window if the facebook stream check is active */
+	if (facebookStreamCheckThread) {
+		QTimer::singleShot(1000, this, SLOT(close()));
+		event->ignore();
+		return;
+	}
+#endif
+
 	if (isVisible())
 		config_set_string(App()->GlobalConfig(), "BasicWindow",
 				  "geometry",
@@ -6907,6 +6926,53 @@ void OBSBasic::ShowYouTubeAutoStartWarning()
 }
 #endif
 
+#if FACEBOOK_ENABLED
+void OBSBasic::FacebookActionDialogOk(const QString &id, const QString &key)
+{
+#ifdef _DEBUG
+	blog(LOG_WARNING, "Facebook Stream key: %s", QT_TO_UTF8(key));
+#endif
+
+	OBSDataAutoRelease settings = obs_service_get_settings(service);
+
+	QString userid = config_get_string(basicConfig, FACEBOOK_SECTION_NAME,
+					   FACEBOOK_USER_ID);
+
+	config_set_string(basicConfig, FACEBOOK_SECTION_NAME, "liveVideoId",
+			  QT_TO_UTF8(id));
+	const int index = key.lastIndexOf("/");
+	obs_data_set_string(settings, "server", QT_TO_UTF8(key.left(index)));
+	obs_data_set_string(settings, "key",
+			    QT_TO_UTF8(key.right(key.size() - index)));
+	obs_service_update(service, settings);
+
+	//broadcastActive = true;
+	broadcastReady = true;
+
+	QMetaObject::invokeMethod(this, "StartStreaming");
+}
+
+void OBSBasic::FacebookStreamCheck(const std::string &key)
+{
+	FacebookApiWrappers *apiFacebook(
+		dynamic_cast<FacebookApiWrappers *>(GetAuth()));
+	if (!apiFacebook) {
+		QMetaObject::invokeMethod(this, "ForceStopStreaming",
+					  Qt::QueuedConnection);
+		youtubeStreamCheckThread->deleteLater();
+		blog(LOG_ERROR, "==========================================");
+		blog(LOG_ERROR, "%s: Uh, hey, we got here", __FUNCTION__);
+		blog(LOG_ERROR, "==========================================");
+		return;
+	}
+
+	// do something
+
+	facebookStreamCheckThread->deleteLater();
+}
+
+#endif
+
 void OBSBasic::StartStreaming()
 {
 	if (outputHandler->StreamingActive())
@@ -7112,13 +7178,29 @@ void OBSBasic::SetBroadcastFlowEnabled(bool enabled)
 
 void OBSBasic::SetupBroadcast()
 {
-#ifdef YOUTUBE_ENABLED
 	Auth *const auth = GetAuth();
+
+#ifdef YOUTUBE_ENABLED
 	if (IsYouTubeService(auth->service())) {
 		OBSYoutubeActions dialog(this, auth, broadcastReady);
 		connect(&dialog, &OBSYoutubeActions::ok, this,
 			&OBSBasic::YouTubeActionDialogOk);
 		int result = dialog.Valid() ? dialog.exec() : QDialog::Rejected;
+		if (result != QDialog::Accepted) {
+			if (!broadcastReady)
+				ui->broadcastButton->setChecked(false);
+		}
+	}
+#endif
+
+#ifdef FACEBOOK_ENABLED
+	if (IsFacebookService(auth->service())) {
+		OBSFacebookActions *dialog;
+		dialog = new OBSFacebookActions(this, auth, broadcastReady);
+		connect(dialog, &OBSFacebookActions::ok, this,
+			&OBSBasic::FacebookActionDialogOk);
+		int result = dialog->Valid() ? dialog->exec()
+					     : QDialog::Rejected;
 		if (result != QDialog::Accepted) {
 			if (!broadcastReady)
 				ui->broadcastButton->setChecked(false);
@@ -7232,6 +7314,18 @@ inline void OBSBasic::OnDeactivate()
 
 void OBSBasic::StopStreaming()
 {
+#ifdef FACEBOOK_ENABLED
+	OBSBasic *main = OBSBasic::Get();
+	FacebookApiWrappers *api =
+		reinterpret_cast<FacebookApiWrappers *>(GetAuth());
+	QString liveVideoId = config_get_string(
+		main->Config(), FACEBOOK_SECTION_NAME, "liveVideoId");
+
+	if (api->EndLive(liveVideoId)) {
+		blog(LOG_WARNING, "VIDEO FINISHED");
+	}
+#endif
+
 	SaveProject();
 
 	if (outputHandler->StreamingActive())

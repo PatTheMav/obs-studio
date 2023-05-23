@@ -107,9 +107,6 @@ void OAuthLogin::urlChanged(const QString &url)
 	if (code_idx == -1)
 		return;
 
-	if (!url.startsWith(OAUTH_BASE_URL))
-		return;
-
 	code_idx += (int)uri.size();
 
 	int next_idx = url.indexOf("&", code_idx);
@@ -259,6 +256,9 @@ try {
 	bool success = false;
 
 	auto func = [&]() {
+		blog(LOG_WARNING, "Facebook Graph API request URL %s", url);
+		blog(LOG_WARNING, "Facebook Graph API request DATA %s",
+		     post_data.c_str());
 		success = GetRemoteFile(url, output, error, nullptr,
 					"application/x-www-form-urlencoded", "",
 					post_data.c_str(),
@@ -296,12 +296,13 @@ try {
 		throw ErrorInfo("Failed to get token from remote", error);
 
 	if (!auth_code.empty()) {
-		refresh_token = json["refresh_token"].string_value();
-		if (refresh_token.empty())
-			throw ErrorInfo("Failed to get refresh token from "
-					"remote",
+		if (strcmp(this->service(), "Facebook Live") != 0) {
+			refresh_token = json["refresh_token"].string_value();
+			if (refresh_token.empty())
+				throw ErrorInfo(
+					"Failed to get refresh token from remote",
 					error);
-
+		}
 		currentScopeVer = scope_ver;
 	}
 
