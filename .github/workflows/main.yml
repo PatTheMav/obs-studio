@@ -332,6 +332,51 @@ jobs:
           $CommitHash = git rev-parse --short=9 HEAD
           "commitHash=${CommitHash}" >> $env:GITHUB_OUTPUT
 
+      - name: 'Restore ccache from cache'
+        id: ccache-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'ccache-cache'
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache-${{ github.event_name }}-${{ github.head_ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-push-
+
+      - name: 'Setup Ccache'
+        run: |
+          $BuildSpec = Get-Content -Path buildspec.json -Raw | ConvertFrom-Json
+          $CcacheData = $BuildSpec.tools."ccache-win"
+
+          New-Item -Type Directory '.deps' > $null
+          Set-Location '.deps'
+
+          curl --location --remote-name "$($CcacheData.baseUrl)/v$($CcacheData.version)/ccache-$($CcacheData.version)-windows-x86_64.zip"
+
+          $DownloadHash = (Get-FileHash "ccache-$($CcacheData.version)-windows-x86_64.zip").Hash.ToLower()
+
+          if ( $DownloadHash -ne $CcacheData.hash ) {
+            throw "Hash mismatch for downloaded Ccache archive: Expected $($CcacheData.hash), got ${DownloadHash}."
+          }
+
+          Expand-Archive -Path "ccache-$($CcacheData.version)-windows-x86_64.zip" -DestinationPath . -Force
+
+          $Env:CCACHE_CONFIGPATH="${Env:GITHUB_WORKSPACE}/.ccache.conf"
+          $Env:path="${Env:GITHUB_WORKSPACE}/.deps/ccache-$($CcacheData.version)-windows-x86_64;${Env:path}"
+          "CCACHE_CONFIGPATH=${Env:GITHUB_WORKSPACE}/.ccache.conf" >> $Env:GITHUB_ENV
+          "${Env:GITHUB_WORKSPACE}/.deps/ccache-$($CcacheData.version)-windows-x86_64" >> $Env:GITHUB_PATH
+
+          ccache --set-config=run_second_cpp=true
+          ccache --set-config=direct_mode=true
+          ccache --set-config=inode_cache=true
+          ccache --set-config=compiler_check=content
+          ccache --set-config=file_clone=true
+          ccache --set-config=sloppiness=include_file_mtime,include_file_ctime,file_stat_matches,system_headers
+
+          ccache --set-config=cache_dir="${Env:GITHUB_WORKSPACE}/.ccache"
+          ccache --set-config=max_size=1G
+          ccache -z > $null
+
       - name: 'Build OBS'
         run: .github/scripts/Build-Windows.ps1 -Target x64 -Configuration RelWithDebInfo
 
