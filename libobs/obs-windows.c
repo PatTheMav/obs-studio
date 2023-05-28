@@ -34,17 +34,11 @@ const char *get_module_extension(void)
 	return ".dll";
 }
 
-#ifdef _WIN64
-#define BIT_STRING "64bit"
-#else
-#define BIT_STRING "32bit"
-#endif
+static const char *module_bin[] = {"../../obs-plugins",
+				   "../../obs-plugins/64bit"};
 
-static const char *module_bin[] = {
-	"../../obs-plugins/" BIT_STRING,
-};
-
-static const char *module_data[] = {"../../data/obs-plugins/%module%"};
+static const char *module_data[] = {"../../data/obs-plugins/%module%",
+				    "../../data/obs-plugins/%module%"};
 
 static const int module_patterns_size =
 	sizeof(module_bin) / sizeof(module_bin[0]);
