@@ -5051,7 +5051,6 @@ void OBSBasic::closeEvent(QCloseEvent *event)
 #endif
 
 #if FACEBOOK_ENABLED
-	/* Also don't close the window if the facebook stream check is active */
 	if (facebookStreamCheckThread) {
 		QTimer::singleShot(1000, this, SLOT(close()));
 		event->ignore();
@@ -6927,29 +6926,35 @@ void OBSBasic::ShowYouTubeAutoStartWarning()
 #endif
 
 #if FACEBOOK_ENABLED
-void OBSBasic::FacebookActionDialogOk(const QString &id, const QString &key)
+void OBSBasic::FacebookActionDialogOk(const QString &streamId,
+				      const QString &streamUrl, bool autostop,
+				      bool start_now)
 {
 #ifdef _DEBUG
-	blog(LOG_WARNING, "Facebook Stream key: %s", QT_TO_UTF8(key));
+	blog(LOG_DEBUG, "Facebook Stream URL: %s", QT_TO_UTF8(streamUrl));
 #endif
+	obs_service_t *serviceObject = GetService();
+	OBSDataAutoRelease settings = obs_service_get_settings(serviceObject);
 
-	OBSDataAutoRelease settings = obs_service_get_settings(service);
+	config_set_string(basicConfig, "Facebook Live", "liveVideoId",
+			  QT_TO_UTF8(streamId));
 
-	QString userid = config_get_string(basicConfig, FACEBOOK_SECTION_NAME,
-					   FACEBOOK_USER_ID);
+	qsizetype index = streamUrl.lastIndexOf("/");
+	obs_data_set_string(settings, "server",
+			    QT_TO_UTF8(streamUrl.left(index)));
+	obs_data_set_string(
+		settings, "key",
+		QT_TO_UTF8(streamUrl.right(streamUrl.size() - index)));
 
-	config_set_string(basicConfig, FACEBOOK_SECTION_NAME, "liveVideoId",
-			  QT_TO_UTF8(id));
-	const int index = key.lastIndexOf("/");
-	obs_data_set_string(settings, "server", QT_TO_UTF8(key.left(index)));
-	obs_data_set_string(settings, "key",
-			    QT_TO_UTF8(key.right(key.size() - index)));
-	obs_service_update(service, settings);
+	obs_service_update(serviceObject, settings);
 
-	//broadcastActive = true;
+	autoStartBroadcast = false;
+	autoStopBroadcast = autostop;
 	broadcastReady = true;
 
-	QMetaObject::invokeMethod(this, "StartStreaming");
+	if (start_now) {
+		QMetaObject::invokeMethod(this, "StartStreaming");
+	}
 }
 
 void OBSBasic::FacebookStreamCheck(const std::string &key)
@@ -7063,8 +7068,9 @@ void OBSBasic::StartStreaming()
 		StartReplayBuffer();
 
 #ifdef YOUTUBE_ENABLED
-	if (!autoStartBroadcast)
+	if (IsYouTubeService(auth->service()) && !autoStartBroadcast) {
 		OBSBasic::ShowYouTubeAutoStartWarning();
+	}
 #endif
 }
 
@@ -7078,28 +7084,32 @@ void OBSBasic::BroadcastButtonClicked()
 		return;
 	}
 
-	if (!autoStartBroadcast) {
 #ifdef YOUTUBE_ENABLED
-		std::shared_ptr<YoutubeApiWrappers> ytAuth =
-			dynamic_pointer_cast<YoutubeApiWrappers>(auth);
-		if (ytAuth.get()) {
-			if (!ytAuth->StartLatestBroadcast()) {
-				auto last_error = ytAuth->GetLastError();
-				if (last_error.isEmpty())
-					last_error = QTStr(
-						"YouTube.Actions.Error.YouTubeApi");
-				if (!ytAuth->GetTranslatedError(last_error))
-					last_error =
-						QTStr("YouTube.Actions.Error.BroadcastTransitionFailed")
-							.arg(last_error,
-							     ytAuth->GetBroadcastId());
+	if (IsYouTubeService(auth->service())) {
+		if (!autoStartBroadcast) {
+			std::shared_ptr<YoutubeApiWrappers> ytAuth =
+				dynamic_pointer_cast<YoutubeApiWrappers>(auth);
+			if (ytAuth.get()) {
+				if (!ytAuth->StartLatestBroadcast()) {
+					auto last_error =
+						ytAuth->GetLastError();
+					if (last_error.isEmpty())
+						last_error = QTStr(
+							"YouTube.Actions.Error.YouTubeApi");
+					if (!ytAuth->GetTranslatedError(
+						    last_error))
+						last_error =
+							QTStr("YouTube.Actions.Error.BroadcastTransitionFailed")
+								.arg(last_error,
+								     ytAuth->GetBroadcastId());
 
-				OBSMessageBox::warning(
-					this,
-					QTStr("Output.BroadcastStartFailed"),
-					last_error, true);
-				ui->broadcastButton->setChecked(false);
-				return;
+					OBSMessageBox::warning(
+						this,
+						QTStr("Output.BroadcastStartFailed"),
+						last_error, true);
+					ui->broadcastButton->setChecked(false);
+					return;
+				}
 			}
 		}
 #endif
@@ -7120,39 +7130,47 @@ void OBSBasic::BroadcastButtonClicked()
 		ui->broadcastButton->style()->polish(ui->broadcastButton);
 	} else if (!autoStopBroadcast) {
 #ifdef YOUTUBE_ENABLED
-		bool confirm = config_get_bool(GetGlobalConfig(), "BasicWindow",
-					       "WarnBeforeStoppingStream");
-		if (confirm && isVisible()) {
-			QMessageBox::StandardButton button = OBSMessageBox::question(
-				this, QTStr("ConfirmStop.Title"),
-				QTStr("YouTube.Actions.AutoStopStreamingWarning"),
-				QMessageBox::Yes | QMessageBox::No,
-				QMessageBox::No);
+		if (IsYouTubeService(auth->service())) {
+			bool confirm = config_get_bool(
+				GetGlobalConfig(), "BasicWindow",
+				"WarnBeforeStoppingStream");
+			if (confirm && isVisible()) {
+				QMessageBox::StandardButton button =
+					OBSMessageBox::question(
+						this,
+						QTStr("ConfirmStop.Title"),
+						QTStr("YouTube.Actions.AutoStopStreamingWarning"),
+						QMessageBox::Yes |
+							QMessageBox::No,
+						QMessageBox::No);
 
-			if (button == QMessageBox::No) {
-				ui->broadcastButton->setChecked(true);
-				return;
+				if (button == QMessageBox::No) {
+					ui->broadcastButton->setChecked(true);
+					return;
+				}
 			}
-		}
 
-		std::shared_ptr<YoutubeApiWrappers> ytAuth =
-			dynamic_pointer_cast<YoutubeApiWrappers>(auth);
-		if (ytAuth.get()) {
-			if (!ytAuth->StopLatestBroadcast()) {
-				auto last_error = ytAuth->GetLastError();
-				if (last_error.isEmpty())
-					last_error = QTStr(
-						"YouTube.Actions.Error.YouTubeApi");
-				if (!ytAuth->GetTranslatedError(last_error))
-					last_error =
-						QTStr("YouTube.Actions.Error.BroadcastTransitionFailed")
-							.arg(last_error,
-							     ytAuth->GetBroadcastId());
+			std::shared_ptr<YoutubeApiWrappers> ytAuth =
+				dynamic_pointer_cast<YoutubeApiWrappers>(auth);
+			if (ytAuth.get()) {
+				if (!ytAuth->StopLatestBroadcast()) {
+					auto last_error =
+						ytAuth->GetLastError();
+					if (last_error.isEmpty())
+						last_error = QTStr(
+							"YouTube.Actions.Error.YouTubeApi");
+					if (!ytAuth->GetTranslatedError(
+						    last_error))
+						last_error =
+							QTStr("YouTube.Actions.Error.BroadcastTransitionFailed")
+								.arg(last_error,
+								     ytAuth->GetBroadcastId());
 
-				OBSMessageBox::warning(
-					this,
-					QTStr("Output.BroadcastStopFailed"),
-					last_error, true);
+					OBSMessageBox::warning(
+						this,
+						QTStr("Output.BroadcastStopFailed"),
+						last_error, true);
+				}
 			}
 		}
 #endif
@@ -7314,18 +7332,6 @@ inline void OBSBasic::OnDeactivate()
 
 void OBSBasic::StopStreaming()
 {
-#ifdef FACEBOOK_ENABLED
-	OBSBasic *main = OBSBasic::Get();
-	FacebookApiWrappers *api =
-		reinterpret_cast<FacebookApiWrappers *>(GetAuth());
-	QString liveVideoId = config_get_string(
-		main->Config(), FACEBOOK_SECTION_NAME, "liveVideoId");
-
-	if (api->EndLive(liveVideoId)) {
-		blog(LOG_WARNING, "VIDEO FINISHED");
-	}
-#endif
-
 	SaveProject();
 
 	if (outputHandler->StreamingActive())
@@ -7343,6 +7349,19 @@ void OBSBasic::StopStreaming()
 	if (autoStopBroadcast) {
 		broadcastActive = false;
 		broadcastReady = false;
+
+#ifdef FACEBOOK_ENABLED
+		if (IsFacebookService(auth->service())) {
+			OBSBasic *main = OBSBasic::Get();
+			QString liveVideoId = config_get_string(
+				main->Config(), "Facebook Live", "liveVideoId");
+			FacebookApiWrappers *facebookApi =
+				reinterpret_cast<FacebookApiWrappers *>(
+					GetAuth());
+
+			facebookApi->EndStream(liveVideoId);
+		}
+#endif
 	}
 
 	OnDeactivate();
@@ -7383,6 +7402,19 @@ void OBSBasic::ForceStopStreaming()
 	if (autoStopBroadcast) {
 		broadcastActive = false;
 		broadcastReady = false;
+
+#ifdef FACEBOOK_ENABLED
+		if (IsFacebookService(auth->service())) {
+			OBSBasic *main = OBSBasic::Get();
+			QString liveVideoId = config_get_string(
+				main->Config(), "Facebook Live", "liveVideoId");
+			FacebookApiWrappers *facebookApi =
+				reinterpret_cast<FacebookApiWrappers *>(
+					GetAuth());
+
+			facebookApi->EndStream(liveVideoId);
+		}
+#endif
 	}
 
 	OnDeactivate();
@@ -7470,7 +7502,7 @@ void OBSBasic::StreamingStart()
 	}
 
 #ifdef YOUTUBE_ENABLED
-	if (!autoStartBroadcast) {
+	if (IsYouTubeService(auth->service()) && !autoStartBroadcast) {
 		// get a current stream key
 		obs_service_t *service_obj = GetService();
 		OBSDataAutoRelease settings =

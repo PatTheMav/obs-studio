@@ -648,7 +648,8 @@ private:
 	QScopedPointer<QThread> facebookStreamCheckThread;
 #if FACEBOOK_ENABLED
 	void FacebookStreamCheck(const std::string &key);
-	void FacebookActionDialogOk(const QString &id, const QString &key);
+	void FacebookActionDialogOk(const QString &id, const QString &key,
+				    bool autostop, bool start_now);
 #endif
 	void BroadcastButtonClicked();
 	void SetBroadcastFlowEnabled(bool enabled);

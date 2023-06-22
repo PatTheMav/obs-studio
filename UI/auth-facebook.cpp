@@ -1,22 +1,48 @@
-#include "auth-facebook.hpp"
-
 #include <QThread>
 #include <vector>
 #include <QDesktopServices>
 #include <QUrl>
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
 #include <QRandomGenerator>
-#endif
 
-#include "remote-text.hpp"
 #include <obs-app.hpp>
 #include <qt-wrappers.hpp>
-#include "ui-config.h"
-#include "facebook-api-wrappers.hpp"
-#include "window-basic-main.hpp"
-#include "obf.h"
 
+#include "auth-facebook.hpp"
+#include "facebook-api-wrappers.hpp"
+#include "obf.h"
+#include "remote-text.hpp"
+#include "ui-config.h"
+#include "window-basic-main.hpp"
 #include "window-dock-browser.hpp"
+
+const char *FACEBOOK_DASHBOARD_URL =
+	"https://www.facebook.com/live/producer=ref=OBS";
+const char *FACEBOOK_LOGIN_URL = "https://www.facebook.com/dialog/oauth";
+const char *FACEBOOK_COMMENTS_POPUP_URL =
+	"https://www.facebook.com/live/producer/dashboard/%1/COMMENTS";
+const char *FACEBOOK_COMMENTS_PLACEHOLDER_URL =
+	"https://obsproject.com/placeholders/youtube-chat";
+const char *FACEBOOK_HEALTH_POPUP_URL =
+	"https://www.facebook.com/live/producer/dashboard/%1/STREAM_HEALTH";
+const char *FACEBOOK_HEALTH_PLACEHOLDER_URL =
+	"https://obsproject.com/placeholders/youtube-chat";
+const char *FACEBOOK_STATS_POPUP_URL =
+	"https://www.facebook.com/live/producer/dashboard/%1/STREAM_STATS";
+const char *FACEBOOK_STATS_PLACEHOLDER_URL =
+	"https://obsproject.com/placeholders/youtube-chat";
+const char *FACEBOOK_ALERTS_POPUP_URL =
+	"https://www.facebook.com/live/producer/dashboard/%1/ALERTS";
+const char *FACEBOOK_ALERTS_PLACEHOLDER_URL =
+	"https://obsproject.com/placeholders/youtube-chat";
+
+const char *FACEBOOK_TOKEN_URL =
+	"https://graph.facebook.com/v17.0/oauth/access_token";
+const char *FACEBOOK_REDIRECT_URL =
+	"https://www.facebook.com/connect/login_success.html";
+const char *FACEBOOK_PERMISSION_PUBLISH_VIDEO = "publish_video";
+
+int FACEBOOK_SCOPE_VERSION = 1;
+int FACEBOOK_API_STATE_LENGTH = 32;
 
 static inline void OpenBrowser(const QString auth_uri)
 {
@@ -32,7 +58,7 @@ static std::shared_ptr<FacebookApiWrappers> CreateFacebookAuth()
 static void DeleteCookies()
 {
 	if (panel_cookies)
-		panel_cookies->DeleteCookies("twitch.tv", std::string());
+		panel_cookies->DeleteCookies("facebook.com", std::string());
 }
 
 void RegisterFacebookAuth()
@@ -46,14 +72,14 @@ FacebookAuth::FacebookAuth(const Def &d) : OAuthStreamKey(d) {}
 void FacebookAuth::SaveInternal()
 {
 	OBSBasic *main = OBSBasic::Get();
-	config_set_string(main->Config(), FACEBOOK_SECTION_NAME, "DockState",
+	config_set_string(main->Config(), "Facebook Live", "DockState",
 			  main->saveState().toBase64().constData());
 
-	config_set_string(main->Config(), FACEBOOK_SECTION_NAME, "Token",
+	config_set_string(main->Config(), "Facebook Live", "Token",
 			  token.c_str());
-	config_set_uint(main->Config(), FACEBOOK_SECTION_NAME, "ExpireTime",
+	config_set_uint(main->Config(), "Facebook Live", "ExpireTime",
 			expire_time);
-	config_set_int(main->Config(), FACEBOOK_SECTION_NAME, "ScopeVer",
+	config_set_int(main->Config(), "Facebook Live", "ScopeVer",
 		       currentScopeVer);
 }
 
@@ -68,11 +94,11 @@ bool FacebookAuth::LoadInternal()
 {
 	OBSBasic *main = OBSBasic::Get();
 
-	token = get_config_str(main, FACEBOOK_SECTION_NAME, "Token");
-	expire_time = config_get_uint(main->Config(), FACEBOOK_SECTION_NAME,
-				      "ExpireTime");
-	currentScopeVer = (int)config_get_int(
-		main->Config(), FACEBOOK_SECTION_NAME, "ScopeVer");
+	token = get_config_str(main, "Facebook Live", "Token");
+	expire_time =
+		config_get_uint(main->Config(), "Facebook Live", "ExpireTime");
+	currentScopeVer = (int)config_get_int(main->Config(), "Facebook Live",
+					      "ScopeVer");
 
 	firstLoad = false;
 
@@ -81,6 +107,8 @@ bool FacebookAuth::LoadInternal()
 
 void FacebookAuth::SetDocksLiveVideoId(QString &liveVideoId)
 {
+	// TODO: REMOVE EARLY RETURN
+	return;
 	QString commentsUrl =
 		QString(FACEBOOK_COMMENTS_POPUP_URL).arg(liveVideoId);
 	QString healthUrl = QString(FACEBOOK_HEALTH_POPUP_URL).arg(liveVideoId);
@@ -130,6 +158,10 @@ void FacebookAuth::LoadUI()
 
 	if (!cef)
 		return;
+
+	// TODO: REMOVE EARLY RETURN
+	uiLoaded = true;
+	return;
 
 	OBSBasic::InitBrowserPanelSafeBlock();
 	OBSBasic *main = OBSBasic::Get();
@@ -234,7 +266,7 @@ void FacebookAuth::LoadUI()
 		alerts->setVisible(true);
 	} else {
 		const char *dsStr = config_get_string(
-			main->Config(), FACEBOOK_SECTION_NAME, "DockState");
+			main->Config(), "Facebook Live", "DockState");
 		main->restoreState(QByteArray::fromBase64(QByteArray(dsStr)));
 	}
 
@@ -248,7 +280,6 @@ bool FacebookAuth::RetryLogin()
 
 QString FacebookAuth::GenerateState()
 {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
 	char state[FACEBOOK_API_STATE_LENGTH + 1];
 	QRandomGenerator *rng = QRandomGenerator::system();
 	int i;
@@ -258,17 +289,6 @@ QString FacebookAuth::GenerateState()
 	state[i] = 0;
 
 	return state;
-#else
-	std::uniform_int_distribution<> distr(0, allowedCount);
-	std::string result;
-	result.reserve(FACEBOOK_API_STATE_LENGTH);
-	std::generate_n(std::back_inserter(result), FACEBOOK_API_STATE_LENGTH,
-			[&] {
-				return static_cast<char>(
-					allowedChars[distr(randomSeed)]);
-			});
-	return result.c_str();
-#endif
 }
 
 std::shared_ptr<Auth> FacebookAuth::WebviewLoginFlow(QWidget *parent)
@@ -278,9 +298,7 @@ std::shared_ptr<Auth> FacebookAuth::WebviewLoginFlow(QWidget *parent)
 #endif
 	const auto auth = CreateFacebookAuth();
 
-	QString redirect_uri =
-		//QString("http://localhost:%1").arg(server.GetPort());
-		QString("https://www.facebook.com/connect/login_success.html");
+	QString redirect_uri = QString(FACEBOOK_REDIRECT_URL);
 
 	std::string clientid = FACEBOOK_CLIENTID;
 	std::string secret = FACEBOOK_SECRET;
@@ -289,23 +307,24 @@ std::shared_ptr<Auth> FacebookAuth::WebviewLoginFlow(QWidget *parent)
 
 	QString state = auth->GenerateState();
 
-	QString url_template;
-	url_template += "%1";
-	url_template += "?response_type=code";
-	url_template += "&client_id=%2";
-	url_template += "&redirect_uri=%3";
-	url_template += "&state=%4";
-	url_template += "&scope=%5";
-	QString url = url_template.arg(FACEBOOK_LOGIN_URL, clientid.c_str(),
-				       redirect_uri, state,
-				       FACEBOOK_PERMISSION_PUBLISH_VIDEO);
+	QStringList arguments = {
+		"response_type=code",
+		QString("client_id=%1").arg(clientid.c_str()),
+		QString("redirect_uri=%1").arg(redirect_uri),
+		QString("state=%1").arg(state),
+		QString("scope=%1").arg(FACEBOOK_PERMISSION_PUBLISH_VIDEO)};
+
+	QString url = QString("%1?%2")
+			      .arg(FACEBOOK_LOGIN_URL)
+			      .arg(arguments.join("&"));
 
 #ifdef _DEBUG
-	blog(LOG_WARNING, QT_TO_UTF8(url));
+	blog(LOG_WARNING, "%s", QT_TO_UTF8(url));
 #endif
 	OAuthLogin login(parent, QT_TO_UTF8(url), false);
-	if (login.exec() == QDialog::Rejected)
+	if (login.exec() == QDialog::Rejected) {
 		return nullptr;
+	}
 
 	if (!auth->GetToken(FACEBOOK_TOKEN_URL, clientid, secret,
 			    QT_TO_UTF8(redirect_uri), FACEBOOK_SCOPE_VERSION,
@@ -314,16 +333,16 @@ std::shared_ptr<Auth> FacebookAuth::WebviewLoginFlow(QWidget *parent)
 	}
 
 	User u;
-	if (!auth->GetUserInfo(u))
+	if (!auth->GetUserInfo(u)) {
 		return nullptr;
+	}
 
 	config_t *config = OBSBasic::Get()->Config();
-	config_remove_value(config, FACEBOOK_SECTION_NAME, FACEBOOK_USER_ID);
-	config_remove_value(config, FACEBOOK_SECTION_NAME, FACEBOOK_USER_NAME);
+	config_remove_value(config, "Facebook Live", "UserId");
+	config_remove_value(config, "Facebook Live", "UserName");
 
-	config_set_string(config, FACEBOOK_SECTION_NAME, FACEBOOK_USER_ID,
-			  QT_TO_UTF8(u.id));
-	config_set_string(config, FACEBOOK_SECTION_NAME, FACEBOOK_USER_NAME,
+	config_set_string(config, "Facebook Live", "UserId", QT_TO_UTF8(u.id));
+	config_set_string(config, "Facebook Live", "UserName",
 			  QT_TO_UTF8(u.name));
 
 	config_save_safe(config, "tmp", nullptr);

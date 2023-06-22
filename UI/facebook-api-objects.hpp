@@ -6,45 +6,52 @@
 #define _DEBUG 1
 
 /* ------------------------------------------------------------------------- */
-#define FACEBOOK_BASE_URL "https://www.facebook.com"
-#define FACEBOOK_DASHBOARD_URL FACEBOOK_BASE_URL "/live/producer?ref=OBS"
 #define FACEBOOK_API_VERSION "/v12.0"
-
-#define FACEBOOK_LOGIN_URL \
-	FACEBOOK_BASE_URL  \
-	FACEBOOK_API_VERSION "/dialog/oauth"
 
 #define FACEBOOK_BASE_API "https://graph.facebook.com"
 #define FACEBOOK_API_URL FACEBOOK_BASE_API FACEBOOK_API_VERSION
-
-#define FACEBOOK_TOKEN_URL FACEBOOK_API_URL "/oauth/access_token"
 
 #define FACEBOOK_USER_URL FACEBOOK_API_URL "/me"
 #define FACEBOOK_USER_PERMISSIONS FACEBOOK_USER_URL "/permissions"
 #define FACEBOOK_USER_LIVE_VIDEOS FACEBOOK_API_URL "/%1/live_videos"
 
-#define FACEBOOK_PERMISSION_PUBLISH_VIDEO "publish_video"
+typedef enum : unsigned int {
+	FACEBOOK_PRIVATE,
+	FACEBOOK_FRIENDS,
+	FACEBOOK_PUBLIC,
+} FacebookAudience;
 
-#define FACEBOOK_SCOPE_VERSION 1
-#define FACEBOOK_API_STATE_LENGTH 32
+typedef enum : unsigned int {
+	FACEBOOK_TIMELINE,
+	FACEBOOK_GROUP,
+	FACEBOOK_PAGE,
+} FacebookChannel;
 
-#define FACEBOOK_SECTION_NAME "Facebook Live"
-#define FACEBOOK_USER_ID "UserId"
-#define FACEBOOK_USER_NAME "UserName"
+typedef enum : unsigned int {
+	FACEBOOK_UNPUBLISHED,
+	FACEBOOK_LIVE,
+} FacebookState;
 
-#define FACEBOOK_POPUP_BASE FACEBOOK_BASE_URL "/live/producer/dashboard"
-#define FACEBOOK_COMMENTS_POPUP_URL FACEBOOK_POPUP_BASE "/%1/COMMENTS"
-#define FACEBOOK_COMMENTS_PLACEHOLDER_URL \
-	"https://obsproject.com/placeholders/youtube-chat"
-#define FACEBOOK_HEALTH_POPUP_URL FACEBOOK_POPUP_BASE "/%1/STREAM_HEALTH"
-#define FACEBOOK_HEALTH_PLACEHOLDER_URL \
-	"https://obsproject.com/placeholders/youtube-chat"
-#define FACEBOOK_STATS_POPUP_URL FACEBOOK_POPUP_BASE "/%1/STREAM_STATS"
-#define FACEBOOK_STATS_PLACEHOLDER_URL \
-	"https://obsproject.com/placeholders/youtube-chat"
-#define FACEBOOK_ALERTS_POPUP_URL FACEBOOK_POPUP_BASE "/%1/ALERTS"
-#define FACEBOOK_ALERTS_PLACEHOLDER_URL \
-	"https://obsproject.com/placeholders/youtube-chat"
+extern int FACEBOOK_SCOPE_VERSION;
+extern int FACEBOOK_API_STATE_LENGTH;
+extern const char *FACEBOOK_DATETIME_FORMAT;
+extern const char *FACEBOOK_TOKEN_URL;
+
+extern const char *FACEBOOK_DASHBOARD_URL;
+extern const char *FACEBOOK_LOGIN_URL;
+extern const char *FACEBOOK_COMMENTS_POPUP_URL;
+extern const char *FACEBOOK_COMMENTS_PLACEHOLDER_URL;
+extern const char *FACEBOOK_HEALTH_POPUP_URL;
+extern const char *FACEBOOK_HEALTH_PLACEHOLDER_URL;
+extern const char *FACEBOOK_STATS_POPUP_URL;
+extern const char *FACEBOOK_STATS_PLACEHOLDER_URL;
+extern const char *FACEBOOK_ALERTS_POPUP_URL;
+extern const char *FACEBOOK_ALERTS_PLACEHOLDER_URL;
+
+extern const char *FACEBOOK_GROUP_MEMBER_URL;
+extern const char *FACEBOOK_BROADCAST_URL;
+
+extern const char *FACEBOOK_PERMISSION_PUBLISH_VIDEO;
 
 static const char allowedChars[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

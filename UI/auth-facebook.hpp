@@ -6,7 +6,7 @@
 class BrowserDock;
 
 inline const Auth::Def facebookDef = {
-	FACEBOOK_SECTION_NAME, Auth::Type::OAuth_LinkedAccount, true, true};
+	"Facebook Live", Auth::Type::OAuth_LinkedAccount, true, true};
 
 class FacebookAuth : public OAuthStreamKey {
 	Q_OBJECT

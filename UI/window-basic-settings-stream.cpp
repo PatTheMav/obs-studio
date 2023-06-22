@@ -484,8 +484,7 @@ static void get_yt_ch_title(Ui::OBSBasicSettings *ui)
 static void get_fb_ch_title(Ui::OBSBasicSettings *ui)
 {
 	const char *name = config_get_string(OBSBasic::Get()->Config(),
-					     FACEBOOK_SECTION_NAME,
-					     FACEBOOK_USER_NAME);
+					     "Facebook Live", "UserName");
 	if (name) {
 		ui->connectedAccountText->setText(name);
 	} else {
@@ -1055,6 +1054,9 @@ void OBSBasicSettings::UpdateServiceRecommendations()
 			"<a href=\"https://security.google.com/settings/security/permissions\">"
 			"Google Third-Party Permissions</a>";
 	}
+#endif
+#if FACEBOOK_ENABLED
+	// TODO: ADD FACEBOOK TOS AND PRIVACY POLICY LINKS
 #endif
 	ui->enforceSettingsLabel->setText(text);
 }

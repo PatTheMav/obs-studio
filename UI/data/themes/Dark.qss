@@ -978,6 +978,24 @@ OBSYoutubeActions {
     border: none;
 }
 
+/* Facebook Integration */
+#fbEventWidget QLabel {
+    color: rgb(254,253,254); /* veryLight */
+    background-color: rgb(76,76,76);
+    border: none;
+    border-radius: 3px;
+    padding: 4px 20px;
+}
+
+#fbEventWidget QLabel:hover {
+    background: rgb(122,121,122);
+}
+
+#fbEventWidget QLabel[isSelectedEvent=true] {
+    background: rgb(31,30,31);
+    border: none;
+}
+
 /* Calendar Widget */
 QDateTimeEdit::down-arrow {
     qproperty-alignment: AlignTop;

@@ -1,438 +1,383 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>OBSFacebookActions</class>
- <widget class="QDialog" name="OBSFacebookActions">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>616</width>
-    <height>645</height>
-   </rect>
-  </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>0</width>
-    <height>0</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>720</width>
-    <height>880</height>
-   </size>
-  </property>
-  <property name="windowTitle">
-   <string>Facebook.Actions.WindowTitle</string>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-	   <widget class="QScrollArea" name="scrollArea_50">
-		   <property name="frameShape">
-			   <enum>QFrame::NoFrame</enum>
-		   </property>
-		   <property name="frameShadow">
-			   <enum>QFrame::Plain</enum>
-		   </property>
-		   <property name="widgetResizable">
-			   <bool>true</bool>
-		   </property>
-		   <widget class="QWidget" name="fbCreateLiveVideo">
-			   <layout class="QFormLayout" name="formLayout">
-				   <property name="fieldGrowthPolicy">
-					   <enum>QFormLayout::ExpandingFieldsGrow</enum>
-				   </property>
-				   <property name="labelAlignment">
-					   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-				   </property>
-				   <item row="0" column="0">
-					   <widget class="QLabel" name="label">
-						   <property name="text">
-							   <string>Facebook.Actions.WhereToPost</string>
-						   </property>
-						   <property name="buddy">
-							   <cstring>whereToPost</cstring>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="0" column="1">
-					   <widget class="QComboBox" name="whereToPost">
-						   <property name="sizePolicy">
-							   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-								   <horstretch>0</horstretch>
-								   <verstretch>0</verstretch>
-							   </sizepolicy>
-						   </property>
-						   <property name="sizeAdjustPolicy">
-							   <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="1" column="0">
-					   <widget class="QLabel" name="label_1">
-						   <property name="buddy">
-							   <cstring>whereToPostType</cstring>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="1" column="1">
-					   <widget class="QComboBox" name="whereToPostType">
-						   <property name="enabled">
-							   <bool>false</bool>
-						   </property>
-						   <property name="sizePolicy">
-							   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-								   <horstretch>0</horstretch>
-								   <verstretch>0</verstretch>
-							   </sizepolicy>
-						   </property>
-						   <property name="sizeAdjustPolicy">
-							   <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="2" column="0">
-					   <widget class="QLabel" name="label_2">
-						   <property name="text">
-							   <string>Facebook.Actions.WhenLive</string>
-						   </property>
-						   <property name="buddy">
-							   <cstring>whenLive</cstring>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="2" column="1">
-					   <widget class="QComboBox" name="whenLive">
-						   <property name="sizePolicy">
-							   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-								   <horstretch>0</horstretch>
-								   <verstretch>0</verstretch>
-							   </sizepolicy>
-						   </property>
-						   <property name="sizeAdjustPolicy">
-							   <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="3" column="0">
-					   <spacer name="horizontalSpacer_1">
-						   <property name="orientation">
-							   <enum>Qt::Horizontal</enum>
-						   </property>
-						   <property name="sizeHint" stdset="0">
-							   <size>
-								   <width>40</width>
-								   <height>20</height>
-							   </size>
-						   </property>
-					   </spacer>
-				   </item>
-				   <item row="3" column="1">
-					   <layout class="QHBoxLayout" name="horizontalLayout_2">
-						   <item>
-							   <widget class="QDateTimeEdit" name="whenLiveDate">
-								   <property name="enabled">
-									   <bool>false</bool>
-								   </property>
-								   <property name="sizePolicy">
-									   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-										   <horstretch>0</horstretch>
-										   <verstretch>0</verstretch>
-									   </sizepolicy>
-								   </property>
-								   <property name="calendarPopup">
-									   <bool>true</bool>
-								   </property>
-							   </widget>
-						   </item>
-					   </layout>
-				   </item>
-				   <item row="4" column="0">
-					   <widget class="QLabel" name="label_4">
-						   <property name="text">
-							   <string>Facebook.Actions.SelectAudience</string>
-						   </property>
-						   <property name="buddy">
-							   <cstring>audience</cstring>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="4" column="1">
-					   <widget class="QComboBox" name="audience">
-						   <property name="sizePolicy">
-							   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-								   <horstretch>0</horstretch>
-								   <verstretch>0</verstretch>
-							   </sizepolicy>
-						   </property>
-						   <property name="sizeAdjustPolicy">
-							   <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
-						   </property>
-					   </widget>
-				   </item>
-				   <item row="5" column="1">
-					   <widget class="QGroupBox" name="groupStreamSettingsPage">
-						   <property name="title">
-							   <string>Facebook.StreamSetup.Stream.Settings</string>
-						   </property>
-						   <layout class="QFormLayout" name="formStreamSettingsPage">
-							   <property name="fieldGrowthPolicy">
-								   <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-							   </property>
-							   <property name="labelAlignment">
-								   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-							   </property>
-							   <item row="0" column="1">
-								   <widget class="QCheckBox" name="endLiveVideo">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.Stream.Settings.EndLiveVideo</string>
-									   </property>
-									   <property name="checked">
-										   <bool>true</bool>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.Stream.Settings.EndLiveVideo.Tooltip</string>
-									   </property>
-								   </widget>
-							   </item>
-							   <item row="1" column="1">
-								   <widget class="QCheckBox" name="embedLiveVideo">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.Stream.Settings.EmbedLiveVideo</string>
-									   </property>
-									   <property name="checked">
-										   <bool>true</bool>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.Stream.Settings.EmbedLiveVideo.Tooltip</string>
-									   </property>
-								   </widget>
-							   </item>
-							   <item row="2" column="1">
-								   <widget class="QCheckBox" name="sphericalVideo">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.Stream.Settings.SphericalVideo</string>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.Stream.Settings.SphericalVideo.Tooltip</string>
-									   </property>
-								   </widget>
-							   </item>
-							   <item row="3" column="1">
-								   <widget class="QCheckBox" name="unpublishVideo">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.Stream.Settings.UnpublishVideo</string>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.Stream.Settings.UnpublishVideo.Tooltip</string>
-									   </property>
-									   <property name="sizePolicy">
-										   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-											   <horstretch>0</horstretch>
-											   <verstretch>0</verstretch>
-										   </sizepolicy>
-									   </property>
-								   </widget>
-							   </item>
-						   </layout>
-					   </widget>
-				   </item>
-				   <item row="6" column="1">
-					   <widget class="QGroupBox" name="groupLatencySettingsPage">
-						   <property name="title">
-							   <string>Facebook.StreamSetup.Latency.Settings</string>
-						   </property>
-						   <layout class="QFormLayout" name="formLatencySettingsPage">
-							   <property name="fieldGrowthPolicy">
-								   <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-							   </property>
-							   <property name="labelAlignment">
-								   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-							   </property>
-							   <item row="4" column="1">
-								   <widget class="QComboBox" name="streamLatency">
-									   <property name="sizePolicy">
-										   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-											   <horstretch>0</horstretch>
-											   <verstretch>0</verstretch>
-										   </sizepolicy>
-									   </property>
-									   <property name="sizeAdjustPolicy">
-										   <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
-									   </property>
-								   </widget>
-							   </item>
-						   </layout>
-					   </widget>
-				   </item>
-				   <item row="7" column="1">
-					   <widget class="QGroupBox" name="groupViewerSettingsPage">
-						   <property name="title">
-							   <string>Facebook.StreamSetup.Viewer.Settings</string>
-						   </property>
-						   <layout class="QFormLayout" name="formViewerSettingsPage">
-							   <property name="fieldGrowthPolicy">
-								   <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-							   </property>
-							   <property name="labelAlignment">
-								   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-							   </property>
-							   <item row="0" column="1">
-								   <widget class="QCheckBox" name="allowRewind">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.Viewer.Settings.AllowRewind</string>
-									   </property>
-									   <property name="checked">
-										   <bool>true</bool>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.Viewer.Settings.AllowRewind.Tooltip</string>
-									   </property>
-									   <property name="sizePolicy">
-										   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-											   <horstretch>0</horstretch>
-											   <verstretch>0</verstretch>
-										   </sizepolicy>
-									   </property>
-								   </widget>
-							   </item>
-							   <item row="1" column="1">
-								   <widget class="QCheckBox" name="autoGeneratedCaptions">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.Viewer.Settings.AutoGeneratedCaptions</string>
-									   </property>
-									   <property name="checked">
-										   <bool>true</bool>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.Viewer.Settings.AutoGeneratedCaptions.Tooltip</string>
-									   </property>
-								   </widget>
-							   </item>
-							   <item row="2" column="1">
-								   <widget class="QCheckBox" name="viwersMessageYou">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.Viewer.Settings.ViwersMessageYou</string>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.Viewer.Settings.ViwersMessageYou.Tooltip</string>
-									   </property>
-								   </widget>
-							   </item>
-						   </layout>
-					   </widget>
-				   </item>
-				   <item row="8" column="1">
-					   <widget class="QGroupBox" name="groupStreamSetupPage">
-						   <property name="title">
-							   <string>Facebook.StreamSetup.PostDetails</string>
-						   </property>
-						   <layout class="QFormLayout" name="formStreamSetupPage">
-							   <property name="fieldGrowthPolicy">
-								   <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-							   </property>
-							   <property name="labelAlignment">
-								   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-							   </property>
-							   <item row="0" column="1">
-								   <widget class="QCheckBox" name="shareToStory">
-									   <property name="text">
-										   <string>Facebook.StreamSetup.PostDetails.ShareToStory</string>
-									   </property>
-									   <property name="toolTip">
-										   <string>Facebook.StreamSetup.PostDetails.ShareToStory.Tooltip</string>
-									   </property>
-								   </widget>
-							   </item>
-							   <item row="1" column="1">
-								   <widget class="QLineEdit" name="title">
-									   <property name="placeholderText">
-										   <string>Facebook.StreamSetup.PostDetails.Title</string>
-									   </property>
-									   <property name="maxLength">
-										   <number>100</number>
-									   </property>
-								   </widget>
-							   </item>
-							   <item row="2" column="1">
-								   <widget class="QPlainTextEdit" name="description">
-									   <property name="sizePolicy">
-										   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-											   <horstretch>0</horstretch>
-											   <verstretch>0</verstretch>
-										   </sizepolicy>
-									   </property>
-									   <property name="tabChangesFocus">
-										   <bool>true</bool>
-									   </property>
-									   <property name="placeholderText">
-										   <string>Facebook.StreamSetup.PostDetails.Description</string>
-									   </property>
-								   </widget>
-							   </item>
-						   </layout>
-					   </widget>
-				   </item>
-			   </layout>
-		   </widget>
-	   </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2,0,6">
-     <item>
-      <widget class="QPushButton" name="cancelButton">
-       <property name="text">
-        <string>Cancel</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton">
-       <property name="text">
-        <string>Facebook.Actions.Dashboard</string>
-       </property>
-	      <property name="visible">
-		      <bool>true</bool>
-	      </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="saveButton">
-       <property name="text">
-        <string>Facebook.Actions.Create_Ready</string>
-       </property>
-	      <property name="enabled">
-		      <bool>true</bool>
-	      </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="okButton">
-       <property name="text">
-        <string>Facebook.Actions.Create_GoLive</string>
-       </property>
-	      <property name="enabled">
-		      <bool>true</bool>
-	      </property>
-      </widget>
-     </item>
+  <class>OBSFacebookActions</class>
+  <widget class="QDialog" name="OBSFacebookActions">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>821</width>
+      <height>738</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="windowTitle">
+     <string>Facebook.Actions.WindowTitle</string>
+    </property>
+    <property name="sizeGripEnabled">
+      <bool>true</bool>
+    </property>
+    <layout class="QVBoxLayout" name="fbBroadcastWindow">
+      <item>
+        <widget class="QTabWidget" name="fbBroadcastTabWidget">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="fbBroadcastWidget">
+            <attribute name="title">
+              <string>Facebook.Actions.CreateNewEvent</string>
+            </attribute>
+            <layout class="QGridLayout" name="fbBroadcastLayout">
+              <property name="leftMargin">
+                <number>0</number>
+              </property>
+              <property name="topMargin">
+                <number>0</number>
+              </property>
+              <property name="rightMargin">
+                <number>0</number>
+              </property>
+              <property name="bottomMargin">
+                <number>0</number>
+              </property>
+              <property name="spacing">
+                <number>0</number>
+              </property>
+              <item row="0" column="0">
+                <widget class="QScrollArea" name="fbBroadcastSetupArea">
+                  <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                    </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                    <size>
+                      <width>0</width>
+                      <height>0</height>
+                    </size>
+                  </property>
+                  <property name="widgetResizable">
+                    <bool>true</bool>
+                  </property>
+                  <widget class="QWidget" name="fbBroadcastSetup">
+                    <property name="geometry">
+                      <rect>
+                        <x>0</x>
+                        <y>0</y>
+                        <width>784</width>
+                        <height>666</height>
+                      </rect>
+                    </property>
+                    <layout class="QFormLayout" name="fbBroadcastSetupLayout">
+                      <property name="fieldGrowthPolicy">
+                        <enum>QFormLayout::ExpandingFieldsGrow</enum>
+                      </property>
+                      <property name="labelAlignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      </property>
+                      <property name="topMargin">
+                        <number>9</number>
+                      </property>
+                      <item row="2" column="0">
+                        <widget class="QLabel" name="titleLabel">
+                          <property name="text">
+                            <string>Facebook.Actions.Title</string>
+                          </property>
+                          <property name="buddy">
+                            <cstring>title</cstring>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="2" column="1">
+                        <widget class="QLineEdit" name="title">
+                          <property name="text">
+                            <string>Facebook.Actions.MyBroadcast</string>
+                          </property>
+                          <property name="maxLength">
+                            <number>100</number>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="3" column="0">
+                        <widget class="QLabel" name="descriptionLabel">
+                          <property name="text">
+                            <string>Facebook.Actions.Description</string>
+                          </property>
+                          <property name="buddy">
+                            <cstring>description</cstring>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="3" column="1">
+                        <widget class="QPlainTextEdit" name="description">
+                          <property name="tabChangesFocus">
+                            <bool>true</bool>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="4" column="0">
+                        <widget class="QLabel" name="channelLabel">
+                          <property name="text">
+                            <string>Facebook.Actions.Channel</string>
+                          </property>
+                          <property name="buddy">
+                            <cstring>channelBox</cstring>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="4" column="1">
+                        <widget class="QComboBox" name="channelBox">
+                          <property name="sizePolicy">
+                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                            </sizepolicy>
+                          </property>
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="5" column="0">
+                        <widget class="QLabel" name="privacyLabel">
+                          <property name="text">
+                            <string>Facebook.Actions.Privacy</string>
+                          </property>
+                          <property name="buddy">
+                            <cstring>privacyBox</cstring>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="5" column="1">
+                        <widget class="QComboBox" name="privacyBox">
+                          <property name="sizePolicy">
+                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                            </sizepolicy>
+                          </property>
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="6" column="0">
+                        <widget class="QLabel" name="pageLabel">
+                          <property name="text">
+                            <string>Facebook.Actions.Page</string>
+                          </property>
+                          <property name="buddy">
+                            <cstring>pageBox</cstring>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="6" column="1">
+                        <widget class="QComboBox" name="pageBox">
+                          <property name="enabled">
+                            <bool>false</bool>
+                          </property>
+                          <property name="sizePolicy">
+                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                            </sizepolicy>
+                          </property>
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="7" column="0">
+                        <widget class="QLabel" name="groupLabel">
+                          <property name="text">
+                            <string>Facebook.Actions.Group</string>
+                          </property>
+                          <property name="buddy">
+                            <cstring>groupBox</cstring>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="7" column="1">
+                        <widget class="QComboBox" name="groupBox">
+                          <property name="enabled">
+                            <bool>false</bool>
+                          </property>
+                          <property name="sizePolicy">
+                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                            </sizepolicy>
+                          </property>
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!-- ADDITIONAL SETTINGS -->
+                      <item row="9" column="0">
+                        <widget class="QLabel" name="additionalSettingsLabel">
+                          <property name="font">
+                            <font>
+                              <weight>75</weight>
+                              <bold>true</bold>
+                            </font>
+                          </property>
+                          <property name="text">
+                            <string>Facebook.Actions.AdditionalSettings</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="10" column="1">
+                        <widget class="QCheckBox" name="checkSphericalVideo">
+                          <property name="enabled">
+                            <bool>false</bool>
+                          </property>
+                          <property name="text">
+                            <string>Facebook.Actions.SphericalVideo</string>
+                          </property>
+                        </widget>
+                      </item>
+                    </layout>
+                  </widget>
+                </widget>
+              </item>
+            </layout>
+          </widget>
+          <widget class="QWidget" name="fbEventWidget">
+            <attribute name="title">
+              <string>Facebook.Actions.ChooseEvent</string>
+            </attribute>
+            <layout class="QVBoxLayout" name="fbEventLayout">
+              <property name="leftMargin">
+                <number>0</number>
+              </property>
+              <property name="topMargin">
+                <number>0</number>
+              </property>
+              <property name="rightMargin">
+                <number>0</number>
+              </property>
+              <property name="bottomMargin">
+                <number>0</number>
+              </property>
+              <item>
+                <widget class="QScrollArea" name="fbEventArea">
+                  <property name="verticalScrollBarPolicy">
+                    <enum>Qt::ScrollBarAsNeeded</enum>
+                  </property>
+                  <property name="widgetResizable">
+                    <bool>true</bool>
+                  </property>
+                  <widget class="QWidget" name="fbEventlist">
+                    <property name="geometry">
+                      <rect>
+                        <x>0</x>
+                        <y>0</y>
+                        <width>218</width>
+                        <height>200</height>
+                      </rect>
+                    </property>
+                    <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                      </sizepolicy>
+                    </property>
+                    <layout class="QVBoxLayout" name="fbEventList">
+                    </layout>
+                  </widget>
+                </widget>
+              </item>
+            </layout>
+          </widget>
+        </widget>
+      </item>
+      <item>
+        <widget class="QWidget" name="widget" native="true">
+          <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+            </sizepolicy>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_2">
+            <property name="leftMargin">
+              <number>0</number>
+            </property>
+            <property name="topMargin">
+              <number>0</number>
+            </property>
+            <property name="rightMargin">
+              <number>0</number>
+            </property>
+            <property name="bottomMargin">
+              <number>0</number>
+            </property>
+            <property name="spacing">
+              <number>0</number>
+            </property>
+            <item row="0" column="0">
+              <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="1,2,0,6">
+                <property name="sizeConstraint">
+                  <enum>QLayout::SetNoConstraint</enum>
+                </property>
+                <property name="spacing">
+                  <number>10</number>
+                </property>
+                <item>
+                  <widget class="QPushButton" name="cancelButton">
+                    <property name="text">
+                      <string>Cancel</string>
+                    </property>
+                  </widget>
+                </item>
+                <item>
+                  <widget class="QPushButton" name="dashButton">
+                    <property name="text">
+                      <string>Facebook.Actions.Dashboard</string>
+                    </property>
+                  </widget>
+                </item>
+                <item>
+                  <widget class="QPushButton" name="saveButton">
+                    <property name="text">
+                      <string>Facebook.Actions.SaveBroadcast</string>
+                    </property>
+                  </widget>
+                </item>
+                <item>
+                  <widget class="QPushButton" name="liveButton">
+                    <property name="text">
+                      <string>Facebook.Actions.GoLive</string>
+                    </property>
+                  </widget>
+                </item>
+              </layout>
+            </item>
+          </layout>
+        </widget>
+      </item>
     </layout>
-   </item>
-  </layout>
- </widget>
- <customwidgets>
-  <customwidget>
-   <class>ClickableLabel</class>
-   <extends>QLabel</extends>
-   <header>clickable-label.hpp</header>
-  </customwidget>
- </customwidgets>
- <resources/>
- <connections/>
+  </widget>
+  <customwidgets>
+    <customwidget>
+      <class>ClickableLabel</class>
+      <extends>QLabel</extends>
+      <header>clickable-label.hpp</header>
+    </customwidget>
+  </customwidgets>
+  <resources/>
+  <connections/>
 </ui>
