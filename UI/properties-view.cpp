@@ -24,6 +24,7 @@
 #include <QGroupBox>
 #include <QObject>
 #include <QDesktopServices>
+#include <QUuid>
 #include "double-slider.hpp"
 #include "slider-ignorewheel.hpp"
 #include "spinbox-ignorewheel.hpp"
@@ -2004,6 +2005,9 @@ void WidgetInfo::EditableListChanged()
 		OBSDataAutoRelease arrayItem = obs_data_create();
 		obs_data_set_string(arrayItem, "value",
 				    QT_TO_UTF8(item->text()));
+		obs_data_set_string(
+			arrayItem, "uuid",
+			QT_TO_UTF8(item->data(Qt::UserRole).toString()));
 		obs_data_set_bool(arrayItem, "selected", item->isSelected());
 		obs_data_set_bool(arrayItem, "hidden", item->isHidden());
 		obs_data_array_push_back(array, arrayItem);
@@ -2274,7 +2278,11 @@ void WidgetInfo::EditListAddText()
 	if (text.isEmpty())
 		return;
 
-	list->addItem(text);
+	QListWidgetItem *item = new QListWidgetItem(text);
+	item->setData(Qt::UserRole,
+		      QUuid::createUuid().toString(QUuid::WithoutBraces));
+	list->addItem(item);
+
 	EditableListChanged();
 }
 
@@ -2299,7 +2307,13 @@ void WidgetInfo::EditListAddFiles()
 	if (files.count() == 0)
 		return;
 
-	list->addItems(files);
+	for (QString file : files) {
+		QListWidgetItem *item = new QListWidgetItem(file);
+		item->setData(Qt::UserRole, QUuid::createUuid().toString(
+						    QUuid::WithoutBraces));
+		list->addItem(item);
+	}
+
 	EditableListChanged();
 }
 
@@ -2323,7 +2337,11 @@ void WidgetInfo::EditListAddDir()
 	if (dir.isEmpty())
 		return;
 
-	list->addItem(dir);
+	QListWidgetItem *item = new QListWidgetItem(dir);
+	item->setData(Qt::UserRole,
+		      QUuid::createUuid().toString(QUuid::WithoutBraces));
+	list->addItem(item);
+
 	EditableListChanged();
 }
 
