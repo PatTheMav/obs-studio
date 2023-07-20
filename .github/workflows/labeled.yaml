@@ -1,0 +1,43 @@
+name: Labeled Pull Request 🏷️
+run-name: ${{ github.event.pull_request.title }} label run 🏷️
+on:
+  pull_request_target:
+    types:
+      - labeled
+permissions:
+  contents: read
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+jobs:
+  rebuild:
+    if: contains(github.event.pull_request.labels.*.name, 'Seeking Testers')
+    name: Rebuild project with downloadable artifacts
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Trigger Pull Request Rebuild 🔄
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          : Trigger Pull Request Rebuild 🔄
+          if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
+
+          IFS=';' read -r workflowHash workflowId workflowStatus <<< \
+            "$(gh run ls --event pull_request -b ${GITHUB_REF_NAME} --limit 1 --json headSha,databaseId,status \
+              --jq '.[] | { headSha, databaseId, status } | join(";")')"
+
+          if [[ "${workflowId}" -gt 0 ]] && [[ "${workflowHash}" == "${GITHUB_SHA}" ]]; then
+            case "${workflowStatus}" in
+              queued|requested|waiting) gh run cancel "${workflowId}" ;;
+              action_required) echo "::notice::Workflow for pull request #${{ github.event.pull_request.number }} requires maintainer action before being able to run."; return 0 ;;
+              failure|stale|startup_failure) echo "::notice::Workflow for pull request #${{ github.event.pull_request.number }} has failures."; return 1 ;;
+            esac
+
+            gh run rerun "${workflowId}"
+          else
+            echo "::notice::No valid workflow run id found for pull request #${{ github.event.pull_request.number }}"
+            return 0
+          fi
