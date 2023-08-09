@@ -107,7 +107,7 @@ UseTab: ForContinuationAndIndentation
 ---
 Language: ObjC
 AccessModifierOffset: 2
-AlignArrayOfStructures: Right
+AlignArrayOfStructures: Left
 AlignConsecutiveAssignments: None
 AlignConsecutiveBitFields: None
 AlignConsecutiveDeclarations: None

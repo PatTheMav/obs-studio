@@ -29,6 +29,230 @@
 
 #import <AppKit/AppKit.h>
 
+#pragma mark - Key Code and Glyph Mappings
+
+typedef struct obs_key_code {
+    int code;
+    bool is_valid;
+} obs_key_code_t;
+
+typedef struct macOS_glyph_desc {
+    UniChar glyph;
+    char *desc;
+    bool is_glyph;
+    bool is_valid;
+} macOS_glyph_desc_t;
+
+typedef struct obs_key_desc {
+    char *desc;
+    bool is_valid;
+} obs_key_desc_t;
+
+static int INVALID_KEY = 0xFF;
+
+static const obs_key_code_t virtual_keys[OBS_KEY_LAST_VALUE] = {
+    [OBS_KEY_A]            = {.code = kVK_ANSI_A,              .is_valid = true},
+    [OBS_KEY_B]            = {.code = kVK_ANSI_B,              .is_valid = true},
+    [OBS_KEY_C]            = {.code = kVK_ANSI_C,              .is_valid = true},
+    [OBS_KEY_D]            = {.code = kVK_ANSI_D,              .is_valid = true},
+    [OBS_KEY_E]            = {.code = kVK_ANSI_E,              .is_valid = true},
+    [OBS_KEY_F]            = {.code = kVK_ANSI_F,              .is_valid = true},
+    [OBS_KEY_G]            = {.code = kVK_ANSI_G,              .is_valid = true},
+    [OBS_KEY_H]            = {.code = kVK_ANSI_H,              .is_valid = true},
+    [OBS_KEY_I]            = {.code = kVK_ANSI_I,              .is_valid = true},
+    [OBS_KEY_J]            = {.code = kVK_ANSI_J,              .is_valid = true},
+    [OBS_KEY_K]            = {.code = kVK_ANSI_K,              .is_valid = true},
+    [OBS_KEY_L]            = {.code = kVK_ANSI_L,              .is_valid = true},
+    [OBS_KEY_M]            = {.code = kVK_ANSI_M,              .is_valid = true},
+    [OBS_KEY_N]            = {.code = kVK_ANSI_N,              .is_valid = true},
+    [OBS_KEY_O]            = {.code = kVK_ANSI_O,              .is_valid = true},
+    [OBS_KEY_P]            = {.code = kVK_ANSI_P,              .is_valid = true},
+    [OBS_KEY_Q]            = {.code = kVK_ANSI_Q,              .is_valid = true},
+    [OBS_KEY_R]            = {.code = kVK_ANSI_R,              .is_valid = true},
+    [OBS_KEY_S]            = {.code = kVK_ANSI_S,              .is_valid = true},
+    [OBS_KEY_T]            = {.code = kVK_ANSI_T,              .is_valid = true},
+    [OBS_KEY_U]            = {.code = kVK_ANSI_U,              .is_valid = true},
+    [OBS_KEY_V]            = {.code = kVK_ANSI_V,              .is_valid = true},
+    [OBS_KEY_W]            = {.code = kVK_ANSI_W,              .is_valid = true},
+    [OBS_KEY_X]            = {.code = kVK_ANSI_X,              .is_valid = true},
+    [OBS_KEY_Y]            = {.code = kVK_ANSI_Y,              .is_valid = true},
+    [OBS_KEY_Z]            = {.code = kVK_ANSI_Z,              .is_valid = true},
+    [OBS_KEY_1]            = {.code = kVK_ANSI_1,              .is_valid = true},
+    [OBS_KEY_2]            = {.code = kVK_ANSI_2,              .is_valid = true},
+    [OBS_KEY_3]            = {.code = kVK_ANSI_3,              .is_valid = true},
+    [OBS_KEY_4]            = {.code = kVK_ANSI_4,              .is_valid = true},
+    [OBS_KEY_5]            = {.code = kVK_ANSI_5,              .is_valid = true},
+    [OBS_KEY_6]            = {.code = kVK_ANSI_6,              .is_valid = true},
+    [OBS_KEY_7]            = {.code = kVK_ANSI_7,              .is_valid = true},
+    [OBS_KEY_8]            = {.code = kVK_ANSI_8,              .is_valid = true},
+    [OBS_KEY_9]            = {.code = kVK_ANSI_9,              .is_valid = true},
+    [OBS_KEY_0]            = {.code = kVK_ANSI_0,              .is_valid = true},
+    [OBS_KEY_RETURN]       = {.code = kVK_Return,              .is_valid = true},
+    [OBS_KEY_ESCAPE]       = {.code = kVK_Escape,              .is_valid = true},
+    [OBS_KEY_BACKSPACE]    = {.code = kVK_Delete,              .is_valid = true},
+    [OBS_KEY_TAB]          = {.code = kVK_Tab,                 .is_valid = true},
+    [OBS_KEY_SPACE]        = {.code = kVK_Space,               .is_valid = true},
+    [OBS_KEY_MINUS]        = {.code = kVK_ANSI_Minus,          .is_valid = true},
+    [OBS_KEY_EQUAL]        = {.code = kVK_ANSI_Equal,          .is_valid = true},
+    [OBS_KEY_BRACKETLEFT]  = {.code = kVK_ANSI_LeftBracket,    .is_valid = true},
+    [OBS_KEY_BRACKETRIGHT] = {.code = kVK_ANSI_RightBracket,   .is_valid = true},
+    [OBS_KEY_BACKSLASH]    = {.code = kVK_ANSI_Backslash,      .is_valid = true},
+    [OBS_KEY_SEMICOLON]    = {.code = kVK_ANSI_Semicolon,      .is_valid = true},
+    [OBS_KEY_QUOTE]        = {.code = kVK_ANSI_Quote,          .is_valid = true},
+    [OBS_KEY_DEAD_GRAVE]   = {.code = kVK_ANSI_Grave,          .is_valid = true},
+    [OBS_KEY_COMMA]        = {.code = kVK_ANSI_Comma,          .is_valid = true},
+    [OBS_KEY_PERIOD]       = {.code = kVK_ANSI_Period,         .is_valid = true},
+    [OBS_KEY_SLASH]        = {.code = kVK_ANSI_Slash,          .is_valid = true},
+    [OBS_KEY_CAPSLOCK]     = {.code = kVK_CapsLock,            .is_valid = true},
+    [OBS_KEY_SECTION]      = {.code = kVK_ISO_Section,         .is_valid = true},
+    [OBS_KEY_F1]           = {.code = kVK_F1,                  .is_valid = true},
+    [OBS_KEY_F2]           = {.code = kVK_F2,                  .is_valid = true},
+    [OBS_KEY_F3]           = {.code = kVK_F3,                  .is_valid = true},
+    [OBS_KEY_F4]           = {.code = kVK_F4,                  .is_valid = true},
+    [OBS_KEY_F5]           = {.code = kVK_F5,                  .is_valid = true},
+    [OBS_KEY_F6]           = {.code = kVK_F6,                  .is_valid = true},
+    [OBS_KEY_F7]           = {.code = kVK_F7,                  .is_valid = true},
+    [OBS_KEY_F8]           = {.code = kVK_F8,                  .is_valid = true},
+    [OBS_KEY_F9]           = {.code = kVK_F9,                  .is_valid = true},
+    [OBS_KEY_F10]          = {.code = kVK_F10,                 .is_valid = true},
+    [OBS_KEY_F11]          = {.code = kVK_F11,                 .is_valid = true},
+    [OBS_KEY_F12]          = {.code = kVK_F12,                 .is_valid = true},
+    [OBS_KEY_HELP]         = {.code = kVK_Help,                .is_valid = true},
+    [OBS_KEY_HOME]         = {.code = kVK_Home,                .is_valid = true},
+    [OBS_KEY_PAGEUP]       = {.code = kVK_PageUp,              .is_valid = true},
+    [OBS_KEY_DELETE]       = {.code = kVK_ForwardDelete,       .is_valid = true},
+    [OBS_KEY_END]          = {.code = kVK_End,                 .is_valid = true},
+    [OBS_KEY_PAGEDOWN]     = {.code = kVK_PageDown,            .is_valid = true},
+    [OBS_KEY_RIGHT]        = {.code = kVK_RightArrow,          .is_valid = true},
+    [OBS_KEY_LEFT]         = {.code = kVK_LeftArrow,           .is_valid = true},
+    [OBS_KEY_DOWN]         = {.code = kVK_DownArrow,           .is_valid = true},
+    [OBS_KEY_UP]           = {.code = kVK_UpArrow,             .is_valid = true},
+    [OBS_KEY_CLEAR]        = {.code = kVK_ANSI_KeypadClear,    .is_valid = true},
+    [OBS_KEY_NUMSLASH]     = {.code = kVK_ANSI_KeypadDivide,   .is_valid = true},
+    [OBS_KEY_NUMASTERISK]  = {.code = kVK_ANSI_KeypadMultiply, .is_valid = true},
+    [OBS_KEY_NUMMINUS]     = {.code = kVK_ANSI_KeypadMinus,    .is_valid = true},
+    [OBS_KEY_NUMPLUS]      = {.code = kVK_ANSI_KeypadPlus,     .is_valid = true},
+    [OBS_KEY_ENTER]        = {.code = kVK_ANSI_KeypadEnter,    .is_valid = true},
+    [OBS_KEY_NUM1]         = {.code = kVK_ANSI_Keypad1,        .is_valid = true},
+    [OBS_KEY_NUM2]         = {.code = kVK_ANSI_Keypad2,        .is_valid = true},
+    [OBS_KEY_NUM3]         = {.code = kVK_ANSI_Keypad3,        .is_valid = true},
+    [OBS_KEY_NUM4]         = {.code = kVK_ANSI_Keypad4,        .is_valid = true},
+    [OBS_KEY_NUM5]         = {.code = kVK_ANSI_Keypad5,        .is_valid = true},
+    [OBS_KEY_NUM6]         = {.code = kVK_ANSI_Keypad6,        .is_valid = true},
+    [OBS_KEY_NUM7]         = {.code = kVK_ANSI_Keypad7,        .is_valid = true},
+    [OBS_KEY_NUM8]         = {.code = kVK_ANSI_Keypad8,        .is_valid = true},
+    [OBS_KEY_NUM9]         = {.code = kVK_ANSI_Keypad9,        .is_valid = true},
+    [OBS_KEY_NUM0]         = {.code = kVK_ANSI_Keypad0,        .is_valid = true},
+    [OBS_KEY_NUMPERIOD]    = {.code = kVK_ANSI_KeypadDecimal,  .is_valid = true},
+    [OBS_KEY_NUMEQUAL]     = {.code = kVK_ANSI_KeypadEquals,   .is_valid = true},
+    [OBS_KEY_F13]          = {.code = kVK_F13,                 .is_valid = true},
+    [OBS_KEY_F14]          = {.code = kVK_F14,                 .is_valid = true},
+    [OBS_KEY_F15]          = {.code = kVK_F15,                 .is_valid = true},
+    [OBS_KEY_F16]          = {.code = kVK_F16,                 .is_valid = true},
+    [OBS_KEY_F17]          = {.code = kVK_F17,                 .is_valid = true},
+    [OBS_KEY_F18]          = {.code = kVK_F18,                 .is_valid = true},
+    [OBS_KEY_F19]          = {.code = kVK_F19,                 .is_valid = true},
+    [OBS_KEY_F20]          = {.code = kVK_F20,                 .is_valid = true},
+    [OBS_KEY_CONTROL]      = {.code = kVK_Control,             .is_valid = true},
+    [OBS_KEY_SHIFT]        = {.code = kVK_Shift,               .is_valid = true},
+    [OBS_KEY_ALT]          = {.code = kVK_Option,              .is_valid = true},
+    [OBS_KEY_META]         = {.code = kVK_Command,             .is_valid = true},
+};
+
+static const obs_key_desc_t key_descriptions[OBS_KEY_LAST_VALUE] = {
+    [OBS_KEY_SPACE]       = {.desc = "Space",      .is_valid = true},
+    [OBS_KEY_NUMEQUAL]    = {.desc = "= (Keypad)", .is_valid = true},
+    [OBS_KEY_NUMASTERISK] = {.desc = "* (Keypad)", .is_valid = true},
+    [OBS_KEY_NUMPLUS]     = {.desc = "+ (Keypad)", .is_valid = true},
+    [OBS_KEY_NUMMINUS]    = {.desc = "- (Keypad)", .is_valid = true},
+    [OBS_KEY_NUMPERIOD]   = {.desc = ". (Keypad)", .is_valid = true},
+    [OBS_KEY_NUMSLASH]    = {.desc = "/ (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM0]        = {.desc = "0 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM1]        = {.desc = "1 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM2]        = {.desc = "2 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM3]        = {.desc = "3 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM4]        = {.desc = "4 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM5]        = {.desc = "5 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM6]        = {.desc = "6 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM7]        = {.desc = "7 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM8]        = {.desc = "8 (Keypad)", .is_valid = true},
+    [OBS_KEY_NUM9]        = {.desc = "9 (Keypad)", .is_valid = true},
+    [OBS_KEY_MOUSE1]      = {.desc = "Mouse 1",    .is_valid = true},
+    [OBS_KEY_MOUSE2]      = {.desc = "Mouse 2",    .is_valid = true},
+    [OBS_KEY_MOUSE3]      = {.desc = "Mouse 3",    .is_valid = true},
+    [OBS_KEY_MOUSE4]      = {.desc = "Mouse 4",    .is_valid = true},
+    [OBS_KEY_MOUSE5]      = {.desc = "Mouse 5",    .is_valid = true},
+    [OBS_KEY_MOUSE6]      = {.desc = "Mouse 6",    .is_valid = true},
+    [OBS_KEY_MOUSE7]      = {.desc = "Mouse 7",    .is_valid = true},
+    [OBS_KEY_MOUSE8]      = {.desc = "Mouse 8",    .is_valid = true},
+    [OBS_KEY_MOUSE9]      = {.desc = "Mouse 9",    .is_valid = true},
+    [OBS_KEY_MOUSE10]     = {.desc = "Mouse 10",   .is_valid = true},
+    [OBS_KEY_MOUSE11]     = {.desc = "Mouse 11",   .is_valid = true},
+    [OBS_KEY_MOUSE12]     = {.desc = "Mouse 12",   .is_valid = true},
+    [OBS_KEY_MOUSE13]     = {.desc = "Mouse 13",   .is_valid = true},
+    [OBS_KEY_MOUSE14]     = {.desc = "Mouse 14",   .is_valid = true},
+    [OBS_KEY_MOUSE15]     = {.desc = "Mouse 15",   .is_valid = true},
+    [OBS_KEY_MOUSE16]     = {.desc = "Mouse 16",   .is_valid = true},
+    [OBS_KEY_MOUSE17]     = {.desc = "Mouse 17",   .is_valid = true},
+    [OBS_KEY_MOUSE18]     = {.desc = "Mouse 18",   .is_valid = true},
+    [OBS_KEY_MOUSE19]     = {.desc = "Mouse 19",   .is_valid = true},
+    [OBS_KEY_MOUSE20]     = {.desc = "Mouse 20",   .is_valid = true},
+    [OBS_KEY_MOUSE21]     = {.desc = "Mouse 21",   .is_valid = true},
+    [OBS_KEY_MOUSE22]     = {.desc = "Mouse 22",   .is_valid = true},
+    [OBS_KEY_MOUSE23]     = {.desc = "Mouse 23",   .is_valid = true},
+    [OBS_KEY_MOUSE24]     = {.desc = "Mouse 24",   .is_valid = true},
+    [OBS_KEY_MOUSE25]     = {.desc = "Mouse 25",   .is_valid = true},
+    [OBS_KEY_MOUSE26]     = {.desc = "Mouse 26",   .is_valid = true},
+    [OBS_KEY_MOUSE27]     = {.desc = "Mouse 27",   .is_valid = true},
+    [OBS_KEY_MOUSE28]     = {.desc = "Mouse 28",   .is_valid = true},
+    [OBS_KEY_MOUSE29]     = {.desc = "Mouse 29",   .is_valid = true},
+};
+
+static const macOS_glyph_desc_t key_glyphs[0xFF] = {
+    [kVK_Return]           = {.glyph = 0x21A9, .is_glyph = true, .is_valid = true},
+    [kVK_Escape]           = {.glyph = 0x238B, .is_glyph = true, .is_valid = true},
+    [kVK_Delete]           = {.glyph = 0x232B, .is_glyph = true, .is_valid = true},
+    [kVK_Tab]              = {.glyph = 0x21e5, .is_glyph = true, .is_valid = true},
+    [kVK_CapsLock]         = {.glyph = 0x21EA, .is_glyph = true, .is_valid = true},
+    [kVK_ANSI_KeypadClear] = {.glyph = 0x2327, .is_glyph = true, .is_valid = true},
+    [kVK_ANSI_KeypadEnter] = {.glyph = 0x2305, .is_glyph = true, .is_valid = true},
+    [kVK_Help]             = {.glyph = 0x003F, .is_glyph = true, .is_valid = true},
+    [kVK_Home]             = {.glyph = 0x2196, .is_glyph = true, .is_valid = true},
+    [kVK_PageUp]           = {.glyph = 0x21de, .is_glyph = true, .is_valid = true},
+    [kVK_ForwardDelete]    = {.glyph = 0x2326, .is_glyph = true, .is_valid = true},
+    [kVK_End]              = {.glyph = 0x2198, .is_glyph = true, .is_valid = true},
+    [kVK_PageDown]         = {.glyph = 0x21df, .is_glyph = true, .is_valid = true},
+    [kVK_Control]          = {.glyph = kControlUnicode, .is_glyph = true, .is_valid = true},
+    [kVK_Shift]            = {.glyph = kShiftUnicode, .is_glyph = true, .is_valid = true},
+    [kVK_Option]           = {.glyph = kOptionUnicode, .is_glyph = true, .is_valid = true},
+    [kVK_Command]          = {.glyph = kCommandUnicode, .is_glyph = true, .is_valid = true},
+    [kVK_RightControl]     = {.glyph = kControlUnicode, .is_glyph = true, .is_valid = true},
+    [kVK_RightShift]       = {.glyph = kShiftUnicode, .is_glyph = true, .is_valid = true},
+    [kVK_RightOption]      = {.glyph = kOptionUnicode, .is_glyph = true, .is_valid = true},
+    [kVK_F1]               = {.desc = "F1", .is_valid = true},
+    [kVK_F2]               = {.desc = "F2", .is_valid = true},
+    [kVK_F3]               = {.desc = "F3", .is_valid = true},
+    [kVK_F4]               = {.desc = "F4", .is_valid = true},
+    [kVK_F5]               = {.desc = "F5", .is_valid = true},
+    [kVK_F6]               = {.desc = "F6", .is_valid = true},
+    [kVK_F7]               = {.desc = "F7", .is_valid = true},
+    [kVK_F8]               = {.desc = "F8", .is_valid = true},
+    [kVK_F9]               = {.desc = "F9", .is_valid = true},
+    [kVK_F10]              = {.desc = "F10", .is_valid = true},
+    [kVK_F11]              = {.desc = "F11", .is_valid = true},
+    [kVK_F12]              = {.desc = "F12", .is_valid = true},
+    [kVK_F13]              = {.desc = "F13", .is_valid = true},
+    [kVK_F14]              = {.desc = "F14", .is_valid = true},
+    [kVK_F15]              = {.desc = "F15", .is_valid = true},
+    [kVK_F16]              = {.desc = "F16", .is_valid = true},
+    [kVK_F17]              = {.desc = "F17", .is_valid = true},
+    [kVK_F18]              = {.desc = "F18", .is_valid = true},
+    [kVK_F19]              = {.desc = "F19", .is_valid = true},
+    [kVK_F20]              = {.desc = "F20", .is_valid = true}
+};
+
+#pragma mark -
+
 bool is_in_bundle()
 {
     NSRunningApplication *app = [NSRunningApplication currentApplication];
@@ -42,9 +266,9 @@ const char *get_module_extension(void)
 
 void add_default_module_paths(void)
 {
-    NSURL *pluginURL = [[NSBundle mainBundle] builtInPlugInsURL];
+    NSURL *pluginURL           = [[NSBundle mainBundle] builtInPlugInsURL];
     NSString *pluginModulePath = [[pluginURL path] stringByAppendingString:@"/%module%.plugin/Contents/MacOS/"];
-    NSString *pluginDataPath = [[pluginURL path] stringByAppendingString:@"/%module%.plugin/Contents/Resources/"];
+    NSString *pluginDataPath   = [[pluginURL path] stringByAppendingString:@"/%module%.plugin/Contents/Resources/"];
 
     obs_add_module_path(pluginModulePath.UTF8String, pluginDataPath.UTF8String);
 }
@@ -88,7 +312,7 @@ static void log_processor_speed(void)
     int ret;
 
     size = sizeof(freq);
-    ret = sysctlbyname("hw.cpufrequency", &freq, &size, NULL, 0);
+    ret  = sysctlbyname("hw.cpufrequency", &freq, &size, NULL, 0);
     if (ret == 0)
         blog(LOG_INFO, "CPU Speed: %lldMHz", freq / 1000000);
 }
@@ -110,7 +334,7 @@ static void log_available_memory(void)
     int ret;
 
     size = sizeof(memory_available);
-    ret = sysctlbyname("hw.memsize", &memory_available, &size, NULL, 0);
+    ret  = sysctlbyname("hw.memsize", &memory_available, &size, NULL, 0);
     if (ret == 0)
         blog(LOG_INFO, "Physical Memory: %lldMB Total", memory_available / 1024 / 1024);
 }
@@ -146,7 +370,7 @@ void log_system_info(void)
 
 static bool dstr_from_cfstring(struct dstr *str, CFStringRef ref)
 {
-    CFIndex length = CFStringGetLength(ref);
+    CFIndex length   = CFStringGetLength(ref);
     CFIndex max_size = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8);
     dstr_reserve(str, max_size);
 
@@ -180,134 +404,13 @@ static void hotkeys_release(struct obs_hotkeys_platform *plat)
         free_hotkeys_platform(plat);
 }
 
-#define INVALID_KEY 0xff
-
-#pragma GCC diagnostic ignored "-Winitializer-overrides"
-static const int virtual_keys[] = {
-    [0 ... OBS_KEY_LAST_VALUE] = INVALID_KEY,
-
-    [OBS_KEY_A] = kVK_ANSI_A,
-    [OBS_KEY_B] = kVK_ANSI_B,
-    [OBS_KEY_C] = kVK_ANSI_C,
-    [OBS_KEY_D] = kVK_ANSI_D,
-    [OBS_KEY_E] = kVK_ANSI_E,
-    [OBS_KEY_F] = kVK_ANSI_F,
-    [OBS_KEY_G] = kVK_ANSI_G,
-    [OBS_KEY_H] = kVK_ANSI_H,
-    [OBS_KEY_I] = kVK_ANSI_I,
-    [OBS_KEY_J] = kVK_ANSI_J,
-    [OBS_KEY_K] = kVK_ANSI_K,
-    [OBS_KEY_L] = kVK_ANSI_L,
-    [OBS_KEY_M] = kVK_ANSI_M,
-    [OBS_KEY_N] = kVK_ANSI_N,
-    [OBS_KEY_O] = kVK_ANSI_O,
-    [OBS_KEY_P] = kVK_ANSI_P,
-    [OBS_KEY_Q] = kVK_ANSI_Q,
-    [OBS_KEY_R] = kVK_ANSI_R,
-    [OBS_KEY_S] = kVK_ANSI_S,
-    [OBS_KEY_T] = kVK_ANSI_T,
-    [OBS_KEY_U] = kVK_ANSI_U,
-    [OBS_KEY_V] = kVK_ANSI_V,
-    [OBS_KEY_W] = kVK_ANSI_W,
-    [OBS_KEY_X] = kVK_ANSI_X,
-    [OBS_KEY_Y] = kVK_ANSI_Y,
-    [OBS_KEY_Z] = kVK_ANSI_Z,
-
-    [OBS_KEY_1] = kVK_ANSI_1,
-    [OBS_KEY_2] = kVK_ANSI_2,
-    [OBS_KEY_3] = kVK_ANSI_3,
-    [OBS_KEY_4] = kVK_ANSI_4,
-    [OBS_KEY_5] = kVK_ANSI_5,
-    [OBS_KEY_6] = kVK_ANSI_6,
-    [OBS_KEY_7] = kVK_ANSI_7,
-    [OBS_KEY_8] = kVK_ANSI_8,
-    [OBS_KEY_9] = kVK_ANSI_9,
-    [OBS_KEY_0] = kVK_ANSI_0,
-
-    [OBS_KEY_RETURN] = kVK_Return,
-    [OBS_KEY_ESCAPE] = kVK_Escape,
-    [OBS_KEY_BACKSPACE] = kVK_Delete,
-    [OBS_KEY_TAB] = kVK_Tab,
-    [OBS_KEY_SPACE] = kVK_Space,
-    [OBS_KEY_MINUS] = kVK_ANSI_Minus,
-    [OBS_KEY_EQUAL] = kVK_ANSI_Equal,
-    [OBS_KEY_BRACKETLEFT] = kVK_ANSI_LeftBracket,
-    [OBS_KEY_BRACKETRIGHT] = kVK_ANSI_RightBracket,
-    [OBS_KEY_BACKSLASH] = kVK_ANSI_Backslash,
-    [OBS_KEY_SEMICOLON] = kVK_ANSI_Semicolon,
-    [OBS_KEY_QUOTE] = kVK_ANSI_Quote,
-    [OBS_KEY_DEAD_GRAVE] = kVK_ANSI_Grave,
-    [OBS_KEY_COMMA] = kVK_ANSI_Comma,
-    [OBS_KEY_PERIOD] = kVK_ANSI_Period,
-    [OBS_KEY_SLASH] = kVK_ANSI_Slash,
-    [OBS_KEY_CAPSLOCK] = kVK_CapsLock,
-    [OBS_KEY_SECTION] = kVK_ISO_Section,
-
-    [OBS_KEY_F1] = kVK_F1,
-    [OBS_KEY_F2] = kVK_F2,
-    [OBS_KEY_F3] = kVK_F3,
-    [OBS_KEY_F4] = kVK_F4,
-    [OBS_KEY_F5] = kVK_F5,
-    [OBS_KEY_F6] = kVK_F6,
-    [OBS_KEY_F7] = kVK_F7,
-    [OBS_KEY_F8] = kVK_F8,
-    [OBS_KEY_F9] = kVK_F9,
-    [OBS_KEY_F10] = kVK_F10,
-    [OBS_KEY_F11] = kVK_F11,
-    [OBS_KEY_F12] = kVK_F12,
-
-    [OBS_KEY_HELP] = kVK_Help,
-    [OBS_KEY_HOME] = kVK_Home,
-    [OBS_KEY_PAGEUP] = kVK_PageUp,
-    [OBS_KEY_DELETE] = kVK_ForwardDelete,
-    [OBS_KEY_END] = kVK_End,
-    [OBS_KEY_PAGEDOWN] = kVK_PageDown,
-
-    [OBS_KEY_RIGHT] = kVK_RightArrow,
-    [OBS_KEY_LEFT] = kVK_LeftArrow,
-    [OBS_KEY_DOWN] = kVK_DownArrow,
-    [OBS_KEY_UP] = kVK_UpArrow,
-
-    [OBS_KEY_CLEAR] = kVK_ANSI_KeypadClear,
-    [OBS_KEY_NUMSLASH] = kVK_ANSI_KeypadDivide,
-    [OBS_KEY_NUMASTERISK] = kVK_ANSI_KeypadMultiply,
-    [OBS_KEY_NUMMINUS] = kVK_ANSI_KeypadMinus,
-    [OBS_KEY_NUMPLUS] = kVK_ANSI_KeypadPlus,
-    [OBS_KEY_ENTER] = kVK_ANSI_KeypadEnter,
-
-    [OBS_KEY_NUM1] = kVK_ANSI_Keypad1,
-    [OBS_KEY_NUM2] = kVK_ANSI_Keypad2,
-    [OBS_KEY_NUM3] = kVK_ANSI_Keypad3,
-    [OBS_KEY_NUM4] = kVK_ANSI_Keypad4,
-    [OBS_KEY_NUM5] = kVK_ANSI_Keypad5,
-    [OBS_KEY_NUM6] = kVK_ANSI_Keypad6,
-    [OBS_KEY_NUM7] = kVK_ANSI_Keypad7,
-    [OBS_KEY_NUM8] = kVK_ANSI_Keypad8,
-    [OBS_KEY_NUM9] = kVK_ANSI_Keypad9,
-    [OBS_KEY_NUM0] = kVK_ANSI_Keypad0,
-
-    [OBS_KEY_NUMPERIOD] = kVK_ANSI_KeypadDecimal,
-    [OBS_KEY_NUMEQUAL] = kVK_ANSI_KeypadEquals,
-
-    [OBS_KEY_F13] = kVK_F13,
-    [OBS_KEY_F14] = kVK_F14,
-    [OBS_KEY_F15] = kVK_F15,
-    [OBS_KEY_F16] = kVK_F16,
-    [OBS_KEY_F17] = kVK_F17,
-    [OBS_KEY_F18] = kVK_F18,
-    [OBS_KEY_F19] = kVK_F19,
-    [OBS_KEY_F20] = kVK_F20,
-
-    [OBS_KEY_CONTROL] = kVK_Control,
-    [OBS_KEY_SHIFT] = kVK_Shift,
-    [OBS_KEY_ALT] = kVK_Option,
-    [OBS_KEY_META] = kVK_Command,
-    [OBS_KEY_CONTROL] = kVK_RightControl,
-};
-
 int obs_key_to_virtual_key(obs_key_t code)
 {
-    return virtual_keys[code];
+    if (virtual_keys[code].is_valid) {
+        return virtual_keys[code].code;
+    } else {
+        return INVALID_KEY;
+    }
 }
 
 obs_key_t obs_key_from_virtual_key(int code)
@@ -320,8 +423,9 @@ obs_key_t obs_key_from_virtual_key(int code)
         return OBS_KEY_META;
     if (code == kVK_RightControl)
         return OBS_KEY_META;
+
     for (size_t i = 0; i < OBS_KEY_LAST_VALUE; i++) {
-        if (virtual_keys[i] == code) {
+        if (virtual_keys[i].is_valid && virtual_keys[i].code == code) {
             return (obs_key_t) i;
         }
     }
@@ -330,135 +434,30 @@ obs_key_t obs_key_from_virtual_key(int code)
 
 static bool localized_key_to_str(obs_key_t key, struct dstr *str)
 {
-#define MAP_KEY(k, s)                                     \
-    case k:                                               \
-        dstr_copy(str, obs_get_hotkey_translation(k, s)); \
-        return true
-
-#define MAP_BUTTON(i)                                                 \
-    case OBS_KEY_MOUSE##i:                                            \
-        dstr_copy(str, obs_get_hotkey_translation(key, "Mouse " #i)); \
-        return true
-
-    switch (key) {
-        MAP_KEY(OBS_KEY_SPACE, "Space");
-        MAP_KEY(OBS_KEY_NUMEQUAL, "= (Keypad)");
-        MAP_KEY(OBS_KEY_NUMASTERISK, "* (Keypad)");
-        MAP_KEY(OBS_KEY_NUMPLUS, "+ (Keypad)");
-        MAP_KEY(OBS_KEY_NUMMINUS, "- (Keypad)");
-        MAP_KEY(OBS_KEY_NUMPERIOD, ". (Keypad)");
-        MAP_KEY(OBS_KEY_NUMSLASH, "/ (Keypad)");
-        MAP_KEY(OBS_KEY_NUM0, "0 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM1, "1 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM2, "2 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM3, "3 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM4, "4 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM5, "5 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM6, "6 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM7, "7 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM8, "8 (Keypad)");
-        MAP_KEY(OBS_KEY_NUM9, "9 (Keypad)");
-
-        MAP_BUTTON(1);
-        MAP_BUTTON(2);
-        MAP_BUTTON(3);
-        MAP_BUTTON(4);
-        MAP_BUTTON(5);
-        MAP_BUTTON(6);
-        MAP_BUTTON(7);
-        MAP_BUTTON(8);
-        MAP_BUTTON(9);
-        MAP_BUTTON(10);
-        MAP_BUTTON(11);
-        MAP_BUTTON(12);
-        MAP_BUTTON(13);
-        MAP_BUTTON(14);
-        MAP_BUTTON(15);
-        MAP_BUTTON(16);
-        MAP_BUTTON(17);
-        MAP_BUTTON(18);
-        MAP_BUTTON(19);
-        MAP_BUTTON(20);
-        MAP_BUTTON(21);
-        MAP_BUTTON(22);
-        MAP_BUTTON(23);
-        MAP_BUTTON(24);
-        MAP_BUTTON(25);
-        MAP_BUTTON(26);
-        MAP_BUTTON(27);
-        MAP_BUTTON(28);
-        MAP_BUTTON(29);
-        default:
-            break;
+    if (key < OBS_KEY_LAST_VALUE) {
+        if (key_descriptions[key].is_valid) {
+            dstr_copy(str, obs_get_hotkey_translation(key, key_descriptions[key].desc));
+        } else {
+            return false;
+        }
     }
-#undef MAP_BUTTON
-#undef MAP_KEY
 
-    return false;
+    return true;
 }
 
 static bool code_to_str(int code, struct dstr *str)
 {
-#define MAP_GLYPH(c, g)                         \
-    case c:                                     \
-        dstr_from_wcs(str, (wchar_t[]) {g, 0}); \
-        return true
-#define MAP_STR(c, s)      \
-    case c:                \
-        dstr_copy(str, s); \
-        return true
-    switch (code) {
-        MAP_GLYPH(kVK_Return, 0x21A9);
-        MAP_GLYPH(kVK_Escape, 0x238B);
-        MAP_GLYPH(kVK_Delete, 0x232B);
-        MAP_GLYPH(kVK_Tab, 0x21e5);
-        MAP_GLYPH(kVK_CapsLock, 0x21EA);
-        MAP_GLYPH(kVK_ANSI_KeypadClear, 0x2327);
-        MAP_GLYPH(kVK_ANSI_KeypadEnter, 0x2305);
-        MAP_GLYPH(kVK_Help, 0x003F);
-        MAP_GLYPH(kVK_Home, 0x2196);
-        MAP_GLYPH(kVK_PageUp, 0x21de);
-        MAP_GLYPH(kVK_ForwardDelete, 0x2326);
-        MAP_GLYPH(kVK_End, 0x2198);
-        MAP_GLYPH(kVK_PageDown, 0x21df);
-
-        MAP_GLYPH(kVK_RightArrow, 0x2192);
-        MAP_GLYPH(kVK_LeftArrow, 0x2190);
-        MAP_GLYPH(kVK_DownArrow, 0x2193);
-        MAP_GLYPH(kVK_UpArrow, 0x2191);
-
-        MAP_STR(kVK_F1, "F1");
-        MAP_STR(kVK_F2, "F2");
-        MAP_STR(kVK_F3, "F3");
-        MAP_STR(kVK_F4, "F4");
-        MAP_STR(kVK_F5, "F5");
-        MAP_STR(kVK_F6, "F6");
-        MAP_STR(kVK_F7, "F7");
-        MAP_STR(kVK_F8, "F8");
-        MAP_STR(kVK_F9, "F9");
-        MAP_STR(kVK_F10, "F10");
-        MAP_STR(kVK_F11, "F11");
-        MAP_STR(kVK_F12, "F12");
-        MAP_STR(kVK_F13, "F13");
-        MAP_STR(kVK_F14, "F14");
-        MAP_STR(kVK_F15, "F15");
-        MAP_STR(kVK_F16, "F16");
-        MAP_STR(kVK_F17, "F17");
-        MAP_STR(kVK_F18, "F18");
-        MAP_STR(kVK_F19, "F19");
-        MAP_STR(kVK_F20, "F20");
-        MAP_GLYPH(kVK_Control, kControlUnicode);
-        MAP_GLYPH(kVK_Shift, kShiftUnicode);
-        MAP_GLYPH(kVK_Option, kOptionUnicode);
-        MAP_GLYPH(kVK_Command, kCommandUnicode);
-        MAP_GLYPH(kVK_RightControl, kControlUnicode);
-        MAP_GLYPH(kVK_RightShift, kShiftUnicode);
-        MAP_GLYPH(kVK_RightOption, kOptionUnicode);
+    if (code < INVALID_KEY) {
+        if (key_glyphs[code].is_valid && key_glyphs[code].is_glyph && key_glyphs[code].glyph > 0) {
+            dstr_from_wcs(str, (wchar_t[]) {key_glyphs[code].glyph, 0});
+        } else if (key_glyphs[code].is_valid && key_glyphs[code].desc) {
+            dstr_copy(str, key_glyphs[code].desc);
+        } else {
+            return false;
+        }
     }
-#undef MAP_STR
-#undef MAP_GLYPH
 
-    return false;
+    return true;
 }
 
 void obs_key_to_str(obs_key_t key, struct dstr *str)
@@ -499,12 +498,12 @@ void obs_key_to_str(obs_key_t key, struct dstr *str)
     }
 
     UInt32 dead_key_state = 0;
-    UniCharCount len = 0;
+    UniCharCount len      = 0;
 
-    OSStatus err = UCKeyTranslate(plat->layout, code, kUCKeyActionDown,
-                                  0x104,  //caps lock for upper case letters
-                                  LMGetKbdType(), kUCKeyTranslateNoDeadKeysBit, &dead_key_state, max_length, &len,
-                                  buffer);
+    OSStatus err =
+        UCKeyTranslate(plat->layout, code, kUCKeyActionDown,
+                       0x104,  // caps lock for upper case letters
+                       LMGetKbdType(), kUCKeyTranslateNoDeadKeysBit, &dead_key_state, max_length, &len, buffer);
 
     if (err == noErr && len <= 0 && dead_key_state) {
         err = UCKeyTranslate(plat->layout, kVK_Space, kUCKeyActionDown, 0x104, LMGetKbdType(),
@@ -556,7 +555,7 @@ err:
     dstr_copy(str, obs_key_to_name(key));
 }
 
-#define OBS_COCOA_MODIFIER_SIZE 7
+#define OBS_COCOA_MODIFIER_SIZE (int) 7
 
 static void unichar_to_utf8(const UniChar *c, char *buff)
 {
@@ -576,23 +575,25 @@ static void unichar_to_utf8(const UniChar *c, char *buff)
     CFRelease(string);
 }
 
-static char ctrl_str[OBS_COCOA_MODIFIER_SIZE];
-static char opt_str[OBS_COCOA_MODIFIER_SIZE];
-static char shift_str[OBS_COCOA_MODIFIER_SIZE];
-static char cmd_str[OBS_COCOA_MODIFIER_SIZE];
+static char string_control[OBS_COCOA_MODIFIER_SIZE];
+static char string_option[OBS_COCOA_MODIFIER_SIZE];
+static char string_shift[OBS_COCOA_MODIFIER_SIZE];
+static char string_command[OBS_COCOA_MODIFIER_SIZE];
 
 static void init_utf_8_strings(void)
 {
-    const UniChar ctrl_uni[] = {kControlUnicode, 0};
-    const UniChar opt_uni[] = {kOptionUnicode, 0};
+    const UniChar ctrl_uni[]  = {kControlUnicode, 0};
+    const UniChar opt_uni[]   = {kOptionUnicode, 0};
     const UniChar shift_uni[] = {kShiftUnicode, 0};
-    const UniChar cmd_uni[] = {kCommandUnicode, 0};
+    const UniChar cmd_uni[]   = {kCommandUnicode, 0};
 
-    unichar_to_utf8(ctrl_uni, ctrl_str);
-    unichar_to_utf8(opt_uni, opt_str);
-    unichar_to_utf8(shift_uni, shift_str);
-    unichar_to_utf8(cmd_uni, cmd_str);
+    unichar_to_utf8(ctrl_uni, string_control);
+    unichar_to_utf8(opt_uni, string_option);
+    unichar_to_utf8(shift_uni, string_shift);
+    unichar_to_utf8(cmd_uni, string_command);
 }
+
+#undef OBS_COCOA_MODIFIER_SIZE
 
 static pthread_once_t strings_token = PTHREAD_ONCE_INIT;
 
@@ -612,11 +613,13 @@ void obs_key_combination_to_str(obs_key_combination_t key, struct dstr *str)
         return;
     }
 
-#define CHECK_MODIFIER(mod, str) ((key.modifiers & mod) ? str : "")
-    dstr_printf(str, "%s%s%s%s%s", CHECK_MODIFIER(INTERACT_CONTROL_KEY, ctrl_str),
-                CHECK_MODIFIER(INTERACT_ALT_KEY, opt_str), CHECK_MODIFIER(INTERACT_SHIFT_KEY, shift_str),
-                CHECK_MODIFIER(INTERACT_COMMAND_KEY, cmd_str), key_str.len ? key_str.array : "");
-#undef CHECK_MODIFIER
+    const char *modifier_control = (key.modifiers & INTERACT_CONTROL_KEY) ? string_control : "";
+    const char *modifier_option  = (key.modifiers & INTERACT_ALT_KEY) ? string_option : "";
+    const char *modifier_shift   = (key.modifiers & INTERACT_SHIFT_KEY) ? string_shift : "";
+    const char *modifier_command = (key.modifiers & INTERACT_COMMAND_KEY) ? string_command : "";
+    const char *modifier_key     = key_str.len ? key_str.array : "";
+
+    dstr_printf(str, "%s%s%s%s%s", modifier_control, modifier_option, modifier_shift, modifier_command, modifier_key);
 
     dstr_free(&key_str);
 }
@@ -624,7 +627,7 @@ void obs_key_combination_to_str(obs_key_combination_t key, struct dstr *str)
 static bool log_layout_name(TISInputSourceRef tis)
 {
     struct dstr layout_name = {0};
-    CFStringRef sid = (CFStringRef) TISGetInputSourceProperty(tis, kTISPropertyInputSourceID);
+    CFStringRef sid         = (CFStringRef) TISGetInputSourceProperty(tis, kTISPropertyInputSourceID);
     if (!sid) {
         blog(LOG_ERROR, "hotkeys-cocoa: Failed getting InputSourceID");
         return false;
@@ -649,12 +652,12 @@ fail:
 static void handle_monitor_event(obs_hotkeys_platform_t *plat, NSEvent *event)
 {
     if (event.type == NSEventTypeFlagsChanged) {
-        NSEventModifierFlags flags = event.modifierFlags;
+        NSEventModifierFlags flags          = event.modifierFlags;
         plat->is_key_down[OBS_KEY_CAPSLOCK] = !!(flags & NSEventModifierFlagCapsLock);
-        plat->is_key_down[OBS_KEY_SHIFT] = !!(flags & NSEventModifierFlagShift);
-        plat->is_key_down[OBS_KEY_ALT] = !!(flags & NSEventModifierFlagOption);
-        plat->is_key_down[OBS_KEY_META] = !!(flags & NSEventModifierFlagCommand);
-        plat->is_key_down[OBS_KEY_CONTROL] = !!(flags & NSEventModifierFlagControl);
+        plat->is_key_down[OBS_KEY_SHIFT]    = !!(flags & NSEventModifierFlagShift);
+        plat->is_key_down[OBS_KEY_ALT]      = !!(flags & NSEventModifierFlagOption);
+        plat->is_key_down[OBS_KEY_META]     = !!(flags & NSEventModifierFlagCommand);
+        plat->is_key_down[OBS_KEY_CONTROL]  = !!(flags & NSEventModifierFlagControl);
     } else if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp) {
         plat->is_key_down[obs_key_from_virtual_key(event.keyCode)] = (event.type == NSEventTypeKeyDown);
     }
@@ -665,7 +668,7 @@ static bool init_hotkeys_platform(obs_hotkeys_platform_t **plat_)
     if (!plat_)
         return false;
 
-    *plat_ = bzalloc(sizeof(obs_hotkeys_platform_t));
+    *plat_                       = bzalloc(sizeof(obs_hotkeys_platform_t));
     obs_hotkeys_platform_t *plat = *plat_;
     if (!plat) {
         *plat_ = NULL;
@@ -689,7 +692,7 @@ static bool init_hotkeys_platform(obs_hotkeys_platform_t **plat_)
         [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged
                                               handler:local_handler];
 
-    plat->tis = TISCopyCurrentKeyboardLayoutInputSource();
+    plat->tis         = TISCopyCurrentKeyboardLayoutInputSource();
     plat->layout_data = (CFDataRef) TISGetInputSourceProperty(plat->tis, kTISPropertyUnicodeKeyLayoutData);
 
     if (!plat->layout_data) {
@@ -736,14 +739,9 @@ static inline void free_hotkeys_platform(obs_hotkeys_platform_t *plat)
     bfree(plat);
 }
 
-static void input_method_changed(CFNotificationCenterRef nc, void *observer, CFStringRef name, const void *object,
-                                 CFDictionaryRef user_info)
+static void input_method_changed(CFNotificationCenterRef nc __unused, void *observer, CFStringRef name __unused,
+                                 const void *object __unused, CFDictionaryRef user_info __unused)
 {
-    UNUSED_PARAMETER(nc);
-    UNUSED_PARAMETER(name);
-    UNUSED_PARAMETER(object);
-    UNUSED_PARAMETER(user_info);
-
     struct obs_core_hotkeys *hotkeys = observer;
     obs_hotkeys_platform_t *new_plat;
 
@@ -793,49 +791,15 @@ typedef unsigned long NSUInteger;
 static bool mouse_button_pressed(obs_key_t key, bool *pressed)
 {
     int button = 0;
-    switch (key) {
-#define MAP_BUTTON(n)      \
-    case OBS_KEY_MOUSE##n: \
-        button = n - 1;    \
-        break
-        MAP_BUTTON(1);
-        MAP_BUTTON(2);
-        MAP_BUTTON(3);
-        MAP_BUTTON(4);
-        MAP_BUTTON(5);
-        MAP_BUTTON(6);
-        MAP_BUTTON(7);
-        MAP_BUTTON(8);
-        MAP_BUTTON(9);
-        MAP_BUTTON(10);
-        MAP_BUTTON(11);
-        MAP_BUTTON(12);
-        MAP_BUTTON(13);
-        MAP_BUTTON(14);
-        MAP_BUTTON(15);
-        MAP_BUTTON(16);
-        MAP_BUTTON(17);
-        MAP_BUTTON(18);
-        MAP_BUTTON(19);
-        MAP_BUTTON(20);
-        MAP_BUTTON(21);
-        MAP_BUTTON(22);
-        MAP_BUTTON(23);
-        MAP_BUTTON(24);
-        MAP_BUTTON(25);
-        MAP_BUTTON(26);
-        MAP_BUTTON(27);
-        MAP_BUTTON(28);
-        MAP_BUTTON(29);
-        break;
-#undef MAP_BUTTON
 
-        default:
-            return false;
+    if (key >= OBS_KEY_MOUSE1 && key <= OBS_KEY_MOUSE29) {
+        button = key - 1;
+    } else {
+        return false;
     }
 
     NSUInteger buttons = [NSEvent pressedMouseButtons];
-    *pressed = (buttons & (1 << button)) != 0;
+    *pressed           = (buttons & (1 << button)) != 0;
     return true;
 }
 
