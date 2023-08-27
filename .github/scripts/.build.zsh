@@ -60,7 +60,7 @@ build() {
   )
 
   local config='RelWithDebInfo'
-  local -r -a _valid_configs=(Debug RelWithDebInfo Release MinSizeRel)
+  local -r -a _valid_configs=(Debug RelWithDebInfo Release MinSizeRel Analyze)
   local -i codesign=0
 
   local -a args
@@ -142,16 +142,33 @@ build() {
         }
       }
 
-      local -a build_args=(
-        ONLY_ACTIVE_ARCH=NO
-        -project obs-studio.xcodeproj
-        -target obs-studio
-        -destination "generic/platform=macOS,name=Any Mac"
-        -configuration ${config}
-        -parallelizeTargets
-        -hideShellScriptEnvironment
-        build
-      )
+      local -a build_args=()
+
+      if [[ ${config} == Analyze ]] {
+        build_args+=(
+          ONLY_ACTIVE_ARCH=NO
+          -project obs-studio.xcodeproj
+          -scheme obs-studio
+          -destination "generic/platform=macOS,name=Any Mac"
+          -configuration Debug
+          -parallelizeTargets
+          -hideShellScriptEnvironment
+          -resultBundlePath ${project_root}/build_macos/analyze.xcresult
+          analyze
+        )
+      } else {
+        build_args+=(
+          ONLY_ACTIVE_ARCH=NO
+          -project obs-studio.xcodeproj
+          -scheme obs-studio
+          -destination "generic/platform=macOS,name=Any Mac"
+          -configuration ${config}
+          -parallelizeTargets
+          -hideShellScriptEnvironment
+          -resultBundlePath ${project_root}/build_macos/build.xcresult
+          build
+        )
+      }
 
       local -a archive_args=(
         ONLY_ACTIVE_ARCH=NO
@@ -177,6 +194,17 @@ build() {
         run_xcodebuild ${export_args}
       } else {
         run_xcodebuild ${build_args}
+
+        if [[ ${config} == Analyze ]] {
+          config='Debug'
+          xclogparser parse --project obs-studio --reporter issues \
+            | jq 'keys[] as $k | {level: "\($k)"|sub("warnings";"warning")|sub("errors";"failure"), data: (.[$k][])} | {file: .data.documentURL, start_line: .data.startingLineNumber, end_line: .data.endingLineNumber, start_column: .data.startingColumnNumber, end_column: .data.endingColumnNumber, title: "Compiler \(.level)", message: .data.title, annotation_level: .level}' \
+            | jq -s '. | unique' \
+            | sed -E -e "s#file://${project_root}/##g" \
+            > ${project_root}/build_issues.json
+        }
+
+        xclogparser parse --project obs-studio --reporter chromeTracer > obs-studio.trace
 
         rm -rf OBS.app
         mkdir OBS.app

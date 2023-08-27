@@ -85,6 +85,9 @@ jobs:
     uses: ./.github/workflows/build-project.yaml
     needs: cache-cleanup
     secrets: inherit
+    permissions:
+      contents: read
+      checks: write
 
   upload-language-files:
     name: Upload Language Files 🌐

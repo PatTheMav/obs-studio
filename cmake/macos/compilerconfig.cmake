@@ -15,14 +15,25 @@ if(NOT CMAKE_OSX_ARCHITECTURES)
 endif()
 set_property(CACHE CMAKE_OSX_ARCHITECTURES PROPERTY STRINGS arm64 x86_64)
 
+option(ENABLE_COMPILER_TRACE "Enable clang time-trace" OFF)
+mark_as_advanced(ENABLE_COMPILER_TRACE)
+
+if(ENABLE_COMPILER_TRACE AND CMAKE_GENERATOR MATCHES "(Ninja|Xcode)")
+  add_compile_options($<$<NOT:$<COMPILE_LANGUAGE:Swift>>:-ftime-trace>)
+  add_compile_options("$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xfrontend -debug-time-expression-type-checking>"
+                      "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xfrontend -debug-time-function-bodies>")
+  add_link_options(LINKER:-print_statistics)
+else()
+  set(ENABLE_COMPILER_TRACE
+      OFF
+      CACHE BOOL "Enable clang time-trace (requires Ninja)" FORCE)
+endif()
+
 if(XCODE)
   # Enable dSYM generator for release builds
   string(APPEND CMAKE_C_FLAGS_RELEASE " -g")
   string(APPEND CMAKE_CXX_FLAGS_RELEASE " -g")
 else()
-  option(ENABLE_COMPILER_TRACE "Enable clang time-trace (requires Ninja)" OFF)
-  mark_as_advanced(ENABLE_COMPILER_TRACE)
-
   # clang options for ObjC
   set(_obs_clang_objc_options
       ${_obs_clang_common_options}
@@ -62,15 +73,6 @@ else()
 
   # Enable color diagnostics for AppleClang
   set(CMAKE_COLOR_DIAGNOSTICS ON)
-
-  # Add time trace option to compiler, if enabled.
-  if(ENABLE_COMPILER_TRACE AND CMAKE_GENERATOR STREQUAL "Ninja")
-    add_compile_options($<$<NOT:$<COMPILE_LANGUAGE:Swift>>:-ftime-trace>)
-  else()
-    set(ENABLE_COMPILER_TRACE
-        OFF
-        CACHE BOOL "Enable clang time-trace (requires Ninja)" FORCE)
-  endif()
 endif()
 
 add_compile_definitions(

@@ -25,6 +25,7 @@ jobs:
     secrets: inherit
     permissions:
       contents: read
+      checks: write
 
   compatibility-validation:
     name: Validate Compatibility 🕵️

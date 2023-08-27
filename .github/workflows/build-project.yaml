@@ -14,6 +14,7 @@ jobs:
       notarize: ${{ steps.setup.outputs.notarize }}
       config: ${{ steps.setup.outputs.config }}
       commitHash: ${{ steps.setup.outputs.commitHash }}
+      analyze: ${{ steps.setup.outputs.analyze }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -28,25 +29,30 @@ jobs:
 
           case "${GITHUB_EVENT_NAME}" in
             pull_request)
-              config_data=('codesign:false' 'notarize:false' 'package:false' 'config:RelWithDebInfo')
-              if gh pr view ${{ github.event.number }} --json labels \
+              config_data=('codesign:false' 'notarize:false' 'package:false' 'config:RelWithDebInfo' 'analyze:false')
+              label_data=$(gh pr view ${{ github.event.number }} --json labels)
+              if echo "${label_data}" \
                 | jq -e -r '.labels[] | select(.name == "Seeking Testers")' > /dev/null; then
                 config_data[0]='codesign:true'
                 config_data[2]='package:true'
               fi
+              if echo "${label_data}" \
+                | jq -e -r '.labels[] | select(.name == "Analyze")' > /dev/null; then
+                config_data[4]='analyze:true'
+              fi
               ;;
             push)
-              config_data=('codesign:true' 'notarize:false' 'package:true' 'config:RelWithDebInfo')
+              config_data=('codesign:true' 'notarize:false' 'package:true' 'config:RelWithDebInfo' 'analyze:false')
               if [[ ${GITHUB_REF_NAME} =~ [0-9]+.[0-9]+.[0-9]+(-(rc|beta).+)? ]]; then
                 config_data[1]='notarize:true'
                 config_data[3]='config:Release'
               fi
               ;;
             workflow_dispatch)
-              config_data=('codesign:true' 'notarize:false' 'package:false' 'config:RelWithDebInfo')
+              config_data=('codesign:true' 'notarize:false' 'package:false' 'config:RelWithDebInfo' 'analyze:false')
               ;;
             schedule)
-              config_data=('codesign:true' 'notarize:false' 'package:true' 'config:RelWithDebInfo')
+              config_data=('codesign:true' 'notarize:false' 'package:true' 'config:RelWithDebInfo' 'analyze:false')
               ;;
             *) ;;
           esac
@@ -166,11 +172,71 @@ jobs:
           name: obs-studio-macos-${{ matrix.target }}-${{ needs.check-event.outputs.commitHash }}-dSYMs
           path: ${{ github.workspace }}/build_macos/obs-studio-*-macos-${{ steps.setup.outputs.cpuName }}-dSYMs.tar.xz
 
+      - name: Upload Build Trace 🔬
+        uses: actions/upload-artifact@v3
+        if: github.event_name == 'pull_request'
+        with:
+          name: obs-studio-macos-${{ matrix.target }}-${{ needs.check-event.outputs.commitHash }}-trace
+          path: ${{ github.workspace }}/build_macos/obs-studio.trace
+
       - uses: actions/cache/save@v3
         if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
         with:
           path: ${{ github.workspace }}/.ccache
           key: ${{ runner.os }}-ccache-${{ matrix.target }}-${{ needs.check-event.outputs.config }}
+
+  macos-analyze:
+    name: macOS Analytic 🍏
+    runs-on: macos-13
+    needs: check-event
+    if: fromJSON(needs.check-event.outputs.analyze)
+    defaults:
+      run:
+        shell: zsh --no-rcs --errexit --pipefail {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set Up Environment 🔧
+        id: setup
+        run: |
+          : Set Up Environment 🔧
+          if (( ${+RUNNER_DEBUG} )) setopt XTRACE
+
+          print '::group::Enable Xcode 14.3.1 and AppleScript'
+          sudo xcode-select --switch /Applications/Xcode_14.3.1.app/Contents/Developer
+          sudo sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db \
+            "INSERT OR REPLACE INTO access VALUES('kTCCServiceAppleEvents','/usr/local/opt/runner/provisioner/provisioner',1,2,3,1,NULL,NULL,0,'com.apple.finder',X'fade0c000000002c00000001000000060000000200000010636f6d2e6170706c652e66696e64657200000003',NULL,1592919552);"
+          sudo sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db \
+            "INSERT OR REPLACE INTO access VALUES('kTCCServiceAppleEvents','/usr/local/opt/runner/provisioner/provisioner',1,2,3,1,NULL,NULL,0,'com.apple.finder',X'fade0c000000002c00000001000000060000000200000010636f6d2e6170706c652e66696e64657200000003',NULL,1592919552);"
+          print '::endgroup::'
+
+          print '::group::Clean Homebrew Environment'
+          local -a to_remove=()
+
+          for formula (curl) {
+            if [[ -d ${HOMEBREW_PREFIX}/opt/${formula} ]] to_remove+=(${formula})
+          }
+
+          if (( #to_remove )) brew uninstall --ignore-dependencies ${to_remove}
+          print '::endgroup::'
+
+      - name: Analyze OBS Studio 🔬
+        uses: ./.github/actions/analyze-obs
+        env:
+          TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
+          RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
+          YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENTID }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+          YOUTUBE_SECRET: ${{ secrets.YOUTUBE_SECRET }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_SECRET_HASH }}
+        with:
+          target: arm64
+          repositorySecret: ${{ github.token }}
 
   ubuntu-build:
     name: Ubuntu 🐧
