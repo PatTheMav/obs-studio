@@ -15,12 +15,13 @@ add_library(_graphics-hook INTERFACE)
 
 target_sources(
   _graphics-hook
-  INTERFACE d3d8-capture.cpp
-            d3d9-capture.cpp
-            d3d9-patches.hpp
+  INTERFACE # cmake-format: sortable
             d3d10-capture.cpp
             d3d11-capture.cpp
             d3d12-capture.cpp
+            d3d8-capture.cpp
+            d3d9-capture.cpp
+            d3d9-patches.hpp
             dxgi-capture.cpp
             gl-capture.c
             gl-decs.h
