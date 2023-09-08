@@ -1,7 +1,8 @@
 # OBS CMake Windows helper functions module
 
 # cmake-format: off
-# cmake-lint: disable=C0301
+# cmake-lint: disable=C0103
+# cmake-lint: disable=R0912
 # cmake-lint: disable=R0915
 # cmake-format: on
 
@@ -319,7 +320,6 @@ endfunction()
 
 # Helper function to add a specific resource to a bundle
 function(target_add_resource target resource)
-
   get_property(obs_module_list GLOBAL PROPERTY OBS_MODULES_ENABLED)
   if(ARGN)
     set(target_destination "${ARGN}")

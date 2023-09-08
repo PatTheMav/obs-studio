@@ -2,31 +2,7 @@
 
 include_guard(GLOBAL)
 
-# Enable automatic PUSH and POP of policies to parent scope
-if(POLICY CMP0011)
-  cmake_policy(SET CMP0011 NEW)
-endif()
-
-# Enable distinction between Clang and AppleClang
-if(POLICY CMP0025)
-  cmake_policy(SET CMP0025 NEW)
-endif()
-
-# Enable strict checking of "break()" usage
-if(POLICY CMP0055)
-  cmake_policy(SET CMP0055 NEW)
-endif()
-
-# Honor visibility presets for all target types (executable, shared, module, static)
-if(POLICY CMP0063)
-  cmake_policy(SET CMP0063 NEW)
-endif()
-
-# Disable export function calls to populate package registry by default
-if(POLICY CMP0090)
-  cmake_policy(SET CMP0090 NEW)
-endif()
-
+# Map fallback configurations for optimized build configurations
 set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO RelWithDebInfo Release MinSizeRel "")
 set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL MinSizeRel Release RelWithDebInfo "")
 set(CMAKE_MAP_IMPORTED_CONFIG_RELEASE Release RelWithDebInfo MinSizeRel "")
@@ -57,6 +33,7 @@ set(_obs_beta "0" "0" "0" "0")
 # Add common module directories to default search path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/common" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/finders")
 
+include(policies NO_POLICY_SCOPE)
 include(versionconfig)
 include(buildnumber)
 include(osconfig)
@@ -69,7 +46,5 @@ if(NOT CMAKE_GENERATOR MATCHES "(Xcode|Visual Studio .+)")
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release RelWithDebInfo Debug MinSizeRel)
 endif()
 
-# Disable exports automatically going into the CMake package registry
-set(CMAKE_EXPORT_PACKAGE_REGISTRY FALSE)
 # Enable default inclusion of targets' source and binary directory
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
