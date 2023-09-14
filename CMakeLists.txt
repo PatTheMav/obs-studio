@@ -26,6 +26,9 @@ if(CMAKE_HOST_SYSTEM_NAME MATCHES "(Darwin)" OR OBS_CMAKE_VERSION VERSION_GREATE
     add_subdirectory(libobs-winrt)
   endif()
   add_subdirectory(libobs-opengl)
+  if(OS_MACOS)
+    add_subdirectory(libobs-metal)
+  endif()
   add_subdirectory(plugins)
 
   add_subdirectory(test/test-input)
