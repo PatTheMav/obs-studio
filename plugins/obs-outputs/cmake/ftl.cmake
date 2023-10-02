@@ -64,4 +64,4 @@ target_sources(obs-outputs PRIVATE ftl-stream.c)
 target_link_libraries(obs-outputs PRIVATE ftl-sdk)
 target_enable_feature(obs-outputs "FTL protocol support")
 
-set_target_properties(ftl-sdk PROPERTIES FOLDER plugins/obs-outputs)
+set_target_properties(ftl-sdk PROPERTIES FOLDER plugins/obs-outputs POSITION_INDEPENDENT_CODE TRUE)
