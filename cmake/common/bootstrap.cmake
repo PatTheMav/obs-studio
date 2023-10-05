@@ -14,8 +14,10 @@ if("${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   file(REMOVE_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/CMakeCache.txt" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles")
 endif()
 
-# Use folders for source file organization with IDE generators (Visual Studio/Xcode)
-set_property(GLOBAL PROPERTY USE_FOLDERS TRUE)
+if(CMAKE_VERSION VERSION_LESS 3.26)
+  # Use folders for source file organization with IDE generators (Visual Studio/Xcode)
+  set_property(GLOBAL PROPERTY USE_FOLDERS TRUE)
+endif()
 
 # Set default global project variables
 set(OBS_COMPANY_NAME "OBS Project")

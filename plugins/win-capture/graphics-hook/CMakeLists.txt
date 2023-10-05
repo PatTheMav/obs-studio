@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24...3.25)
+cmake_minimum_required(VERSION 3.24...3.27)
 
 find_package(Detours REQUIRED)
 find_package(Vulkan REQUIRED)

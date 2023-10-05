@@ -225,18 +225,27 @@ function(find_dependencies)
   endforeach()
 
   if(NOT is_root)
-    # cmake-format: off
-    set(found_libraries ${found_libraries} PARENT_SCOPE)
-    # cmake-format: on
+    if(CMAKE_VERSION VERSION_LESS 3.25)
+      set(found_libraries
+          ${found_libraries}
+          PARENT_SCOPE)
+      return()
+    else()
+      return(PROPAGATE found_libraries)
+    endif()
     # Exit recursive branch
-    return()
   endif()
 
   list(REMOVE_DUPLICATES found_libraries)
   list(APPEND ${var_FOUND_VAR} ${found_libraries})
-  # cmake-format: off
-  set(${var_FOUND_VAR} ${${var_FOUND_VAR}} PARENT_SCOPE)
-  # cmake-format: on
+
+  if(CMAKE_VERSION VERSION_LESS 3.25)
+    set(${var_FOUND_VAR}
+        ${${var_FOUND_VAR}}
+        PARENT_SCOPE)
+  else()
+    return(PROPAGATE ${var_FOUND_VAR})
+  endif()
 endfunction()
 
 # find_qt_plugins: Find and add Qt plugin libraries associated with Qt component to target
@@ -296,9 +305,14 @@ function(find_qt_plugins)
     endforeach()
   endif()
 
-  # cmake-format: off
-  set(${var_FOUND_VAR} ${plugins_list} PARENT_SCOPE)
-  # cmake-format: on
+  if(CMAKE_VERSION VERSION_LESS 3.25)
+    set(${var_FOUND_VAR}
+        ${plugins_list}
+        PARENT_SCOPE)
+  else()
+    set(${var_FOUND_VAR} ${plugins_list})
+    return(PROPAGATE ${var_FOUND_VAR})
+  endif()
 endfunction()
 
 # target_export: Helper function to export target as CMake package
@@ -458,9 +472,15 @@ function(check_uuid uuid_string return_value)
     set(valid_uuid FALSE)
   endif()
   message(DEBUG "UUID ${uuid_string} valid: ${valid_uuid}")
-  # cmake-format: off
-  set(${return_value} ${valid_uuid} PARENT_SCOPE)
-  # cmake-format: on
+
+  if(CMAKE_VERSION VERSION_LESS 3.25)
+    set(${return_value}
+        ${valid_uuid}
+        PARENT_SCOPE)
+  else()
+    set(${return_value} ${valid_uuid})
+    return(PROPAGATE ${return_value})
+  endif()
 endfunction()
 
 # legacy_check: Check if new CMake framework was not enabled and load legacy rules instead

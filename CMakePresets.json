@@ -106,6 +106,9 @@
         "VIRTUALCAM_GUID": {"type": "STRING", "value": "A3FCE0F5-3493-419F-958A-ABA1250EC20B"},
         "ENABLE_BROWSER": true,
         "ENABLE_CCACHE": false
+      },
+      "environment": {
+        "WindowsSDKVersion": "10.0.20348"
       }
     },
     {
