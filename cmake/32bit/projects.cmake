@@ -57,9 +57,15 @@ function(check_uuid uuid_string return_value)
     set(valid_uuid FALSE)
   endif()
   message(DEBUG "UUID ${uuid_string} valid: ${valid_uuid}")
-  # cmake-format: off
-  set(${return_value} ${valid_uuid} PARENT_SCOPE)
-  # cmake-format: on
+
+  if(CMAKE_VERSION VERSION_LESS 3.25)
+    set(${return_value}
+        ${valid_uuid}
+        PARENT_SCOPE)
+  else()
+    set(${return_value} ${valid_uuid})
+    return(PROPAGATE ${return_value})
+  endif()
 endfunction()
 
 if(OS_WINDOWS)

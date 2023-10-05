@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24...3.25)
+cmake_minimum_required(VERSION 3.24...3.27)
 
 add_library(_get-graphics-offsets INTERFACE)
 target_sources(_get-graphics-offsets INTERFACE d3d8-offsets.cpp d3d9-offsets.cpp dxgi-offsets.cpp

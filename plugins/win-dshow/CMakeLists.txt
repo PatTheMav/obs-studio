@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24...3.25)
+cmake_minimum_required(VERSION 3.24...3.27)
 
 if(OBS_CMAKE_VERSION VERSION_GREATER_EQUAL 3.0.0)
   add_library(obs-virtualcam-interface INTERFACE)

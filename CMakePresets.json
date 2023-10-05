@@ -130,7 +130,8 @@
         "ENABLE_BROWSER": true,
         "VIRTUALCAM_GUID": {"type": "STRING", "value": "A3FCE0F5-3493-419F-958A-ABA1250EC20B"},
         "GPU_PRIORITY_VAL": {"type": "STRING", "value": "$penv{GPU_PRIORITY_VAL}"},
-        "ENABLE_CCACHE": false
+        "ENABLE_CCACHE": false,
+        "CMAKE_GENERATOR_PLATFORM": {"type": "STRING", "value": "version=10.0.20348"}
       }
     },
     {
