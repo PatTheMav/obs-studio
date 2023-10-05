@@ -15,7 +15,9 @@ foreach(_uuid IN ITEMS VIRTUALCAM_DEVICE_UUID VIRTUALCAM_SOURCE_UUID VIRTUALCAM_
   endif()
 endforeach()
 
-project(mac-camera-extension LANGUAGES Swift)
+enable_language(Swift)
+
+# project(mac-camera-extension LANGUAGES Swift)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0)
 
