@@ -63,7 +63,7 @@ if(OBS_CMAKE_VERSION VERSION_GREATER_EQUAL 3.0.0)
               placeholder.cpp sleepto.c sleepto.h virtualcam-filter.cpp virtualcam-filter.hpp virtualcam-module.cpp)
   target_include_directories(_virtualcam INTERFACE "${CMAKE_CURRENT_BINARY_DIR}")
   target_compile_definitions(_virtualcam INTERFACE VIRTUALCAM_AVAILABLE)
-  target_compile_options(_virtualcam INTERFACE $<IF:$<CONFIG:Debug>,/MTd,/MT>)
+  # target_compile_options(_virtualcam INTERFACE $<IF:$<CONFIG:Debug>,/MTd,/MT>)
 
   target_link_libraries(
     _virtualcam

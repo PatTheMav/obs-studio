@@ -54,7 +54,7 @@ target_sources(
           audio-repack.hpp
           main.cpp)
 
-target_compile_options(aja PRIVATE $<$<PLATFORM_ID:Windows>:/wd4996>
+target_compile_options(aja PRIVATE $<$<PLATFORM_ID:Windows_DISABLED>:/wd4996>
                                    $<$<CXX_COMPILER_ID:AppleClang,Clang>:-Wno-error=deprecated-declarations>)
 
 target_link_libraries(

@@ -41,7 +41,7 @@ target_compile_definitions(rtmp-services PRIVATE SERVICES_URL="${RTMP_SERVICES_U
 
 target_link_libraries(rtmp-services PRIVATE OBS::libobs OBS::file-updater jansson::jansson)
 
-target_link_options(rtmp-services PRIVATE $<$<PLATFORM_ID:Windows>:/IGNORE:4098>)
+target_link_options(rtmp-services PRIVATE $<$<PLATFORM_ID:Windows_DISABLED>:/IGNORE:4098>)
 
 if(OS_WINDOWS)
   configure_file(cmake/windows/obs-module.rc.in rtmp-services.rc)

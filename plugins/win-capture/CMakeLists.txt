@@ -77,7 +77,7 @@ target_link_libraries(
           OBS::winrt-headers
           jansson::jansson)
 
-target_link_options(win-capture PRIVATE /NODEFAULTLIB:msvcrtd.lib)
+# target_link_options(win-capture PRIVATE /NODEFAULTLIB:msvcrtd.lib)
 
 # cmake-format: off
 set_target_properties_obs(win-capture PROPERTIES FOLDER plugins/win-capture PREFIX "")

@@ -30,7 +30,7 @@ target_include_directories(
   PRIVATE caption
   PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_compile_definitions(caption PRIVATE __STDC_CONSTANT_MACROS $<$<PLATFORM_ID:Windows>:_CRT_SECURE_NO_WARNINGS>)
+target_compile_definitions(caption PRIVATE __STDC_CONSTANT_MACROS $<$<PLATFORM_ID:Windows_DISABLED>:_CRT_SECURE_NO_WARNINGS>)
 
 target_compile_options(
   caption

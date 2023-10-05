@@ -30,11 +30,11 @@ target_sources(
             graphics-hook.rc)
 
 target_compile_definitions(_graphics-hook INTERFACE COMPILE_D3D12_HOOK)
-target_compile_options(_graphics-hook INTERFACE $<IF:$<CONFIG:Debug>,/MTd,/MT>)
+# target_compile_options(_graphics-hook INTERFACE $<IF:$<CONFIG:Debug>,/MTd,/MT>)
 
 target_link_libraries(_graphics-hook INTERFACE OBS::d3d8-api OBS::hook-config OBS::ipc-util OBS::obfuscate
                                                Detours::Detours dxguid)
-target_link_options(_graphics-hook INTERFACE /IGNORE:4099)
+# target_link_options(_graphics-hook INTERFACE /IGNORE:4099)
 
 if(TARGET Vulkan::Vulkan)
   target_sources(_graphics-hook INTERFACE vulkan-capture.c vulkan-capture.h)

@@ -40,7 +40,7 @@ target_include_directories(
                             "${CMAKE_CURRENT_SOURCE_DIR}/libdshowcapture/external/capture-device-support/Library")
 
 target_compile_definitions(libdshowcapture INTERFACE _UP_WINDOWS=1)
-target_compile_options(libdshowcapture INTERFACE /wd4018)
+# target_compile_options(libdshowcapture INTERFACE /wd4018)
 
 get_target_property(target_sources libdshowcapture INTERFACE_SOURCES)
 set(target_headers ${target_sources})

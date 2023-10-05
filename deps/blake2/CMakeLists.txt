@@ -10,9 +10,4 @@ target_sources(
 
 target_include_directories(blake2 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-if(OS_WINDOWS)
-  target_compile_options(blake2 PRIVATE $<IF:$<CONFIG:Debug>,/MTd,/MT> /Zl)
-  target_compile_definitions(blake2 PRIVATE inline=_inline restrict=__restrict)
-endif()
-
 set_target_properties(blake2 PROPERTIES FOLDER deps)

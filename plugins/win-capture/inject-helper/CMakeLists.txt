@@ -8,7 +8,7 @@ add_library(_inject-helper INTERFACE)
 
 target_sources(_inject-helper INTERFACE inject-helper.c)
 
-target_compile_options(_inject-helper INTERFACE $<IF:$<CONFIG:Debug>,/MTd,/MT>)
+# target_compile_options(_inject-helper INTERFACE $<IF:$<CONFIG:Debug>,/MTd,/MT>)
 
 target_link_libraries(_inject-helper INTERFACE OBS::inject-library OBS::obfuscate)
 

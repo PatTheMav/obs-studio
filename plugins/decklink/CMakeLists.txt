@@ -73,7 +73,7 @@ target_sources(
           util.cpp
           util.hpp)
 
-target_compile_definitions(decklink PRIVATE $<$<PLATFORM_ID:Windows>:NOMINMAX>)
+target_compile_definitions(decklink PRIVATE $<$<PLATFORM_ID:Windows_DISABLED>:NOMINMAX>)
 
 target_link_libraries(decklink PRIVATE OBS::libobs OBS::caption Decklink::SDK
                                        "$<$<PLATFORM_ID:Darwin>:$<LINK_LIBRARY:FRAMEWORK,CoreFoundation.framework>>")

@@ -26,7 +26,7 @@ target_sources(
 configure_file(cmake/windows/obs-module.rc.in libobs-d3d11.rc)
 target_sources(libobs-d3d11 PRIVATE libobs-d3d11.rc)
 
-target_compile_options(libobs-d3d11 PRIVATE /wd4595)
+# target_compile_options(libobs-d3d11 PRIVATE /wd4595)
 
 target_compile_definitions(
   libobs-d3d11 PRIVATE $<$<BOOL:${GPU_PRIORITY_VAL}>:USE_GPU_PRIORITY>

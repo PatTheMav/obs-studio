@@ -70,7 +70,7 @@ target_link_libraries(
           "$<$<PLATFORM_ID:Darwin>:$<LINK_LIBRARY:FRAMEWORK,Foundation.framework>>"
           "$<$<PLATFORM_ID:Darwin>:$<LINK_LIBRARY:FRAMEWORK,Security.framework>>")
 
-target_link_options(obs-outputs PRIVATE $<$<PLATFORM_ID:Windows>:/IGNORE:4098> $<$<PLATFORM_ID:Windows>:/IGNORE:4099>)
+target_link_options(obs-outputs PRIVATE $<$<PLATFORM_ID:Windows_DISABLED>:/IGNORE:4098> $<$<PLATFORM_ID:Windows_DISABLED>:/IGNORE:4099>)
 
 if(OS_WINDOWS)
   configure_file(cmake/windows/obs-module.rc.in obs-outputs.rc)

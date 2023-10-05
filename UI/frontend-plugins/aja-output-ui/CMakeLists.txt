@@ -34,7 +34,7 @@ target_sources(aja-output-ui PRIVATE forms/output.ui)
 
 target_compile_options(
   aja-output-ui
-  PRIVATE $<$<PLATFORM_ID:Windows>:/wd4996>
+  PRIVATE $<$<PLATFORM_ID:Windows_DISABLED>:/wd4996>
           $<$<COMPILE_LANG_AND_ID:CXX,AppleClang,Clang>:-Wno-error=deprecated-declarations>
           $<$<COMPILE_LANG_AND_ID:CXX,AppleClang,Clang>:-Wno-quoted-include-in-framework-header>)
 
@@ -57,7 +57,7 @@ target_link_libraries(
           $<$<NOT:$<PLATFORM_ID:Windows,Darwin>>:X11::X11>
           $<$<NOT:$<PLATFORM_ID:Windows,Darwin>>:Qt::GuiPrivate>)
 
-target_link_options(aja-output-ui PRIVATE $<$<PLATFORM_ID:Windows>:/IGNORE:4099>)
+target_link_options(aja-output-ui PRIVATE $<$<PLATFORM_ID:Windows_DISABLED>:/IGNORE:4099>)
 
 if(OS_WINDOWS)
   configure_file(cmake/windows/obs-module.rc.in aja-output-ui.rc)
