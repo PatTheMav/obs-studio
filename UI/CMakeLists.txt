@@ -79,8 +79,6 @@ target_sources(
           platform.hpp
           qt-display.cpp
           qt-display.hpp
-          qt-wrappers.cpp
-          qt-wrappers.hpp
           ui-config.h
           ui-validation.cpp
           ui-validation.hpp)

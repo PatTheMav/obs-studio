@@ -18,6 +18,8 @@ elseif(OS_MACOS)
   set_target_properties(obs-frontend-api PROPERTIES SOVERSION 1)
 endif()
 
-set_target_properties_obs(obs-frontend-api PROPERTIES FOLDER frontend PREFIX "" PUBLIC_HEADER obs-frontend-api.h)
-
 target_export(obs-frontend-api)
+
+# cmake-format: off
+set_target_properties_obs(obs-frontend-api PROPERTIES FOLDER frontend PREFIX "" PUBLIC_HEADER obs-frontend-api.h)
+# cmake-format: on
