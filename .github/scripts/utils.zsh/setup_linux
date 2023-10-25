@@ -75,7 +75,7 @@ if [[ ${CPUTYPE} != ${target##*-} ]] {
 }
 
 sudo apt-get install -y --no-install-recommends \
-  build-essential \
+  build-essential libglib2.0-dev \
   lsb-release dh-cmake \
   libcurl4-openssl-dev \
   libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev \

@@ -191,12 +191,9 @@ build() {
     linux-*)
       local cmake_bin='/usr/bin/cmake'
       cmake_args+=(
-        -S ${PWD} -B build_${target##*-}
-        -G Ninja
-        -DCMAKE_BUILD_TYPE:STRING=${config}
+        --preset linux-ci-x86_64
+        -DENABLE_BROWSER:BOOL=ON
         -DCEF_ROOT_DIR:PATH="${project_root}/.deps/cef_binary_${CEF_VERSION}_${target//-/_}"
-        -DENABLE_AJA:BOOL=OFF
-        -DENABLE_WEBRTC:BOOL=OFF
       )
       if (( ! UBUNTU_2210_OR_LATER )) cmake_args+=(-DENABLE_NEW_MPEGTS_OUTPUT:BOOL=OFF)
 

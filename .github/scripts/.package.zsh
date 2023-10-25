@@ -216,7 +216,7 @@ package() {
     if (( package )) {
       log_group "Packaging obs-studio..."
       pushd ${project_root}
-      ${cmake_bin} --build build_${target##*-} --config ${config} -t package ${cmake_args}
+      ${cmake_bin} --build build_${target##*-} --config ${config} --target package ${cmake_args}
       output_name="${output_name}-${target##*-}-linux-gnu"
 
       pushd ${project_root}/build_${target##*-}
@@ -234,6 +234,19 @@ package() {
       XZ_OPT=-T0 tar -cvJf ${project_root}/build_${target##*-}/${output_name}.tar.xz (bin|lib|share)
       popd
     }
+
+    pushd ${project_root}
+    ${cmake_bin} --build build_${target##*-} --config ${config} --target package_source ${cmake_args}
+    output_name="${output_name}-sources"
+
+    pushd ${project_root}/build_${target##*-}
+    local -a files=(obs-studio-*-sources.tar.*)
+    for file (${files}) {
+      mv ${file} ${file//obs-studio-*-sources/${output_name}}
+    }
+    popd
+    popd
+
     log_group
   }
 }

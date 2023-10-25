@@ -213,9 +213,8 @@ jobs:
 
       - name: Upload Source Tarball 🗜️
         uses: actions/upload-artifact@v4
-        if: ${{ ! always() }}
         with:
-          name: obs-studio-*-sources-${{ needs.check-event.outputs.commitHash }}
+          name: obs-studio-ubuntu-22.04-sources-${{ needs.check-event.outputs.commitHash }}
           path: ${{ github.workspace }}/build_x86_64/obs-studio-*-sources.*
 
       - name: Upload Artifacts 📡
