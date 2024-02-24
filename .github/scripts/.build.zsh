@@ -56,7 +56,7 @@ build() {
   local -r -a _valid_targets=(
     macos-x86_64
     macos-arm64
-    linux-x86_64
+    ubuntu-x86_64
   )
 
   local config='RelWithDebInfo'
@@ -66,7 +66,7 @@ build() {
   local -a args
   while (( # )) {
     case ${1} {
-      -t|--target|--generator|-c|--config)
+      -t|--target|-c|--config)
         if (( # == 1 )) || [[ ${2:0:1} == '-' ]] {
           log_error "Missing value for option %B${1}%b"
           exit 2
@@ -104,8 +104,8 @@ build() {
   check_${host_os}
   setup_ccache
 
-  if [[ ${host_os} == linux ]] {
-    autoload -Uz setup_linux && setup_linux
+  if [[ ${host_os} == ubuntu ]] {
+    autoload -Uz setup_ubuntu && setup_ubuntu
   }
 
   local product_name
@@ -188,17 +188,18 @@ build() {
       }
       popd
       ;;
-    linux-*)
+    ubuntu-*)
       local cmake_bin='/usr/bin/cmake'
       cmake_args+=(
-        --preset linux-ci-x86_64
+        --preset ubuntu-ci
+        --toolchain ${project_root}/cmake/linux/toolchain-${target##*-}-gcc.cmake
         -DENABLE_BROWSER:BOOL=ON
-        -DCEF_ROOT_DIR:PATH="${project_root}/.deps/cef_binary_${CEF_VERSION}_${target//-/_}"
+        -DCEF_ROOT_DIR:PATH="${project_root}/.deps/cef_binary_${CEF_VERSION}_${target//ubuntu-/linux_}"
       )
       if (( ! UBUNTU_2210_OR_LATER )) cmake_args+=(-DENABLE_NEW_MPEGTS_OUTPUT:BOOL=OFF)
 
-      cmake_build_args+=(build_${target##*-} --config ${config} --parallel)
-      cmake_install_args+=(build_${target##*-} --prefix ${project_root}/build_${target##*-}/install/${config})
+      cmake_build_args+=(build_${target%%-*} --config ${config} --parallel)
+      cmake_install_args+=(build_${target%%-*} --prefix ${project_root}/build_${target%%-*}/install/${config})
 
       log_group "Configuring ${product_name}..."
       ${cmake_bin} -S ${project_root} ${cmake_args}
