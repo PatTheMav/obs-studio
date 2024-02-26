@@ -562,27 +562,34 @@ static bool vaapi_encode(void *data, struct encoder_frame *frame,
 			size_t size;
 
 			enc->first_packet = false;
-#ifdef ENABLE_HEVC
-			if (enc->codec == CODEC_HEVC) {
-				obs_extract_hevc_headers(
-					enc->packet->data, enc->packet->size,
-					&new_packet, &size, &enc->header,
-					&enc->header_size, &enc->sei,
-					&enc->sei_size);
-			} else
-#endif
-				if (enc->codec == CODEC_H264) {
+
+			switch (enc->codec) {
+			case CODEC_H264: {
 				obs_extract_avc_headers(
 					enc->packet->data, enc->packet->size,
 					&new_packet, &size, &enc->header,
 					&enc->header_size, &enc->sei,
 					&enc->sei_size);
-			} else if (enc->codec == CODEC_AV1) {
+				break;
+			}
+			case CODEC_AV1: {
 				obs_extract_av1_headers(enc->packet->data,
 							enc->packet->size,
 							&new_packet, &size,
 							&enc->header,
 							&enc->header_size);
+				break;
+			}
+#ifdef ENABLE_HEVC
+			case CODEC_HEVC: {
+				obs_extract_hevc_headers(
+					enc->packet->data, enc->packet->size,
+					&new_packet, &size, &enc->header,
+					&enc->header_size, &enc->sei,
+					&enc->sei_size);
+				break;
+			}
+#endif
 			}
 
 			da_copy_array(enc->buffer, new_packet, size);
