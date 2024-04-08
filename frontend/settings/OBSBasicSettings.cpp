@@ -609,10 +609,23 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 		ui->processPriority->addItem(QTStr(pri.name), pri.val);
 
 #else
+#if defined(__APPLE__) && defined(__aarch64__)
+    delete ui->adapterLabel;
+    delete ui->adapter;
+
+    ui->adapterLabel = nullptr;
+    ui->adapter = nullptr;
+#else
 	delete ui->rendererLabel;
 	delete ui->renderer;
 	delete ui->adapterLabel;
 	delete ui->adapter;
+
+	ui->rendererLabel = nullptr;
+	ui->renderer = nullptr;
+	ui->adapterLabel = nullptr;
+	ui->adapter = nullptr;
+#endif
 	delete ui->processPriorityLabel;
 	delete ui->processPriority;
 	delete ui->enableNewSocketLoop;
@@ -624,10 +637,6 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 #endif
 	delete ui->disableAudioDucking;
 
-	ui->rendererLabel = nullptr;
-	ui->renderer = nullptr;
-	ui->adapterLabel = nullptr;
-	ui->adapter = nullptr;
 	ui->processPriorityLabel = nullptr;
 	ui->processPriority = nullptr;
 	ui->enableNewSocketLoop = nullptr;
