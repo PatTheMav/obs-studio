@@ -648,37 +648,65 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 	for (ProcessPriority pri : processPriorities)
 		ui->processPriority->addItem(QTStr(pri.name), pri.val);
+#endif
+#ifdef __APPLE__
+#ifdef __aarch64__
+    delete ui->adapterLabel;
+    delete ui->adapter;
 
+    ui->adapterLabel = nullptr;
+    ui->adapter = nullptr;
 #else
-	delete ui->rendererLabel;
-	delete ui->renderer;
-	delete ui->adapterLabel;
-	delete ui->adapter;
-	delete ui->processPriorityLabel;
-	delete ui->processPriority;
-	delete ui->enableNewSocketLoop;
-	delete ui->enableLowLatencyMode;
-	delete ui->hideOBSFromCapture;
-#ifdef __linux__
-	delete ui->browserHWAccel;
-	delete ui->sourcesGroup;
-#endif
-	delete ui->disableAudioDucking;
+    delete ui->rendererLabel;
+    delete ui->renderer;
+    delete ui->adapterLabel;
+    delete ui->adapter;
 
-	ui->rendererLabel = nullptr;
-	ui->renderer = nullptr;
-	ui->adapterLabel = nullptr;
-	ui->adapter = nullptr;
-	ui->processPriorityLabel = nullptr;
-	ui->processPriority = nullptr;
-	ui->enableNewSocketLoop = nullptr;
-	ui->enableLowLatencyMode = nullptr;
-	ui->hideOBSFromCapture = nullptr;
-#ifdef __linux__
-	ui->browserHWAccel = nullptr;
-	ui->sourcesGroup = nullptr;
+    ui->rendererLabel = nullptr;
+    ui->renderer = nullptr;
+    ui->adapterLabel = nullptr;
+    ui->adapter = nullptr;
 #endif
-	ui->disableAudioDucking = nullptr;
+    delete ui->processPriorityLabel;
+    delete ui->processPriority;
+    delete ui->enableNewSocketLoop;
+    delete ui->enableLowLatencyMode;
+    delete ui->hideOBSFromCapture;
+    delete ui->disableAudioDucking;
+
+    ui->processPriorityLabel = nullptr;
+    ui->processPriority = nullptr;
+    ui->enableNewSocketLoop = nullptr;
+    ui->enableLowLatencyMode = nullptr;
+    ui->hideOBSFromCapture = nullptr;
+    ui->disableAudioDucking = nullptr;
+#endif
+#ifdef __linux__
+    delete ui->rendererLabel;
+    delete ui->renderer;
+    delete ui->adapterLabel;
+    delete ui->adapter;
+    delete ui->processPriorityLabel;
+    delete ui->processPriority;
+    delete ui->enableNewSocketLoop;
+    delete ui->enableLowLatencyMode;
+    delete ui->hideOBSFromCapture;
+    delete ui->browserHWAccel;
+    delete ui->sourcesGroup;
+    delete ui->disableAudioDucking;
+
+    ui->rendererLabel = nullptr;
+    ui->renderer = nullptr;
+    ui->adapterLabel = nullptr;
+    ui->adapter = nullptr;
+    ui->processPriorityLabel = nullptr;
+    ui->processPriority = nullptr;
+    ui->enableNewSocketLoop = nullptr;
+    ui->enableLowLatencyMode = nullptr;
+    ui->hideOBSFromCapture = nullptr;
+    ui->browserHWAccel = nullptr;
+    ui->sourcesGroup = nullptr;
+    ui->disableAudioDucking = nullptr;
 #endif
 
 #ifndef __APPLE__
