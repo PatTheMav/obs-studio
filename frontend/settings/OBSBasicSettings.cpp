@@ -610,62 +610,62 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 #endif
 #ifdef __APPLE__
 #ifdef __aarch64__
-    delete ui->adapterLabel;
-    delete ui->adapter;
+	delete ui->adapterLabel;
+	delete ui->adapter;
 
-    ui->adapterLabel = nullptr;
-    ui->adapter = nullptr;
+	ui->adapterLabel = nullptr;
+	ui->adapter = nullptr;
 #else
-    delete ui->rendererLabel;
-    delete ui->renderer;
-    delete ui->adapterLabel;
-    delete ui->adapter;
+	delete ui->rendererLabel;
+	delete ui->renderer;
+	delete ui->adapterLabel;
+	delete ui->adapter;
 
-    ui->rendererLabel = nullptr;
-    ui->renderer = nullptr;
-    ui->adapterLabel = nullptr;
-    ui->adapter = nullptr;
+	ui->rendererLabel = nullptr;
+	ui->renderer = nullptr;
+	ui->adapterLabel = nullptr;
+	ui->adapter = nullptr;
 #endif
-    delete ui->processPriorityLabel;
-    delete ui->processPriority;
-    delete ui->enableNewSocketLoop;
-    delete ui->enableLowLatencyMode;
-    delete ui->hideOBSFromCapture;
-    delete ui->disableAudioDucking;
+	delete ui->processPriorityLabel;
+	delete ui->processPriority;
+	delete ui->enableNewSocketLoop;
+	delete ui->enableLowLatencyMode;
+	delete ui->hideOBSFromCapture;
+	delete ui->disableAudioDucking;
 
-    ui->processPriorityLabel = nullptr;
-    ui->processPriority = nullptr;
-    ui->enableNewSocketLoop = nullptr;
-    ui->enableLowLatencyMode = nullptr;
-    ui->hideOBSFromCapture = nullptr;
-    ui->disableAudioDucking = nullptr;
+	ui->processPriorityLabel = nullptr;
+	ui->processPriority = nullptr;
+	ui->enableNewSocketLoop = nullptr;
+	ui->enableLowLatencyMode = nullptr;
+	ui->hideOBSFromCapture = nullptr;
+	ui->disableAudioDucking = nullptr;
 #endif
 #ifdef __linux__
-    delete ui->rendererLabel;
-    delete ui->renderer;
-    delete ui->adapterLabel;
-    delete ui->adapter;
-    delete ui->processPriorityLabel;
-    delete ui->processPriority;
-    delete ui->enableNewSocketLoop;
-    delete ui->enableLowLatencyMode;
-    delete ui->hideOBSFromCapture;
-    delete ui->browserHWAccel;
-    delete ui->sourcesGroup;
-    delete ui->disableAudioDucking;
+	delete ui->rendererLabel;
+	delete ui->renderer;
+	delete ui->adapterLabel;
+	delete ui->adapter;
+	delete ui->processPriorityLabel;
+	delete ui->processPriority;
+	delete ui->enableNewSocketLoop;
+	delete ui->enableLowLatencyMode;
+	delete ui->hideOBSFromCapture;
+	delete ui->browserHWAccel;
+	delete ui->sourcesGroup;
+	delete ui->disableAudioDucking;
 
-    ui->rendererLabel = nullptr;
-    ui->renderer = nullptr;
-    ui->adapterLabel = nullptr;
-    ui->adapter = nullptr;
-    ui->processPriorityLabel = nullptr;
-    ui->processPriority = nullptr;
-    ui->enableNewSocketLoop = nullptr;
-    ui->enableLowLatencyMode = nullptr;
-    ui->hideOBSFromCapture = nullptr;
-    ui->browserHWAccel = nullptr;
-    ui->sourcesGroup = nullptr;
-    ui->disableAudioDucking = nullptr;
+	ui->rendererLabel = nullptr;
+	ui->renderer = nullptr;
+	ui->adapterLabel = nullptr;
+	ui->adapter = nullptr;
+	ui->processPriorityLabel = nullptr;
+	ui->processPriority = nullptr;
+	ui->enableNewSocketLoop = nullptr;
+	ui->enableLowLatencyMode = nullptr;
+	ui->hideOBSFromCapture = nullptr;
+	ui->browserHWAccel = nullptr;
+	ui->sourcesGroup = nullptr;
+	ui->disableAudioDucking = nullptr;
 #endif
 
 #ifndef __APPLE__
@@ -1410,26 +1410,31 @@ void OBSBasicSettings::LoadGeneralSettings()
 
 void OBSBasicSettings::LoadRendererList()
 {
-#ifdef _WIN32
+#if defined(_WIN32) || (defined(__APPLE__) && defined(__aarch64__))
 	const char *renderer = config_get_string(App()->GetAppConfig(), "Video", "Renderer");
-
-	ui->renderer->addItem(QT_UTF8("Direct3D 11"));
-	if (opt_allow_opengl || strcmp(renderer, "OpenGL") == 0)
+#ifdef _WIN32
+	ui->renderer->addItem(QT_UTF8(("Direct3D 11"));
+	if (opt_allow_opengl || strcmp(renderer, "OpenGL") == 0) {
 		ui->renderer->addItem(QT_UTF8("OpenGL"));
+	}
+#else
+	ui->renderer->addItem(QT_UTF8("Metal"));
+	ui->renderer->addItem(QT_UTF8("OpenGL (Deprecated)"));
+#endif
+  int index = ui->renderer->findText(QT_UTF8(renderer));
+    if (index == -1) {
+		index = 0;
+    }
 
-	int idx = ui->renderer->findText(QT_UTF8(renderer));
-	if (idx == -1)
-		idx = 0;
+    // the video adapter selection is not currently implemented, hide for now
+    // to avoid user confusion. was previously protected by
+    // if (strcmp(renderer, "OpenGL") == 0)
+    delete ui->adapter;
+    delete ui->adapterLabel;
+    ui->adapter = nullptr;
+    ui->adapterLabel = nullptr;
 
-	// the video adapter selection is not currently implemented, hide for now
-	// to avoid user confusion. was previously protected by
-	// if (strcmp(renderer, "OpenGL") == 0)
-	delete ui->adapter;
-	delete ui->adapterLabel;
-	ui->adapter = nullptr;
-	ui->adapterLabel = nullptr;
-
-	ui->renderer->setCurrentIndex(idx);
+    ui->renderer->setCurrentIndex(index);
 #endif
 }
 
@@ -3156,10 +3161,13 @@ void OBSBasicSettings::SaveAdvancedSettings()
 {
 	QString lastMonitoringDevice = config_get_string(main->Config(), "Audio", "MonitoringDeviceId");
 
-#ifdef _WIN32
-	if (WidgetChanged(ui->renderer))
+#if defined(_WIN32) || (defined(__APPLE__) && defined(__aarch64__))
+	if (WidgetChanged(ui->renderer)) {
 		config_set_string(App()->GetAppConfig(), "Video", "Renderer", QT_TO_UTF8(ui->renderer->currentText()));
+	}
+#endif
 
+#ifdef _WIN32
 	std::string priority = QT_TO_UTF8(ui->processPriority->currentData().toString());
 	config_set_string(App()->GetAppConfig(), "General", "ProcessPriority", priority.c_str());
 	if (main->Active())
