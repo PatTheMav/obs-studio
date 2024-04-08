@@ -1242,8 +1242,16 @@ const char *OBSApp::GetRenderModule() const
 {
 	const char *renderer =
 		config_get_string(globalConfig, "Video", "Renderer");
-
-	return (astrcmpi(renderer, "Direct3D 11") == 0) ? DL_D3D11 : DL_OPENGL;
+    
+#if defined(_WIN32)
+    return (astrcmpi(renderer, "Direct3D 11") == 0) ? DL_D3D11 : DL_OPENGL;
+#else
+#if defined(__APPLE__) && defined(__aarch64__)
+    return (astrcmpi(renderer, "Metal") == 0) ? DL_METAL : DL_OPENGL;
+#else
+    return DL_OPENGL;
+#endif
+#endif
 }
 
 static bool StartupOBS(const char *locale, profiler_name_store_t *store)
