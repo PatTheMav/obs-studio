@@ -225,7 +225,11 @@ bool OBSApp::InitGlobalConfigDefaults()
 #if _WIN32
 	config_set_default_string(appConfig, "Video", "Renderer", "Direct3D 11");
 #else
-	config_set_default_string(appConfig, "Video", "Renderer", "OpenGL");
+#if defined(__APPLE__) && defined(__aarch64__)
+    config_set_default_string(appConfig, "Video", "Renderer", "Metal");
+#else
+    config_set_default_string(appConfig, "Video", "Renderer", "OpenGL");
+#endif
 #endif
 
 #ifdef _WIN32
