@@ -453,7 +453,11 @@ bool OBSApp::InitGlobalConfigDefaults()
 	config_set_default_string(globalConfig, "Video", "Renderer",
 				  "Direct3D 11");
 #else
-	config_set_default_string(globalConfig, "Video", "Renderer", "OpenGL");
+#if defined(__APPLE__) && defined(__aarch64__)
+    config_set_default_string(globalConfig, "Video", "Renderer", "Metal");
+#else
+    config_set_default_string(globalConfig, "Video", "Renderer", "OpenGL");
+#endif
 #endif
 
 	config_set_default_bool(globalConfig, "BasicWindow", "PreviewEnabled",
