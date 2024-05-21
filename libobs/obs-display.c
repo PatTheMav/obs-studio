@@ -31,7 +31,13 @@ bool obs_display_init(struct obs_display *display,
 					!gs_can_adapter_fast_clear();
 #elif defined(__APPLE__)
 	/* Apple Silicon GL driver doesn't seem to track SRGB clears correctly */
-	display->use_clear_workaround = true;
+	int type = gs_get_device_type();
+
+	if (type == GS_DEVICE_OPENGL) {
+		display->use_clear_workaround = true;
+	} else {
+		display->use_clear_workaround = false;
+	}
 #else
 	display->use_clear_workaround = false;
 #endif
