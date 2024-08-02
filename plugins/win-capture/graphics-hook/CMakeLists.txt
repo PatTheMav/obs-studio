@@ -54,7 +54,15 @@ if(TARGET Vulkan::Vulkan)
 endif()
 
 if(OBS_PARENT_ARCHITECTURE STREQUAL CMAKE_GENERATOR_PLATFORM)
-  if(CMAKE_GENERATOR_PLATFORM STREQUAL x64)
+  if(CMAKE_GENERATOR_PLATFORM STREQUAL ARM64)
+    add_custom_command(
+      TARGET graphics-hook
+      POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_SOURCE_DIR}/build_x64 --config $<CONFIG> -t graphics-hook
+      COMMENT "Build x64 graphics-hook")
+  endif()
+
+  if(CMAKE_GENERATOR_PLATFORM MATCHES "(ARM64|x64)")
     add_custom_command(
       TARGET graphics-hook
       POST_BUILD
@@ -65,7 +73,9 @@ if(OBS_PARENT_ARCHITECTURE STREQUAL CMAKE_GENERATOR_PLATFORM)
   add_dependencies(win-capture graphics-hook)
 endif()
 
-if(CMAKE_GENERATOR_PLATFORM STREQUAL x64)
+if(CMAKE_GENERATOR_PLATFORM STREQUAL ARM64)
+  set(_OUTPUT_NAME graphics-hook-arm64)
+elseif(CMAKE_GENERATOR_PLATFORM STREQUAL x64)
   set(_OUTPUT_NAME graphics-hook64)
 else()
   set(_OUTPUT_NAME graphics-hook32)

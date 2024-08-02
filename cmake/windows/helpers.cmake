@@ -35,6 +35,12 @@ function(set_target_properties_obs target)
       # cmake-format: off
       _target_install_obs(${target} DESTINATION ${OBS_EXECUTABLE_DESTINATION} x86)
       # cmake-format: on
+
+      if(CMAKE_GENERATOR_PLATFORM STREQUAL ARM64)
+        # cmake-format: off
+        _target_install_obs(${target} DESTINATION ${OBS_EXECUTABLE_DESTINATION} x64)
+        # cmake-format: on
+      endif()
     endif()
 
     # cmake-format: off
@@ -82,12 +88,23 @@ function(set_target_properties_obs target)
       _target_install_obs(${target} DESTINATION ${target_destination} x86)
       # cmake-format: on
 
+      if(CMAKE_GENERATOR_PLATFORM STREQUAL ARM64)
+        # cmake-format: off
+        _target_install_obs(${target} DESTINATION ${target_destination} x64)
+        # cmake-format: on
+      endif()
     elseif(target STREQUAL obs-virtualcam-module)
       set(target_destination "${OBS_DATA_DESTINATION}/obs-plugins/win-dshow")
 
       # cmake-format: off
       _target_install_obs(${target} DESTINATION ${target_destination} x86)
       # cmake-format: on
+
+      if(CMAKE_GENERATOR_PLATFORM STREQUAL ARM64)
+        # cmake-format: off
+        _target_install_obs(${target} DESTINATION ${target_destination} x64)
+        # cmake-format: on
+      endif()
     else()
       set(target_destination "${OBS_PLUGIN_DESTINATION}")
     endif()
