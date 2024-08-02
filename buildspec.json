@@ -7,7 +7,8 @@
             "hashes": {
                 "macos-universal": "da3167a3efecfa67dd72e4f2b7964c3456d74c639d4c62aa21ec300ebd5007a8",
                 "windows-x64": "773c87a0d173125ef2768aaca6f6de64a7d6053213cc9f7d3970a301152042d8",
-                "windows-x86": "8f4bc6b37acbabe5434e7ebce3bbc8a213d6c265cd7b4e708cd17ca4aa334130"
+                "windows-x86": "8f4bc6b37acbabe5434e7ebce3bbc8a213d6c265cd7b4e708cd17ca4aa334130",
+                "windows-arm64": "BAA6975FE6BE86B41CF962BFCAEAFFE24A904CD6C37170110FEBE63719927CEE"
             }
         },
         "qt6": {
@@ -16,7 +17,8 @@
             "label": "Pre-Built Qt6",
             "hashes": {
                 "macos-universal": "248fb342e7ddf574af0960aaedeffb832deda1485dc81583302646e979593a6e",
-                "windows-x64": "8f459af5115ce081ae24b108712327e113893f250e14a902b1bd188b43873ed1"
+                "windows-x64": "8f459af5115ce081ae24b108712327e113893f250e14a902b1bd188b43873ed1",
+                "windows-arm64": "4386E2C691901BD54D42C737073B37BA36EFB2C95A91A3BC9CF6B871F09368E2"
             },
             "debugSymbols": {
                 "windows-x64": "e4bc882f23195becbe53f1594fe75bdb9ff4f1d01e319f6caf8e0a38000cb42b"
