@@ -206,6 +206,25 @@ runs:
       with:
         shared_secret: ${{ inputs.steamSecret }}
 
+    - name: Create Steam Login Session 🎫
+      if: ${{ ! fromJSON(inputs.preview) }}
+      shell: zsh --no-rcs --errexit --pipefail {0}
+      run: |
+        : Create Steam Login Session 🎫
+        if (( ${#RUNNER_DEBUG} )) setopt XTRACE
+
+        local -i error_code=0
+
+        steamcmd \
+          +login '${{ inputs.steamUser }}' \
+          +set_steam_guard_code '${{ steps.steam-totp.outputs.code }}' \
+          +quit || error_code=$?
+
+        if (( error_code != 0 )) {
+          print '::error::Unable to log in to Steam using provided user name and TOTP code'
+          return ${error_code}
+        }
+
     - name: Upload to Steam 📤
       shell: zsh --no-rcs --errexit --pipefail {0}
       run: |
@@ -240,18 +259,11 @@ runs:
         local preview='${{ inputs.preview }}'
 
         steamcmd \
-          +login '${{ inputs.steamUser }}' '${{ inputs.steamPassword }}' '${{ steps.steam-totp.outputs.code }}' \
+          +login '${{ inputs.steamUser }}' \
           +run_app_build ${preview:+-preview} ${build_file:a} \
           +quit
         print '::endgroup'
         popd
-
-    - name: Generate Steam auth code 🔐
-      id: steam-totp-playtest
-      uses: CyberAndrii/steam-totp@45775c32193801a84d19d94076d72a2ece010948
-      if: ${{ ! fromJSON(inputs.preview) && fromJSON(steps.asset-info.outputs.is_prerelease) }}
-      with:
-        shared_secret: ${{ inputs.steamSecret }}
 
     - name: Upload to Steam (Playtest) 📤
       if: fromJSON(steps.asset-info.outputs.is_prerelease)
@@ -278,7 +290,7 @@ runs:
         if [[ '${{ inputs.preview }}' == 'true' ]] preview='-preview'
 
         steamcmd \
-          +login '${{ inputs.steamUser }}' '${{ inputs.steamPassword }}' '${{ steps.steam-totp-playtest.outputs.code }}' \
+          +login '${{ inputs.steamUser }}' \
           +run_app_build ${preview} ${build_file:a} \
           +quit
         print '::endgroup'
