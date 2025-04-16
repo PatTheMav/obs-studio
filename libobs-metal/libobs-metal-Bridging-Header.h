@@ -16,5 +16,5 @@
 #import <graphics/matrix4.h>
 #import <graphics/shader-parser.h>
 
-static const char *device_name = "Metal";
-static const char *preprocessor_name = "_Metal";
+static const char *const device_name = "Metal";
+static const char *const preprocessor_name = "_Metal";

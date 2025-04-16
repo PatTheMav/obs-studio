@@ -9,7 +9,7 @@ import Foundation
 import Metal
 
 class MetalIndexBuffer {
-    var device: MetalDevice
+    let device: MetalDevice
 
     var indexData: UnsafeMutableRawPointer?
     var indexBuffer: MTLBuffer?
@@ -22,9 +22,22 @@ class MetalIndexBuffer {
         self.indexData = data
         self.count = count
         self.type = type
+        self.isDynamic = dynamic
 
         if !isDynamic {
             setupMTLBuffers()
+        }
+    }
+
+    func createOrUpdateBuffer<T>(buffer: inout MTLBuffer?, data: UnsafeMutablePointer<T>, count: Int, dynamic: Bool) {
+        let size = MemoryLayout<T>.size * count
+        let alignedSize = (size + 15) & ~15
+
+        if dynamic && buffer != nil && buffer!.length == alignedSize {
+            buffer!.contents().copyMemory(from: data, byteCount: alignedSize)
+        } else {
+            buffer = device.device.makeBuffer(
+                bytes: data, length: alignedSize, options: [.cpuCacheModeWriteCombined, .storageModeShared])
         }
     }
 
@@ -43,15 +56,13 @@ class MetalIndexBuffer {
                 fatalError("MTLIndexType \(type) not supported")
             }
 
+        data.withMemoryRebound(to: UInt8.self, capacity: byteSize) {
+            createOrUpdateBuffer(buffer: &indexBuffer, data: $0, count: byteSize, dynamic: isDynamic)
+        }
+
         if !isDynamic {
-            indexBuffer = device.device.makeBuffer(
-                bytes: data,
-                length: byteSize,
-                options: .cpuCacheModeWriteCombined)
             indexBuffer?.label = "Index buffer static data"
         } else {
-            indexBuffer = device.getBufferForSize(byteSize)
-            indexBuffer?.contents().copyMemory(from: data, byteCount: byteSize)
             indexBuffer?.label = "Index buffer dynamic data"
         }
 
@@ -83,11 +94,9 @@ public func device_indexbuffer_create(
         dynamic: isDynamic
     )
 
-    let indexBufferId = device.indexBuffers.insert(indexBuffer)
+    let retained = Unmanaged.passRetained(indexBuffer).toOpaque()
 
-    let resource = OBSAPIResource(device: device, resourceId: indexBufferId)
-
-    return resource.getRetained()
+    return OpaquePointer(retained)
 }
 
 @_cdecl("device_load_indexbuffer")
@@ -97,13 +106,7 @@ public func device_load_indexbuffer(
     let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
 
     if let ibPointer {
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(ibPointer).takeUnretainedValue()
-
-        guard let indexBuffer = device.indexBuffers[resource.resourceId] else {
-            assertionFailure("device_load_indexbuffer (Metal): Invalid index buffer ID provided")
-            return
-        }
-
+        let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(ibPointer).takeUnretainedValue()
         device.state.indexBuffer = indexBuffer
     } else {
         device.state.indexBuffer = nil
@@ -112,9 +115,7 @@ public func device_load_indexbuffer(
 
 @_cdecl("gs_indexbuffer_destroy")
 public func gs_indexbuffer_destroy(indexBufferPointer: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(indexBufferPointer).takeRetainedValue()
-    let device = resource.device
-    device.indexBuffers.remove(resource.resourceId)
+    let _ = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeRetainedValue()
 }
 
 @_cdecl("gs_indexbuffer_flush")
@@ -124,56 +125,28 @@ public func gs_indexbuffer_flush(indexBufferPointer: UnsafeRawPointer) {
 
 @_cdecl("gs_indexbuffer_flush_direct")
 public func gs_indexbuffer_flush_direct(indexBufferPointer: UnsafeRawPointer, data: UnsafeMutableRawPointer?) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(indexBufferPointer).takeUnretainedValue()
-    let device = resource.device
-
-    guard let indexBuffer = device.indexBuffers[resource.resourceId] else {
-        assertionFailure("gs_indexbuffer_flush (Metal): Invalid index buffer ID provided")
-        return
-    }
-
-    guard indexBuffer.isDynamic else {
-        assertionFailure("gs_indexbuffer_flush (Metal): Attempted to flush static index buffer")
-        return
-    }
+    let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     indexBuffer.setupMTLBuffers(data)
 }
 
 @_cdecl("gs_indexbuffer_get_data")
 public func gs_indexbuffer_get_data(indexBufferPointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(indexBufferPointer).takeUnretainedValue()
-    let device = resource.device
-
-    guard let indexBuffer = device.indexBuffers[resource.resourceId] else {
-        assertionFailure("gs_indexbuffer_flush (Metal): Invalid index buffer ID provided")
-        return nil
-    }
+    let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     return indexBuffer.indexData
 }
 
 @_cdecl("gs_indexbuffer_get_num_indices")
 public func gs_indexbuffer_get_num_indices(indexBufferPointer: UnsafeRawPointer) -> Int {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(indexBufferPointer).takeUnretainedValue()
-    let device = resource.device
-
-    guard let indexBuffer = device.indexBuffers[resource.resourceId] else {
-        assertionFailure("gs_indexbuffer_flush (Metal): Invalid index buffer ID provided")
-        return 0
-    }
+    let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     return indexBuffer.count
 }
 
 @_cdecl("gs_indexbuffer_get_type")
 public func gs_indexbuffer_get_type(indexBufferPointer: UnsafeRawPointer) -> gs_index_type {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(indexBufferPointer).takeUnretainedValue()
-    let device = resource.device
-
-    guard let indexBuffer = device.indexBuffers[resource.resourceId] else {
-        preconditionFailure("gs_indexbuffer_flush (Metal): Invalid index buffer ID provided")
-    }
+    let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     switch indexBuffer.type {
     case .uint16: return GS_UNSIGNED_SHORT

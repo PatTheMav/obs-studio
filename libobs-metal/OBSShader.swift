@@ -23,7 +23,9 @@ class MetalShader {
     var uniforms: [ShaderUniform]
     let bufferOrder: [BufferType]
     var descriptor: MTLVertexDescriptor? = nil
-    var samplers: [(Int, MTLSamplerState)]?
+    var samplers: [MTLSamplerState]?
+
+    var buffer: MTLBuffer?
 
     init(device: MetalDevice, source: String, type: MTLFunctionType, shaderData: ShaderData) {
         self.device = device
@@ -47,7 +49,7 @@ class MetalShader {
                 fatalError("MetalShader: Fragment shader missing MTLSamplerDescriptor")
             }
 
-            var samplers = [(Int, MTLSamplerState)]()
+            var samplers = [MTLSamplerState]()
 
             for descriptor in samplerDescriptors {
                 guard let samplerState = device.device.makeSamplerState(descriptor: descriptor) else {
@@ -55,9 +57,7 @@ class MetalShader {
                     break
                 }
 
-                let samplerStateId = device.samplerStates.insert(samplerState)
-
-                samplers.append((samplerStateId, samplerState))
+                samplers.append(samplerState)
             }
 
             self.samplers = samplers
@@ -84,21 +84,20 @@ class MetalShader {
         }
 
         if uniform.gsType == GS_SHADER_PARAM_TEXTURE {
-            let textureId = Int(currentValues.withUnsafeBytes({ $0.load(as: Int32.self) }))
-
-            guard let texture = device.textures[textureId] else {
-                preconditionFailure("MetalShader: No texture with ID \(textureId) found")
+            let shaderTexture = currentValues.withUnsafeBufferPointer {
+                $0.baseAddress?.withMemoryRebound(to: gs_shader_texture.self, capacity: 1) {
+                    $0.pointee.tex
+                }
             }
 
-            device.state.textures[uniform.textureSlot] = texture
+            if let shaderTexture {
+                let texture = Unmanaged<OBSTexture>.fromOpaque(UnsafeRawPointer(shaderTexture)).takeUnretainedValue()
+                device.state.textures[uniform.textureSlot] = texture.texture
+            }
 
-            if uniform.samplerState > 0 {
-                guard let samplerState = device.samplerStates[uniform.samplerState] else {
-                    preconditionFailure("MetalShader: No sampler state with ID \(uniform.samplerState) found")
-                }
-
+            if let samplerState = uniform.samplerState {
                 device.state.samplers[uniform.textureSlot] = samplerState
-                uniform.samplerState = 0
+                uniform.samplerState = nil
             }
         } else {
             if uniform.hasUpdates {
@@ -110,6 +109,18 @@ class MetalShader {
         }
 
         uniform.hasUpdates = false
+    }
+
+    func createOrUpdateBuffer(buffer: inout MTLBuffer?, data: inout [UInt8]) {
+        let size = MemoryLayout<UInt8>.size * data.count
+        let alignedSize = (size + 0xF) & ~0xF
+
+        if buffer != nil && buffer!.length == alignedSize {
+            buffer!.contents().copyMemory(from: data, byteCount: size)
+        } else {
+            buffer = device.device.makeBuffer(
+                bytes: data, length: alignedSize, options: [.cpuCacheModeWriteCombined, .storageModeShared])
+        }
     }
 
     func uploadParameters(encoder: MTLRenderCommandEncoder) {
@@ -126,18 +137,16 @@ class MetalShader {
             switch data.count {
             case 0..<4096: encoder.setVertexBytes(&data, length: data.count, index: 30)
             default:
-                let buffer = device.getBufferForSize(data.count)
-                buffer.label = "Vertex shader uniform buffer"
-                buffer.contents().copyMemory(from: data, byteCount: data.count)
+                createOrUpdateBuffer(buffer: &buffer, data: &data)
+                buffer?.label = "Vertex shader uniform buffer"
                 encoder.setVertexBuffer(buffer, offset: 0, index: 30)
             }
         case .fragment:
             switch data.count {
             case 0..<4096: encoder.setFragmentBytes(&data, length: data.count, index: 30)
             default:
-                let buffer = device.getBufferForSize(data.count)
-                buffer.label = "Fragment shader uniform buffer"
-                buffer.contents().copyMemory(from: data, byteCount: data.count)
+                createOrUpdateBuffer(buffer: &buffer, data: &data)
+                buffer?.label = "Fragment shader uniform buffer"
                 encoder.setFragmentBuffer(buffer, offset: 0, index: 30)
             }
         default:
@@ -169,14 +178,17 @@ extension MetalShader {
         let name: String
         let gsType: gs_shader_param_type
         let textureSlot: Int
-        var samplerState: Int
+        var samplerState: MTLSamplerState?
         let byteOffset: Int
 
         var currentValues: [UInt8]?
         var defaultValues: [UInt8]?
         var hasUpdates: Bool
 
-        init(name: String, gsType: gs_shader_param_type, textureSlot: Int, samplerState: Int, byteOffset: Int) {
+        init(
+            name: String, gsType: gs_shader_param_type, textureSlot: Int, samplerState: MTLSamplerState?,
+            byteOffset: Int
+        ) {
             self.name = name
             self.gsType = gsType
 
@@ -216,9 +228,10 @@ extension MetalDevice {
             state.textures = [MTLTexture?](repeating: nil, count: Int(GS_MAX_TEXTURES))
             state.samplers = [MTLSamplerState?](repeating: nil, count: Int(GS_MAX_TEXTURES))
 
-            if let newSamplers = shader.samplers?.map({ $0.1 }) {
-                state.samplers.replaceSubrange(0..<newSamplers.count, with: newSamplers)
+            if let samplers = shader.samplers {
+                state.samplers.replaceSubrange(0..<samplers.count, with: samplers)
             }
+
         default:
             fatalError(
                 "device_load_vertexshader (Metal): Incompatible shader type found (\(shader.function.functionType))")
@@ -249,9 +262,9 @@ public func device_vertexshader_create(
             shaderData: parser.buildMetadata()
         )
 
-        let shaderId = device.shaders.insert(shader)
-        let resource = OBSAPIResource(device: device, resourceId: shaderId)
-        return resource.getRetained()
+        let retained = Unmanaged.passRetained(shader).toOpaque()
+
+        return OpaquePointer(retained)
     }
 
     return nil
@@ -278,9 +291,9 @@ public func device_pixelshader_create(
             shaderData: parser.buildMetadata()
         )
 
-        let shaderId = device.shaders.insert(shader)
-        let resource = OBSAPIResource(device: device, resourceId: shaderId)
-        return resource.getRetained()
+        let retained = Unmanaged.passRetained(shader).toOpaque()
+
+        return OpaquePointer(retained)
     }
 
     return nil
@@ -307,12 +320,8 @@ public func device_load_vertexshader(device: UnsafeRawPointer, vertShader: Unsaf
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     if let vertShader {
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(vertShader).takeUnretainedValue()
 
-        guard let shader = device.shaders[resource.resourceId] else {
-            assertionFailure("device_load_vertexshader (Metal): Invalid vertex shader ID provided")
-            return
-        }
+        let shader = Unmanaged<MetalShader>.fromOpaque(vertShader).takeUnretainedValue()
 
         guard shader.function.functionType == .vertex else {
             assertionFailure(
@@ -321,7 +330,6 @@ public func device_load_vertexshader(device: UnsafeRawPointer, vertShader: Unsaf
         }
 
         device.updateShader(shader: shader)
-        device.state.vertexShaderId = resource.resourceId
     } else {
         device.state.vertexShader = nil
         device.state.renderPipelineDescriptor.vertexFunction = nil
@@ -335,12 +343,7 @@ public func device_load_pixelshader(device: UnsafeRawPointer, pixelShader: Unsaf
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     if let pixelShader {
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(pixelShader).takeUnretainedValue()
-
-        guard let shader = device.shaders[resource.resourceId] else {
-            assertionFailure("device_load_pixelshader (Metal): Invalid pixel shader ID provided")
-            return
-        }
+        let shader = Unmanaged<MetalShader>.fromOpaque(pixelShader).takeUnretainedValue()
 
         guard shader.function.functionType == .fragment else {
             assertionFailure(
@@ -349,7 +352,6 @@ public func device_load_pixelshader(device: UnsafeRawPointer, pixelShader: Unsaf
         }
 
         device.updateShader(shader: shader)
-        device.state.fragmentShaderId = resource.resourceId
     } else {
         device.state.textures = [MTLTexture?](repeating: nil, count: Int(GS_MAX_TEXTURES))
         device.state.samplers = [MTLSamplerState?](repeating: nil, count: Int(GS_MAX_TEXTURES))
@@ -363,11 +365,10 @@ public func device_load_pixelshader(device: UnsafeRawPointer, pixelShader: Unsaf
 public func device_get_vertex_shader(device: UnsafeRawPointer) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    let shaderId = device.state.vertexShaderId
+    if let shader = device.state.vertexShader {
+        let unretained = Unmanaged.passUnretained(shader).toOpaque()
 
-    if shaderId > 0 {
-        let resource = OBSAPIResource(device: device, resourceId: shaderId)
-        return resource.getRetained()
+        return OpaquePointer(unretained)
     } else {
         return nil
     }
@@ -377,11 +378,10 @@ public func device_get_vertex_shader(device: UnsafeRawPointer) -> OpaquePointer?
 public func device_get_pixel_shader(device: UnsafeRawPointer) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    let shaderId = device.state.fragmentShaderId
+    if let shader = device.state.fragmentShader {
+        let unretained = Unmanaged.passUnretained(shader).toOpaque()
 
-    if shaderId > 0 {
-        let resource = OBSAPIResource(device: device, resourceId: shaderId)
-        return resource.getRetained()
+        return OpaquePointer(unretained)
     } else {
         return nil
     }
@@ -389,34 +389,19 @@ public func device_get_pixel_shader(device: UnsafeRawPointer) -> OpaquePointer? 
 
 @_cdecl("gs_shader_destroy")
 public func gs_shader_destroy(shader: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(shader).takeRetainedValue()
-    let device = resource.device
-
-    device.shaders.remove(resource.resourceId)
+    let _ = Unmanaged<MetalShader>.fromOpaque(shader).takeRetainedValue()
 }
 
 @_cdecl("gs_shader_get_num_params")
 public func gs_shader_get_num_params(shader: UnsafeRawPointer) -> Int {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(shader).takeUnretainedValue()
-    let device = resource.device
-
-    guard let shader = device.shaders[resource.resourceId] else {
-        assertionFailure("gs_shader_get_num_parameters (Metal): Invalid shader ID provided")
-        return 0
-    }
+    let shader = Unmanaged<MetalShader>.fromOpaque(shader).takeUnretainedValue()
 
     return shader.uniforms.count
 }
 
 @_cdecl("gs_shader_get_param_by_idx")
 public func gs_shader_get_param_by_idx(shader: UnsafeRawPointer, param: UInt32) -> OpaquePointer? {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(shader).takeUnretainedValue()
-    let device = resource.device
-
-    guard let shader = device.shaders[resource.resourceId] else {
-        assertionFailure("gs_shader_get_param_by_idx (Metal): Invalid shader ID provided")
-        return nil
-    }
+    let shader = Unmanaged<MetalShader>.fromOpaque(shader).takeUnretainedValue()
 
     if param < shader.uniforms.count {
         let unretained = Unmanaged.passUnretained(shader.uniforms[Int(param)]).toOpaque()
@@ -429,13 +414,7 @@ public func gs_shader_get_param_by_idx(shader: UnsafeRawPointer, param: UInt32) 
 @_cdecl("gs_shader_get_param_by_name")
 public func gs_shader_get_param_by_name(shader: UnsafeRawPointer, param: UnsafeMutablePointer<CChar>) -> OpaquePointer?
 {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(shader).takeUnretainedValue()
-    let device = resource.device
-
-    guard let shader = device.shaders[resource.resourceId] else {
-        assertionFailure("gs_shader_get_param_by_name (Metal): Invalid shader ID provided")
-        return nil
-    }
+    let shader = Unmanaged<MetalShader>.fromOpaque(shader).takeUnretainedValue()
 
     let paramName = String(cString: param)
 
@@ -451,13 +430,7 @@ public func gs_shader_get_param_by_name(shader: UnsafeRawPointer, param: UnsafeM
 
 @_cdecl("gs_shader_get_viewproj_matrix")
 public func gs_shader_get_viewproj_matrix(shader: UnsafeRawPointer) -> OpaquePointer? {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(shader).takeUnretainedValue()
-    let device = resource.device
-
-    guard let shader = device.shaders[resource.resourceId] else {
-        assertionFailure("gs_shader_get_viewproj_matrix (Metal): Invalid shader ID provided")
-        return nil
-    }
+    let shader = Unmanaged<MetalShader>.fromOpaque(shader).takeUnretainedValue()
 
     guard shader.function.functionType == .vertex else {
         assertionFailure("gs_shader_get_viewproj_matrix (Metal): Provided shader is not a vertex shader")
@@ -557,16 +530,12 @@ public func gs_shader_set_vec4(shaderParam: UnsafeRawPointer, val: UnsafePointer
 public func gs_shader_set_texture(shaderParam: UnsafeRawPointer, val: UnsafeRawPointer?) {
     let shaderParam = Unmanaged<MetalShader.ShaderUniform>.fromOpaque(shaderParam).takeUnretainedValue()
 
-    var textureId = 0
-
     if let val {
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(val).takeUnretainedValue()
+        let texture = Unmanaged<OBSTexture>.fromOpaque(val).takeUnretainedValue()
 
-        textureId = resource.resourceId
-    }
-
-    withUnsafePointer(to: textureId) {
-        shaderParam.setParameter(data: $0, size: MemoryLayout<Int32>.size)
+        withUnsafePointer(to: texture) {
+            shaderParam.setParameter(data: $0, size: MemoryLayout<Int32>.size)
+        }
     }
 }
 
@@ -607,12 +576,9 @@ public func gs_shader_set_val(shaderParam: UnsafeRawPointer, val: UnsafeRawPoint
     }
 
     if shaderParam.gsType == GS_SHADER_PARAM_TEXTURE {
-        let texture: UnsafePointer<gs_shader_texture> = val.bindMemory(to: gs_shader_texture.self, capacity: 1)
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(UnsafeRawPointer(texture.pointee.tex)).takeUnretainedValue()
+        let shaderTexture = val.bindMemory(to: gs_shader_texture.self, capacity: 1)
 
-        withUnsafePointer(to: resource.resourceId) {
-            shaderParam.setParameter(data: $0, size: MemoryLayout<Int32>.size)
-        }
+        shaderParam.setParameter(data: shaderTexture, size: MemoryLayout<gs_shader_texture>.size)
     } else {
         let bytes = val.bindMemory(to: UInt8.self, capacity: size)
         shaderParam.setParameter(data: bytes, size: size)
@@ -635,7 +601,7 @@ public func gs_shader_set_default(shaderParam: UnsafeRawPointer) {
 @_cdecl("gs_shader_set_next_sampler")
 public func gs_shader_set_next_sampler(shaderParam: UnsafeRawPointer, sampler: UnsafeRawPointer) {
     let shaderParam = Unmanaged<MetalShader.ShaderUniform>.fromOpaque(shaderParam).takeUnretainedValue()
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(sampler).takeUnretainedValue()
+    let samplerState = Unmanaged<MTLSamplerState>.fromOpaque(sampler).takeUnretainedValue()
 
-    shaderParam.samplerState = resource.resourceId
+    shaderParam.samplerState = samplerState
 }

@@ -27,29 +27,6 @@ func OBSLog(_ level: OBSLogLevel, _ format: String, _ args: CVarArg...) {
     }
 }
 
-final class OBSAPIResource {
-    var device: MetalDevice
-    var resourceId: Int
-    var data: [UInt8]?
-
-    init(device: MetalDevice, resourceId: Int) {
-        self.device = device
-        self.resourceId = resourceId
-    }
-
-    func getRetained() -> OpaquePointer {
-        let retained = Unmanaged.passRetained(self).toOpaque()
-
-        return OpaquePointer(retained)
-    }
-
-    func getUnretained() -> OpaquePointer {
-        let unretained = Unmanaged.passUnretained(self).toOpaque()
-
-        return OpaquePointer(unretained)
-    }
-}
-
 struct BufferQueue<T> {
     private var elements: [T] = []
 
@@ -231,7 +208,7 @@ extension MTLCullMode {
     }
 }
 
-extension MTLViewport: Equatable {
+extension MTLViewport: @retroactive Equatable {
     public static func < (lhs: MTLViewport, rhs: MTLViewport) -> Bool {
         return lhs != rhs
     }
@@ -247,50 +224,7 @@ extension MTLViewport: Equatable {
     }
 }
 
-extension MTLTexture {
-    func download() -> [UInt8] {
-        var data = [UInt8](repeating: 0, count: width * height * self.pixelFormat.bitsPerPixel() / 8)
-        let region = MTLRegionMake2D(0, 0, width, height)
-        getBytes(&data, bytesPerRow: width * self.pixelFormat.bitsPerPixel() / 8, from: region, mipmapLevel: 0)
-
-        return data
-    }
-
-    func map(data: inout UnsafeMutablePointer<UInt8>) {
-        let region = MTLRegionMake2D(0, 0, width, height)
-        getBytes(&data, bytesPerRow: width * self.pixelFormat.bitsPerPixel() / 8, from: region, mipmapLevel: 0)
-    }
-
-    func upload(data: [[UInt8]]) {
-        var levelWidth = self.width
-        var levelHeight = self.height
-        let bitsPerPixel = self.pixelFormat.bitsPerPixel()
-
-        for level in 0..<self.mipmapLevelCount {
-            if data.count == 0 || level > data.count {
-                break
-            }
-
-            let rowSizeBytes = levelWidth * bitsPerPixel / 8
-            let rowSizeHeight = levelWidth * levelHeight * bitsPerPixel / 8
-
-            let region = MTLRegionMake2D(0, 0, levelWidth, levelHeight)
-
-            self.replace(
-                region: region,
-                mipmapLevel: level,
-                slice: 0,
-                withBytes: data[level],
-                bytesPerRow: rowSizeBytes,
-                bytesPerImage: rowSizeHeight)
-
-            levelWidth = levelWidth / 2
-            levelHeight = levelHeight / 2
-        }
-    }
-}
-
-extension FourCharCode: ExpressibleByStringLiteral {
+extension FourCharCode: @retroactive ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
         var code: FourCharCode = 0
 
@@ -318,7 +252,7 @@ extension FourCharCode: ExpressibleByStringLiteral {
             0,
         ]
 
-        return String(cString: cString)
+        return String(utf8String: cString)
     }
 }
 
@@ -360,7 +294,6 @@ public func device_create(devicePointer: UnsafeMutableRawPointer, adapter: UInt3
     }
 
     OBSLog(.info, "---------------------------------")
-    OBSLog(.info, "Initializing Metal...")
 
     guard let metalDevice = MTLCreateSystemDefaultDevice() else {
         OBSLog(.error, "Unable to initialize Metal device.")
@@ -369,6 +302,7 @@ public func device_create(devicePointer: UnsafeMutableRawPointer, adapter: UInt3
 
     var descriptions: [String] = []
 
+    descriptions.append("Initializing Metal...")
     descriptions.append("\t- Name               : \(metalDevice.name)")
     descriptions.append("\t- Unified Memory     : \(metalDevice.hasUnifiedMemory ? "Yes" : "No")")
     descriptions.append("\t- Raytracing Support : \(metalDevice.supportsRaytracing ? "Yes" : "No")")
@@ -469,9 +403,10 @@ public func device_load_default_samplerstate(device: UnsafeRawPointer, b_3d: Boo
 public func device_get_render_target(device: UnsafeRawPointer) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    if device.state.renderTarget != nil {
-        let resource = OBSAPIResource(device: device, resourceId: device.state.renderTargetId)
-        return resource.getRetained()
+    if let renderTarget = device.state.renderTarget {
+        let unretained = Unmanaged.passUnretained(renderTarget).toOpaque()
+
+        return OpaquePointer(unretained)
     } else {
         return nil
     }
@@ -489,19 +424,12 @@ public func device_set_render_target(device: UnsafeRawPointer, tex: UnsafeRawPoi
     }
 
     if let tex {
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
+        let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-        let textureId = resource.resourceId
-
-        guard let texture = device.textures[textureId] else {
-            assertionFailure("device_set_render_target (Metal): Invalid texture ID provided")
-            device.state.renderTarget = nil
-            return
-        }
         device.state.renderTarget = texture
-        device.state.renderTargetId = textureId
-        device.state.renderPipelineDescriptor.colorAttachments[0].pixelFormat = texture.pixelFormat
-        device.state.renderPassDescriptor.colorAttachments[0].texture = texture
+        device.state.renderTargetId = 0
+        device.state.renderPipelineDescriptor.colorAttachments[0].pixelFormat = texture.texture.pixelFormat
+        device.state.renderPassDescriptor.colorAttachments[0].texture = texture.texture
     } else {
         device.state.renderTarget = nil
     }
@@ -516,15 +444,8 @@ public func device_set_render_target(device: UnsafeRawPointer, tex: UnsafeRawPoi
     }
 
     if let zstencil {
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(zstencil).takeUnretainedValue()
+        let stencilAttachment = Unmanaged<MTLTexture>.fromOpaque(zstencil).takeUnretainedValue()
 
-        let stencilBufferId = resource.resourceId
-
-        guard let stencilAttachment = device.textures[stencilBufferId] else {
-            assertionFailure("device_set_render_target (Metal): Invalid stencil buffer ID provided")
-            device.state.stencilAttachment = nil
-            return
-        }
         device.state.stencilAttachment = stencilAttachment
         device.state.renderPipelineDescriptor.depthAttachmentPixelFormat = stencilAttachment.pixelFormat
         device.state.renderPipelineDescriptor.stencilAttachmentPixelFormat = stencilAttachment.pixelFormat
@@ -571,7 +492,6 @@ public func device_begin_frame(device: UnsafeRawPointer) {
 public func device_begin_scene(device: UnsafeRawPointer) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    //    device.state.textures = [MTLTexture?](repeating: nil, count: Int(GS_MAX_TEXTURES)) // Maybe set to nil instead, check other places to initialise if necessary
     device.state.commandBuffer = device.commandQueue.makeCommandBuffer()
 }
 
@@ -601,7 +521,7 @@ public func device_clear(
         clearColor: nil,
         clearDepth: 0.0,
         clearStencil: 0,
-        clearTargetId: device.state.renderTargetId
+        clearTarget: device.state.renderTarget
     )
 
     if device.state.renderTarget != nil {
@@ -628,8 +548,8 @@ public func device_clear(
         }
     }
 
-    device.clearStates.push(clearState)
-    device.state.clearTargetId = device.state.renderTargetId
+    device.clearState = clearState
+    device.state.clearTarget = device.state.renderTarget
 }
 
 @_cdecl("device_is_present_ready")
@@ -641,13 +561,8 @@ public func device_is_present_ready(device: UnsafeRawPointer) -> Bool {
 public func device_present(device: UnsafeRawPointer) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    guard let layerId = device.state.layerId, var layer = device.layers[layerId], let drawable = layer.nextDrawable
-    else {
+    guard let layer = device.state.layer, let drawable = layer.nextDrawable else {
         preconditionFailure("device_present (Metal): No drawable for layer available")
-    }
-
-    if device.state.numDraws == 0 {
-        device.clear()
     }
 
     defer {
@@ -655,26 +570,10 @@ public func device_present(device: UnsafeRawPointer) {
         device.state.numDraws = 0
 
         layer.nextDrawable = nil
-        device.layers.replaceAt(layerId, layer)
+        device.state.layer = nil
     }
 
     device.state.commandBuffer?.present(drawable)
-
-    weak var weakDevice = device
-
-    device.state.commandBuffer?.addCompletedHandler { _ in
-        if let device = weakDevice {
-            device.queue.sync(flags: .barrier) {
-                device.bufferPools.push(device.currentBuffers)
-
-                if let availableBuffers = device.bufferPools.pop() {
-                    device.availableBuffers = availableBuffers
-                }
-
-                device.currentBuffers = []
-            }
-        }
-    }
 
     device.state.commandBuffer?.commit()
 }
@@ -686,22 +585,8 @@ public func device_flush(devicePointer: UnsafeRawPointer) {
     device.state.commandBuffer?.commit()
     device.state.commandBuffer?.waitUntilCompleted()
 
-    defer {
-        device.state.commandBuffer = nil
-        device.state.numDraws = 0
-    }
-
-    if device.currentBuffers.count > 0 {
-        device.queue.sync(flags: .barrier) {
-            device.bufferPools.push(device.currentBuffers)
-
-            if let buffers = device.bufferPools.pop() {
-                device.availableBuffers = buffers
-            }
-
-            device.currentBuffers = []
-        }
-    }
+    device.state.commandBuffer = nil
+    device.state.numDraws = 0
 }
 
 @_cdecl("device_set_cull_mode")

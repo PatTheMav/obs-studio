@@ -1359,7 +1359,7 @@ extension OBSShaderParser {
                 name: uniform.name,
                 gsType: gsType,
                 textureSlot: (isTexture ? textureSlot : 0),
-                samplerState: 0,
+                samplerState: nil,
                 byteOffset: uniformBufferSize
             )
 

@@ -11,11 +11,16 @@ import Metal
 import simd
 
 struct MetalState {
-    struct MetalLayer {
+    class MetalLayer {
         let layer: CAMetalLayer
         let view: NSView
         var nextDrawable: CAMetalDrawable?
         var textureId: Int?
+
+        init(layer: CAMetalLayer, view: NSView) {
+            self.layer = layer
+            self.view = view
+        }
     }
 
     struct ClearState {
@@ -25,14 +30,14 @@ struct MetalState {
         var clearColor: MTLClearColor?
         var clearDepth: Double
         var clearStencil: UInt32
-        var clearTargetId: Int
+        var clearTarget: OBSTexture?
     }
 
     var viewMatrix: matrix_float4x4
     var viewProjectionMatrix: matrix_float4x4
     var projectionMatrix: matrix_float4x4
 
-    var renderTarget: MTLTexture?
+    var renderTarget: OBSTexture?
     var renderTargetId = 0
     var vertexBuffer: MetalVertexBuffer?
     var indexBuffer: MetalIndexBuffer?
@@ -57,6 +62,7 @@ struct MetalState {
     var clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
     var clearDepth = 0.0
     var clearStencil: UInt32 = 0
+    var clearTarget: OBSTexture?
     var clearTargetId = 0
 
     var clearState: ClearState?
@@ -80,6 +86,7 @@ struct MetalState {
     var gsColorSpace: gs_color_space = GS_CS_SRGB
 
     var layerId: Int?
+    var layer: MetalLayer?
     var nextDrawable: CAMetalDrawable?
 
     var numDraws = 0
@@ -105,6 +112,7 @@ class MetalDevice {
     var availableBuffers = [MTLBuffer]()
     var bufferPools = BufferQueue<[MTLBuffer]>()
     var projectionStack = BufferQueue<matrix_float4x4>()
+    var clearState: MetalState.ClearState?
     var clearStates = BufferQueue<MetalState.ClearState>()
 
     var vertexBuffers = OBSResourceCollection<MetalVertexBuffer>(16)
@@ -144,21 +152,6 @@ class MetalDevice {
         self.bufferPools.push([MTLBuffer]())
     }
 
-    func setRenderTarget(_ texture: MTLTexture, stencilBuffer: MTLTexture?, pixelFormat: MTLPixelFormat?) {
-        guard texture.textureType == .type2D else {
-            OBSLog(.error, "setRenderTarget (Metal): Provided texture is not a 2D texture")
-            return
-        }
-
-        state.renderTarget = texture
-
-        if let stencilBuffer {
-            state.depthAttachment = stencilBuffer
-            state.stencilAttachment = stencilBuffer
-            state.storeAction = .store
-        }
-    }
-
     func draw(primitiveType: MTLPrimitiveType, vertexStart: Int, vertexCount: Int) {
         guard state.commandBuffer != nil else {  // TODO: Figure out what to do when draw calls are initiated before begin_scene was called
             return
@@ -191,11 +184,7 @@ class MetalDevice {
             }
         }
 
-        if state.clearTargetId != state.renderTargetId {
-            state.renderPassDescriptor.colorAttachments[0].loadAction = .load
-            state.renderPassDescriptor.depthAttachment.loadAction = .load
-            state.renderPassDescriptor.stencilAttachment.loadAction = .load
-        } else if let clearState = clearStates.pop() {
+        if let clearState {
             if clearState.colorAction == .clear {
                 state.renderPassDescriptor.colorAttachments[0].loadAction = .clear
 
@@ -223,11 +212,11 @@ class MetalDevice {
                 state.renderPassDescriptor.stencilAttachment.loadAction = .load
             }
 
-            if let nextClearState = clearStates.head {
-                state.clearTargetId = nextClearState.clearTargetId
-            } else {
-                state.clearTargetId = 0
-            }
+            self.clearState = nil
+        } else {
+            state.renderPassDescriptor.colorAttachments[0].loadAction = .load
+            state.renderPassDescriptor.depthAttachment.loadAction = .load
+            state.renderPassDescriptor.stencilAttachment.loadAction = .load
         }
 
         guard let commandEncoder = state.commandBuffer?.makeRenderCommandEncoder(descriptor: state.renderPassDescriptor)
@@ -324,8 +313,6 @@ class MetalDevice {
         }
 
         commandEncoder.endEncoding()
-
-        state.numDraws = state.numDraws + 1
     }
 
     func clear() {
@@ -348,39 +335,6 @@ class MetalDevice {
         }
 
         commandEncoder.endEncoding()
-    }
-
-    func getBufferForSize(_ size: Int) -> MTLBuffer {
-        let alignedSize = (size + 15) & ~15
-
-        var matchingBuffer: MTLBuffer? = nil
-
-        self.queue.sync(flags: .barrier) {
-            for (index, buffer) in availableBuffers.enumerated() {
-                if buffer.length >= alignedSize {
-                    matchingBuffer = buffer
-                    availableBuffers.remove(at: index)
-                    currentBuffers.append(buffer)
-                    break
-                }
-            }
-        }
-
-        guard matchingBuffer == nil else {
-            return matchingBuffer!
-        }
-
-        let options: MTLResourceOptions = [.cpuCacheModeWriteCombined, .storageModeShared]
-
-        guard let buffer = device.makeBuffer(length: alignedSize, options: options) else {
-            preconditionFailure("MetalDevice: Unable to create buffer for \(alignedSize) bytes")
-        }
-
-        self.queue.sync(flags: .barrier) {
-            currentBuffers.append(buffer)
-        }
-
-        return buffer
     }
 }
 

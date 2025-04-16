@@ -37,18 +37,14 @@ public func device_samplerstate_create(device: UnsafeRawPointer, info: gs_sample
         preconditionFailure("device_samplerstate_create (Metal): Failed to create sampler state")
     }
 
-    let samplerStateId = device.samplerStates.insert(samplerState)
-    let resource = OBSAPIResource(device: device, resourceId: samplerStateId)
+    let retained = Unmanaged.passRetained(samplerState).toOpaque()
 
-    return resource.getRetained()
+    return OpaquePointer(retained)
 }
 
 @_cdecl("gs_samplerstate_destroy")
 public func gs_samplerstate_destroy(samplerState: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(samplerState).takeRetainedValue()
-    let device = resource.device
-
-    device.samplerStates.remove(resource.resourceId)
+    let _ = Unmanaged<MTLSamplerState>.fromOpaque(samplerState).takeRetainedValue()
 }
 
 /// Loads a sampler state into a texture unit
@@ -62,12 +58,7 @@ public func gs_samplerstate_destroy(samplerState: UnsafeRawPointer) {
 @_cdecl("device_load_samplerstate")
 public func device_load_samplerstate(device: UnsafeRawPointer, ss: UnsafeRawPointer, unit: Int) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(ss).takeUnretainedValue()
-
-    guard let samplerState = device.samplerStates[resource.resourceId] else {
-        assertionFailure("device_load_samplerstate (Metal): Invalid sampler state ID provided")
-        return
-    }
+    let samplerState = Unmanaged<MTLSamplerState>.fromOpaque(ss).takeUnretainedValue()
 
     device.state.samplers[unit] = samplerState
 }

@@ -8,40 +8,31 @@
 import Foundation
 import Metal
 
-struct OBSBlendFactor: Comparable {
-    static func < (lhs: OBSBlendFactor, rhs: OBSBlendFactor) -> Bool {
-        return lhs != rhs
-    }
+/// Blend State structs combine Blend Factor and Blend Channels information to contain all information necessary to customize blend operations in the renderer.
+struct OBSBlendState: Comparable {
+    /// This struct combines the ``MTLBlendFactor``s for the color channel and alpha channel into a single container. The struct is comparable, so existing blend factors can be compared with new ones to check for differences.
+    struct OBSBlendFactor: Comparable {
+        static func < (lhs: OBSBlendFactor, rhs: OBSBlendFactor) -> Bool {
+            return lhs != rhs
+        }
 
-    static func == (lhs: OBSBlendFactor, rhs: OBSBlendFactor) -> Bool {
-        if lhs.color == rhs.color && lhs.alpha == rhs.alpha {
-            return true
-        } else {
-            return false
+        static func == (lhs: OBSBlendFactor, rhs: OBSBlendFactor) -> Bool {
+            if lhs.color == rhs.color && lhs.alpha == rhs.alpha {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        let color: MTLBlendFactor
+        let alpha: MTLBlendFactor
+
+        init(color: MTLBlendFactor, alpha: MTLBlendFactor) {
+            self.color = color
+            self.alpha = alpha
         }
     }
 
-    let color: MTLBlendFactor
-    let alpha: MTLBlendFactor
-
-    init(color: MTLBlendFactor, alpha: MTLBlendFactor) {
-        self.color = color
-        self.alpha = alpha
-    }
-}
-
-struct OBSBlendChannels: OptionSet {
-    var rawValue: UInt
-
-    static let red = OBSBlendChannels(rawValue: 1 << 0)
-    static let blue = OBSBlendChannels(rawValue: 1 << 1)
-    static let green = OBSBlendChannels(rawValue: 1 << 2)
-    static let alpha = OBSBlendChannels(rawValue: 1 << 4)
-
-    static let all: OBSBlendChannels = [.red, .blue, .green, .alpha]
-}
-
-struct OBSBlendState: Comparable {
     static func < (lhs: OBSBlendState, rhs: OBSBlendState) -> Bool {
         return lhs != rhs
     }

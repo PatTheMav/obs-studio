@@ -21,7 +21,7 @@ extension MetalDevice {
 
         descriptor.arrayLength = 1
         descriptor.cpuCacheMode = .writeCombined
-        descriptor.storageMode = .managed
+        descriptor.storageMode = .shared
         descriptor.usage = renderTarget ? [.shaderRead, .renderTarget] : .shaderRead
 
         if mipmapped {
@@ -40,7 +40,7 @@ extension MetalDevice {
 
         descriptor.arrayLength = 6
         descriptor.cpuCacheMode = .writeCombined
-        descriptor.storageMode = .managed
+        descriptor.storageMode = .shared
         descriptor.usage = .shaderRead
 
         if mipmapped {
@@ -79,12 +79,72 @@ extension MetalDevice {
     }
 }
 
+extension MTLTexture {
+    func download() -> [UInt8] {
+        let rowSize = width * pixelFormat.bitsPerPixel() / 8
+        let dataSize = rowSize * height
+        let region = MTLRegionMake2D(0, 0, width, height)
+        var data = [UInt8](repeating: 0, count: dataSize)
+
+        getBytes(&data, bytesPerRow: rowSize, from: region, mipmapLevel: 0)
+
+        return data
+    }
+
+    func map(data: UnsafeMutablePointer<UInt8>) {
+        let rowSize = width * pixelFormat.bitsPerPixel() / 8
+        let region = MTLRegionMake2D(0, 0, width, height)
+        getBytes(data, bytesPerRow: rowSize, from: region, mipmapLevel: 0)
+    }
+
+    func upload(data: inout [UInt8], mipmapLevel: Int = 0) {
+        let rowSize = width * pixelFormat.bitsPerPixel() / 8
+        let region = MTLRegionMake2D(0, 0, width, height)
+        replace(region: region, mipmapLevel: mipmapLevel, withBytes: data, bytesPerRow: rowSize)
+    }
+}
+
+class OBSTexture: Equatable {
+    static func == (lhs: OBSTexture, rhs: OBSTexture) -> Bool {
+        lhs.resourceID == rhs.resourceID
+    }
+
+    static func != (lhs: OBSTexture, rhs: OBSTexture) -> Bool {
+        lhs.resourceID != rhs.resourceID
+    }
+
+    public let device: MetalDevice
+    public var texture: MTLTexture
+    public var data: [UInt8]
+    private let resourceID: Int
+
+    init(device: MetalDevice, texture: MTLTexture) {
+        self.device = device
+        self.texture = texture
+        self.resourceID = Hasher().finalize()
+
+        data = [UInt8]()
+    }
+
+    func download() {
+        data = texture.download()
+    }
+
+    func map(data: UnsafeMutablePointer<UInt8>) {
+        texture.map(data: data)
+    }
+
+    func upload() {
+        texture.upload(data: &data)
+    }
+}
+
 // MARK: libobs Graphics API
 
 @_cdecl("device_texture_create")
 public func device_texture_create(
     device: UnsafeRawPointer, width: UInt32, height: UInt32, colorFormat: gs_color_format, levels: UInt32,
-    textureData: UnsafePointer<UnsafePointer<UInt8>>?, flags: UInt32
+    textureData: UnsafePointer<UnsafePointer<UInt8>?>?, flags: UInt32
 ) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
@@ -102,29 +162,23 @@ public func device_texture_create(
         return nil
     }
 
-    let textureId = device.textures.insert(texture)
-    let resource = OBSAPIResource(device: device, resourceId: textureId)
-
     if let textureData {
-        var data = [[UInt8]]()
-        var levelWidth = width
-        var levelHeight = height
+        let mipmapLevels = Int(levels)
+        var levelWidth = Int(width)
+        var levelHeight = Int(height)
+        let bytesPerPixel = texture.pixelFormat.bitsPerPixel() / 8
 
-        for level in 0..<levels {
-            let dataSize = Int(levelWidth * levelHeight) * texture.pixelFormat.bitsPerPixel() / 8
-            let dataArray = Array(
-                UnsafeBufferPointer(start: textureData.advanced(by: Int(level)).pointee, count: dataSize)
-            )
+        let textureData = UnsafeBufferPointer(start: textureData, count: mipmapLevels)
 
-            data.append(dataArray)
+        for (level, levelData) in textureData.enumerated() {
+            let levelSize = levelWidth * levelHeight * bytesPerPixel
+            var levelData = Array(UnsafeBufferPointer(start: levelData, count: levelSize))
 
-            levelWidth = levelWidth / 2
-            levelHeight = levelHeight / 2
+            texture.upload(data: &levelData, mipmapLevel: level)
+
+            levelWidth /= 2
+            levelHeight /= 2
         }
-
-        resource.data = data[0]
-
-        texture.upload(data: data)
 
         if (Int32(flags) & GS_BUILD_MIPMAPS) != 0 {
             guard let encoder = device.state.commandBuffer?.makeBlitCommandEncoder() else {
@@ -137,7 +191,11 @@ public func device_texture_create(
         }
     }
 
-    return resource.getRetained()
+    let obsTexture = OBSTexture(device: device, texture: texture)
+
+    let retained = Unmanaged.passRetained(obsTexture).toOpaque()
+
+    return OpaquePointer(retained)
 }
 
 @_cdecl("device_cubetexture_create")
@@ -145,54 +203,7 @@ public func device_cubetexture_create(
     device: UnsafeRawPointer, size: UInt32, colorFormat: gs_color_format, levels: UInt32,
     textureData: UnsafePointer<UnsafePointer<UInt8>>?, flags: UInt32
 ) -> OpaquePointer? {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-
-    let texture = device.makeTextureCube(
-        size: Int(size),
-        pixelFormat: colorFormat.toMTLFormat(),
-        mipLevels: Int(levels),
-        mipmapped: (Int32(flags) & GS_BUILD_MIPMAPS) != 0
-    )
-
-    guard let texture else {
-        assertionFailure("device_cubetexture_create (Metal): Failed to create texture (\(size))")
-        return nil
-    }
-
-    let textureId = device.textures.insert(texture)
-    let resource = OBSAPIResource(device: device, resourceId: textureId)
-
-    if let textureData {
-        var data = [[UInt8]]()
-        var levelWidth = size
-        var levelHeight = size
-
-        for level in 0..<levels {
-            let dataSize = Int(levelWidth * levelHeight) * texture.pixelFormat.bitsPerPixel() / 8
-            let dataArray = Array(
-                UnsafeBufferPointer(start: textureData.advanced(by: Int(level)).pointee, count: dataSize)
-            )
-            data.append(dataArray)
-
-            levelWidth = levelWidth / 2
-            levelHeight = levelHeight / 2
-        }
-
-        resource.data = data[0]
-        texture.upload(data: data)
-
-        if (Int32(flags) & GS_BUILD_MIPMAPS) != 0 {
-            guard let encoder = device.state.commandBuffer?.makeBlitCommandEncoder() else {
-                assertionFailure("device_cubetexture_create (Metal): No command buffer available")
-                return nil
-            }
-
-            encoder.generateMipmaps(for: texture)
-            encoder.endEncoding()
-        }
-    }
-
-    return resource.getRetained()
+    return nil
 }
 
 @_cdecl("device_voltexture_create")
@@ -205,22 +216,14 @@ public func device_voltexture_create(
 
 @_cdecl("gs_texture_destroy")
 public func gs_texture_destroy(texture: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(texture).takeRetainedValue()
-    let device = resource.device
-
-    device.textures.remove(resource.resourceId)
+    let _ = Unmanaged<OBSTexture>.fromOpaque(texture).takeRetainedValue()
 }
 
 @_cdecl("device_get_texture_type")
 public func device_get_texture_type(texture: UnsafeRawPointer) -> gs_texture_type {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(texture).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(texture).takeUnretainedValue()
 
-    guard let type = device.textures[resource.resourceId]?.textureType else {
-        preconditionFailure("device_get_texture_type (Metal): Invalid texture ID provided")
-    }
-
-    return type.toGSTextureType()
+    return texture.texture.textureType.toGSTextureType()
 }
 
 /// Loads a texture into a texture unit
@@ -234,13 +237,9 @@ public func device_get_texture_type(texture: UnsafeRawPointer) -> gs_texture_typ
 @_cdecl("device_load_texture")
 public func device_load_texture(device: UnsafeRawPointer, tex: UnsafeRawPointer, unit: Int) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
+    let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("device_load_texture (Metal): Invalid texture ID provided")
-    }
-
-    device.state.textures[unit] = texture
+    device.state.textures[unit] = texture.texture
 }
 
 @_cdecl("device_copy_texture_region")
@@ -249,16 +248,8 @@ public func device_copy_texture_region(
     src_y: UInt32, src_w: UInt32, src_h: UInt32
 ) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-    let sourceResource = Unmanaged<OBSAPIResource>.fromOpaque(src).takeUnretainedValue()
-    let destinationResource = Unmanaged<OBSAPIResource>.fromOpaque(dst).takeUnretainedValue()
-
-    guard let sourceTexture = device.textures[sourceResource.resourceId] else {
-        preconditionFailure("device_copy_texture_region (Metal): Invalid source texture ID provided")
-    }
-
-    guard let destinationTexture = device.textures[destinationResource.resourceId] else {
-        preconditionFailure("device_copy_texture_region (Metal): Invalid destination texture ID provided")
-    }
+    let sourceTexture = Unmanaged<OBSTexture>.fromOpaque(src).takeUnretainedValue()
+    let destinationTexture = Unmanaged<OBSTexture>.fromOpaque(dst).takeUnretainedValue()
 
     let sourceOrigin = MTLOrigin(x: Int(src_x), y: Int(src_y), z: 0)
     let destinationOrigin = MTLOrigin(x: Int(dst_x), y: Int(dst_y), z: 0)
@@ -266,17 +257,18 @@ public func device_copy_texture_region(
 
     let copyWidth =
         switch size.width {
-        case 0: sourceTexture.width - sourceOrigin.x
+        case 0: sourceTexture.texture.width - sourceOrigin.x
         default: size.width
         }
+
     let copyHeight =
         switch size.height {
-        case 0: sourceTexture.height - sourceOrigin.y
+        case 0: sourceTexture.texture.height - sourceOrigin.y
         default: size.height
         }
 
-    let destinationWidth = destinationTexture.width - destinationOrigin.x
-    let destinationHeight = destinationTexture.height - destinationOrigin.y
+    let destinationWidth = destinationTexture.texture.width - destinationOrigin.x
+    let destinationHeight = destinationTexture.texture.height - destinationOrigin.y
 
     guard destinationWidth >= copyWidth && destinationHeight >= copyHeight else {
         preconditionFailure(
@@ -290,12 +282,12 @@ public func device_copy_texture_region(
     }
 
     encoder.copy(
-        from: sourceTexture,
+        from: sourceTexture.texture,
         sourceSlice: 0,
         sourceLevel: 0,
         sourceOrigin: sourceOrigin,
         sourceSize: actualSize,
-        to: destinationTexture,
+        to: destinationTexture.texture,
         destinationSlice: 0,
         destinationLevel: 0,
         destinationOrigin: destinationOrigin
@@ -307,22 +299,14 @@ public func device_copy_texture_region(
 @_cdecl("device_copy_texture")
 public func device_copy_texture(device: UnsafeRawPointer, dst: UnsafeRawPointer, src: UnsafeRawPointer) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-    let sourceResource = Unmanaged<OBSAPIResource>.fromOpaque(src).takeUnretainedValue()
-    let destinationResource = Unmanaged<OBSAPIResource>.fromOpaque(dst).takeUnretainedValue()
-
-    guard let sourceTexture = device.textures[sourceResource.resourceId] else {
-        preconditionFailure("device_copy_texture (Metal): Invalid source texture ID provided")
-    }
-
-    guard let destinationTexture = device.textures[destinationResource.resourceId] else {
-        preconditionFailure("device_copy_texture (Metal): Invalid destination texture ID provided")
-    }
+    let sourceTexture = Unmanaged<OBSTexture>.fromOpaque(src).takeUnretainedValue()
+    let destinationTexture = Unmanaged<OBSTexture>.fromOpaque(dst).takeUnretainedValue()
 
     guard let encoder = device.state.commandBuffer?.makeBlitCommandEncoder() else {
         preconditionFailure("device_copy_texture (Metal): Failed to create blit command encoder")
     }
 
-    encoder.copy(from: sourceTexture, to: destinationTexture)
+    encoder.copy(from: sourceTexture.texture, to: destinationTexture.texture)
     encoder.endEncoding()
 }
 
@@ -333,15 +317,10 @@ public func device_stage_texture(device: UnsafeRawPointer, dst: UnsafeRawPointer
 
 @_cdecl("gs_texture_get_width")
 public func gs_texture_get_width(tex: UnsafeRawPointer) -> UInt32 {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_texture_get_width (Metal): Invalid texture ID provided")
-    }
-
-    if texture.textureType == .type2D {
-        return UInt32(texture.width)
+    if texture.texture.textureType == .type2D {
+        return UInt32(texture.texture.width)
     }
 
     return 0
@@ -349,15 +328,10 @@ public func gs_texture_get_width(tex: UnsafeRawPointer) -> UInt32 {
 
 @_cdecl("gs_texture_get_height")
 public func gs_texture_get_height(tex: UnsafeRawPointer) -> UInt32 {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_texture_get_height (Metal): Invalid texture ID provided")
-    }
-
-    if texture.textureType == .type2D {
-        return UInt32(texture.height)
+    if texture.texture.textureType == .type2D {
+        return UInt32(texture.texture.height)
     }
 
     return 0
@@ -365,15 +339,10 @@ public func gs_texture_get_height(tex: UnsafeRawPointer) -> UInt32 {
 
 @_cdecl("gs_texture_get_color_format")
 public func gs_texture_get_color_format(tex: UnsafeRawPointer) -> gs_color_format {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_texture_get_color_format (Metal): Invalid texture ID provided")
-    }
-
-    if texture.textureType == .type2D {
-        return texture.pixelFormat.toGSColorFormat()
+    if texture.texture.textureType == .type2D {
+        return texture.texture.pixelFormat.toGSColorFormat()
     }
 
     return GS_UNKNOWN
@@ -384,117 +353,76 @@ public func gs_texture_map(
     tex: UnsafeRawPointer, ptr: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>,
     linesize: UnsafeMutablePointer<UInt32>
 ) -> Bool {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_texture_map (Metal): Invalid texture ID provided")
-    }
-
-    guard texture.textureType == .type2D else {
+    guard texture.texture.textureType == .type2D else {
         return false
     }
+    texture.download()
 
-    resource.data = texture.download()
-
-    guard resource.data != nil else {
-        assertionFailure("gs_texture_map (Metal): Failed to download texture data")
-        return false
+    texture.data.withUnsafeMutableBufferPointer {
+        ptr.pointee = $0.baseAddress
     }
 
-    resource.data!.withUnsafeMutableBufferPointer {
-        ptr.pointee = $0.baseAddress ?? nil
-    }
-
-    linesize.pointee = UInt32(texture.width * texture.pixelFormat.bitsPerPixel() / 8)
+    linesize.pointee = UInt32(texture.texture.width * texture.texture.pixelFormat.bitsPerPixel() / 8)
 
     return true
 }
 
 @_cdecl("gs_texture_unmap")
 public func gs_texture_unmap(tex: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_texture_unmap (Metal): Invalid texture ID provided")
-    }
-
-    guard texture.textureType == .type2D else {
+    guard texture.texture.textureType == .type2D else {
         return
     }
 
-    if resource.data != nil {
-        var textureData = [[UInt8]]()
-        textureData.append(resource.data!)
-
-        texture.upload(data: textureData)
-    }
+    texture.upload()
 }
 
 @_cdecl("gs_texture_get_obj")
 public func gs_texture_get_obj(tex: UnsafeRawPointer) -> OpaquePointer? {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_texture_get_obj (Metal): Invalid texture ID provided")
-    }
-
-    guard texture.textureType == .type2D else {
+    guard texture.texture.textureType == .type2D else {
         return nil
     }
 
-    let unretained = Unmanaged.passUnretained(texture).toOpaque()
+    let unretained = Unmanaged.passUnretained(texture.device).toOpaque()
+
     return OpaquePointer(unretained)
 }
 
 @_cdecl("gs_cubetexture_destroy")
 public func gs_cubetexture_destroy(cubetex: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(cubetex).takeRetainedValue()
-    let device = resource.device
-
-    device.textures.remove(resource.resourceId)
+    let _ = Unmanaged<OBSTexture>.fromOpaque(cubetex).takeRetainedValue()
 }
 
 @_cdecl("gs_cubetexture_get_size")
 public func gs_cubetexture_get_size(cubetex: UnsafeRawPointer) -> UInt32 {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(cubetex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(cubetex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_cubetexture_get_size (Metal): Invalid texture ID provided")
-    }
-
-    guard texture.textureType == .typeCube else {
+    guard texture.texture.textureType == .type2D else {
         return 0
     }
 
-    return UInt32(texture.width)
+    return UInt32(texture.texture.width)
 }
 
 @_cdecl("gs_cubetexture_get_color_format")
 public func gs_cubetexture_get_color_format(cubetex: UnsafeRawPointer) -> gs_color_format {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(cubetex).takeUnretainedValue()
-    let device = resource.device
+    let texture = Unmanaged<OBSTexture>.fromOpaque(cubetex).takeUnretainedValue()
 
-    guard let texture = device.textures[resource.resourceId] else {
-        preconditionFailure("gs_cubetexture_get_color_format (Metal): Invalid texture ID provided")
-    }
-
-    guard texture.textureType == .typeCube else {
+    guard texture.texture.textureType == .typeCube else {
         return GS_UNKNOWN
     }
 
-    return texture.pixelFormat.toGSColorFormat()
+    return texture.texture.pixelFormat.toGSColorFormat()
 }
 
 @_cdecl("gs_voltexture_destroy")
 public func gs_voltexture_destroy(tex: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(tex).takeRetainedValue()
-    let device = resource.device
-
-    device.textures.remove(resource.resourceId)
+    let _ = Unmanaged<OBSTexture>.fromOpaque(tex).takeRetainedValue()
 }
 
 @_cdecl("gs_voltexture_get_width")
@@ -531,22 +459,24 @@ public func device_texture_create_from_iosurface(device: UnsafeRawPointer, iosur
         return nil
     }
 
-    let textureId = device.textures.insert(texture)
-    let resource = OBSAPIResource(device: device, resourceId: textureId)
-    return resource.getRetained()
+    let obsTexture = OBSTexture(device: device, texture: texture)
+
+    let retained = Unmanaged.passRetained(obsTexture).toOpaque()
+
+    return OpaquePointer(retained)
 }
 
 @_cdecl("gs_texture_rebind_iosurface")
 public func gs_texture_rebind_iosurface(texture: UnsafeRawPointer, iosurf: IOSurfaceRef) -> Bool {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(texture).takeUnretainedValue()
-    let device = resource.device
+    let obsTexture = Unmanaged<OBSTexture>.fromOpaque(texture).takeUnretainedValue()
+    let device = obsTexture.device
 
     guard let texture = device.makeTextureFromIOSurface(surface: iosurf) else {
         assertionFailure("device_texture_create_from_iosurface (Metal): Failed to create texture")
         return false
     }
 
-    device.textures.replaceAt(resource.resourceId, texture)
+    obsTexture.texture = texture
 
     return true
 }

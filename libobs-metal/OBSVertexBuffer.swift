@@ -13,7 +13,7 @@ class MetalVertexBuffer {
     var device: MetalDevice
 
     var vertexData: UnsafeMutablePointer<gs_vb_data>?
-    var textureBuffers: [MTLBuffer?] = []
+    var textureBuffers: [MTLBuffer?]
     var vertexBuffer: MTLBuffer?
     var normalBuffer: MTLBuffer?
     var colorBuffer: MTLBuffer?
@@ -25,9 +25,23 @@ class MetalVertexBuffer {
         self.device = device
         self.isDynamic = dynamic
         self.vertexData = data
+        self.isDynamic = dynamic
+        self.textureBuffers = [MTLBuffer?](repeating: nil, count: data.pointee.num_tex)
 
         if !isDynamic {
             setupMTLBuffers()
+        }
+    }
+
+    func createOrUpdateBuffer<T>(buffer: inout MTLBuffer?, data: UnsafeMutablePointer<T>, count: Int, dynamic: Bool) {
+        let size = MemoryLayout<T>.size * count
+        let alignedSize = (size + 15) & ~15
+
+        if dynamic && buffer != nil && buffer!.length == alignedSize {
+            buffer!.contents().copyMemory(from: data, byteCount: size)
+        } else {
+            buffer = device.device.makeBuffer(
+                bytes: data, length: alignedSize, options: [.cpuCacheModeWriteCombined, .storageModeShared])
         }
     }
 
@@ -41,53 +55,17 @@ class MetalVertexBuffer {
         let tangents: UnsafeMutablePointer<vec3>? = data.pointee.tangents
         let colors: UnsafeMutablePointer<UInt32>? = data.pointee.colors
 
-        let options: MTLResourceOptions
-
-        if !isDynamic {
-            options = [.cpuCacheModeWriteCombined, .storageModeManaged]
-
-            vertexBuffer = device.device.makeBuffer(
-                bytes: data.pointee.points,
-                length: MemoryLayout<vec3>.size * numVertices,
-                options: options
-            )
-        } else {
-            options = [.cpuCacheModeWriteCombined, .storageModeShared]
-
-            vertexBuffer = device.getBufferForSize(MemoryLayout<vec3>.size * numVertices)
-            vertexBuffer?.contents().copyMemory(
-                from: data.pointee.points, byteCount: MemoryLayout<vec3>.size * numVertices)
-        }
+        createOrUpdateBuffer(buffer: &vertexBuffer, data: data.pointee.points, count: numVertices, dynamic: isDynamic)
 
         vertexBuffer?.label = "Vertex buffer points data"
 
         if let normals {
-            if !isDynamic {
-                normalBuffer = device.device.makeBuffer(
-                    bytes: normals,
-                    length: MemoryLayout<vec3>.size * numVertices,
-                    options: options)
-            } else {
-                normalBuffer = device.getBufferForSize(MemoryLayout<vec3>.size * numVertices)
-                normalBuffer?.contents().copyMemory(
-                    from: data.pointee.normals, byteCount: MemoryLayout<vec3>.size * numVertices)
-            }
-
+            createOrUpdateBuffer(buffer: &normalBuffer, data: normals, count: numVertices, dynamic: isDynamic)
             normalBuffer?.label = "Vertex buffer normals data"
         }
 
         if let tangents {
-            if !isDynamic {
-                tangentBuffer = device.device.makeBuffer(
-                    bytes: tangents,
-                    length: MemoryLayout<vec3>.size * numVertices,
-                    options: options)
-            } else {
-                tangentBuffer = device.getBufferForSize(MemoryLayout<vec3>.size * numVertices)
-                tangentBuffer?.contents().copyMemory(
-                    from: data.pointee.tangents, byteCount: MemoryLayout<vec3>.size * numVertices)
-            }
-
+            createOrUpdateBuffer(buffer: &tangentBuffer, data: tangents, count: numVertices, dynamic: isDynamic)
             tangentBuffer?.label = "Vertex buffer tangents data"
         }
 
@@ -107,48 +85,26 @@ class MetalVertexBuffer {
                 }
             }
 
-            if !isDynamic {
-                colorBuffer = device.device.makeBuffer(
-                    bytes: unpackedColors,
-                    length: MemoryLayout<SIMD4<Float>>.size * numVertices,
-                    options: options)
-            } else {
-                colorBuffer = device.getBufferForSize(MemoryLayout<SIMD4<Float>>.size * numVertices)
-                colorBuffer?.contents().copyMemory(
-                    from: unpackedColors, byteCount: MemoryLayout<SIMD4<Float>>.size * numVertices)
+            unpackedColors.withUnsafeMutableBufferPointer {
+                createOrUpdateBuffer(
+                    buffer: &colorBuffer, data: $0.baseAddress!, count: numVertices, dynamic: isDynamic)
             }
-
             colorBuffer?.label = "Vertex buffer colors data"
         }
-
-        textureBuffers = []
 
         for i in 0..<data.pointee.num_tex {
             let textureVertex: UnsafeMutablePointer<gs_tvertarray>? = data.pointee.tvarray.advanced(by: i)
 
             if let textureVertex {
-                let textureBuffer: MTLBuffer?
-
-                if !isDynamic {
-                    textureBuffer = device.device.makeBuffer(
-                        bytes: textureVertex.pointee.array,
-                        length: MemoryLayout<Float32>.size * textureVertex.pointee.width * numVertices,
-                        options: options)
-                } else {
-                    textureBuffer = device.getBufferForSize(
-                        MemoryLayout<Float32>.size * textureVertex.pointee.width * numVertices)
-
-                    guard let textureBuffer else {
-                        preconditionFailure("MetalVertexBuffer: Failed to create MTLBuffer texture uv data (\(i))")
-                    }
-
-                    textureBuffer.contents().copyMemory(
-                        from: textureVertex.pointee.array,
-                        byteCount: MemoryLayout<Float32>.size * textureVertex.pointee.width * numVertices)
+                textureVertex.pointee.array.withMemoryRebound(
+                    to: Float32.self, capacity: textureVertex.pointee.width * numVertices
+                ) {
+                    createOrUpdateBuffer(
+                        buffer: &textureBuffers[i], data: $0, count: textureVertex.pointee.width * numVertices,
+                        dynamic: isDynamic)
                 }
 
-                textureBuffer?.label = "Vertex buffer texture uv data (\(i))"
-                textureBuffers.append(textureBuffer)
+                textureBuffers[i]?.label = "Vertex buffer texture uv data (\(i))"
             }
         }
     }
@@ -219,10 +175,9 @@ public func device_vertexbuffer_create(
         dynamic: (Int32(flags) & GS_DYNAMIC) != 0
     )
 
-    let vertexBufferId = device.vertexBuffers.insert(vertexBuffer)
-    let resource = OBSAPIResource(device: device, resourceId: vertexBufferId)
+    let retained = Unmanaged.passRetained(vertexBuffer).toOpaque()
 
-    return resource.getRetained()
+    return OpaquePointer(retained)
 }
 
 /// Removes a vertex buffer object
@@ -232,10 +187,7 @@ public func device_vertexbuffer_create(
 /// - Parameter vertBuffer: Opaque pointer to ``MetalResource`` instance
 @_cdecl("gs_vertexbuffer_destroy")
 public func gs_vertexbuffer_destroy(vertBuffer: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(vertBuffer).takeRetainedValue()
-    let device = resource.device
-
-    device.vertexBuffers.remove(resource.resourceId)
+    let _ = Unmanaged<MetalVertexBuffer>.fromOpaque(vertBuffer).takeRetainedValue()
 }
 
 /// Load a vertex buffer object
@@ -250,12 +202,7 @@ public func device_load_vertexbuffer(device: UnsafeRawPointer, vb: UnsafeRawPoin
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     if let vb {
-        let resource = Unmanaged<OBSAPIResource>.fromOpaque(vb).takeUnretainedValue()
-
-        guard let vertexBuffer = device.vertexBuffers[resource.resourceId] else {
-            assertionFailure("device_load_vertexbuffer (Metal): Invalid vertex buffer ID provided")
-            return
-        }
+        let vertexBuffer = Unmanaged<MetalVertexBuffer>.fromOpaque(vb).takeUnretainedValue()
 
         device.state.vertexBuffer = vertexBuffer
     } else {
@@ -282,19 +229,7 @@ public func gs_vertexbuffer_flush(vertbuffer: UnsafeRawPointer) {
 ///   - data: ``UnsafeMutablePointer`` of `libobs` vertex buffer data
 @_cdecl("gs_vertexbuffer_flush_direct")
 public func gs_vertexbuffer_flush_direct(vertbuffer: UnsafeRawPointer, data: UnsafeMutablePointer<gs_vb_data>?) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(vertbuffer).takeUnretainedValue()
-    let device = resource.device
-
-    guard let vertexBuffer = device.vertexBuffers[resource.resourceId] else {
-        assertionFailure("device_vertexbuffer_flush_direct (Metal): Invalid vertex buffer ID provided")
-        return
-    }
-
-    guard vertexBuffer.isDynamic else {
-        assertionFailure("device_vertexbuffer_flush_direct (Metal): Attempted to flush a static vertex buffer")
-        return
-    }
-
+    let vertexBuffer = Unmanaged<MetalVertexBuffer>.fromOpaque(vertbuffer).takeUnretainedValue()
     vertexBuffer.setupMTLBuffers(data)
 }
 
@@ -306,13 +241,7 @@ public func gs_vertexbuffer_flush_direct(vertbuffer: UnsafeRawPointer, data: Uns
 /// - Returns: Optional ``UnsafeMutablePointer`` of `libobs`-specific vertex buffer data
 @_cdecl("gs_vertexbuffer_get_data")
 public func gs_vertexbuffer_get_data(vertbuffer: UnsafeRawPointer) -> UnsafeMutablePointer<gs_vb_data>? {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(vertbuffer).takeUnretainedValue()
-    let device = resource.device
-
-    guard let vertexBuffer = device.vertexBuffers[resource.resourceId] else {
-        assertionFailure("device_vertexbuffer_get_data (Metal): Invalid vertex buffer ID provided")
-        return nil
-    }
+    let vertexBuffer = Unmanaged<MetalVertexBuffer>.fromOpaque(vertbuffer).takeUnretainedValue()
 
     return vertexBuffer.vertexData
 }

@@ -30,10 +30,9 @@ public func device_zstencil_create(device: UnsafeRawPointer, width: UInt32, heig
         return nil
     }
 
-    let stencilBufferId = device.textures.insert(stencilBuffer)
-    let resource = OBSAPIResource(device: device, resourceId: stencilBufferId)
+    let retained = Unmanaged.passRetained(stencilBuffer).toOpaque()
 
-    return resource.getRetained()
+    return OpaquePointer(retained)
 }
 
 @_cdecl("device_get_zstencil_target")
@@ -52,8 +51,5 @@ public func device_get_zstencil_target(device: UnsafeRawPointer) -> OpaquePointe
 
 @_cdecl("gs_zstencil_destroy")
 public func gs_zstencil_destroy(zstencil: UnsafeRawPointer) {
-    let resource = Unmanaged<OBSAPIResource>.fromOpaque(zstencil).takeRetainedValue()
-    let device = resource.device
-
-    device.textures.remove(resource.resourceId)
+    let _ = Unmanaged<MTLTexture>.fromOpaque(zstencil).takeRetainedValue()
 }
