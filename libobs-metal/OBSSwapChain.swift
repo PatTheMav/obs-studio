@@ -11,7 +11,6 @@ import Metal
 
 // MARK: libobs Graphics API
 @_cdecl("device_swapchain_create")
-@MainActor
 public func device_swapchain_create(device: UnsafeMutableRawPointer, data: UnsafePointer<gs_init_data>)
     -> OpaquePointer?
 {
@@ -30,8 +29,10 @@ public func device_swapchain_create(device: UnsafeMutableRawPointer, data: Unsaf
 
     nonisolated(unsafe) let unsafeLayer = layer
 
-    view.layer = unsafeLayer
-    view.wantsLayer = true
+    Task { @MainActor in
+        view.layer = unsafeLayer
+        view.wantsLayer = true
+    }
 
     let metalLayer = MetalState.MetalLayer(
         layer: layer,
@@ -54,7 +55,7 @@ public func device_resize(device: UnsafeMutableRawPointer, width: Int, height: I
 
     nonisolated(unsafe) let unsafeLayer = layer
 
-    DispatchQueue.main.async {
+    Task { @MainActor in
         let actualWidth =
             switch width {
             case 0: unsafeLayer.layer.frame.size.width - unsafeLayer.layer.frame.origin.x
@@ -81,7 +82,7 @@ public func device_get_size(
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     guard let layer = device.state.layer else {
-        assertionFailure("device_get_size (Metal): No active view")
+        // assertionFailure("device_get_size (Metal): No active view")
         cx.pointee = 0
         cy.pointee = 0
         return

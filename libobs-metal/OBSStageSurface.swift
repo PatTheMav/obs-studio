@@ -68,29 +68,36 @@ public func gs_stagesurface_map(
     linesize: UnsafeMutablePointer<UInt32>
 ) -> Bool {
     let stageSurface = Unmanaged<OBSTexture>.fromOpaque(stageSurface).takeUnretainedValue()
-    let device = stageSurface.device
 
-    guard let encoder = device.state.commandBuffer?.makeBlitCommandEncoder() else {
-        preconditionFailure("gs_stagesurface_map (Metal): Failed to create blit command encoder")
+    let rowSize = stageSurface.texture.width * stageSurface.texture.pixelFormat.bitsPerPixel() / 8
+    let dataSize = rowSize * stageSurface.texture.height
+    let region = MTLRegionMake2D(0, 0, stageSurface.texture.width, stageSurface.texture.height)
+
+    let textureData = UnsafeMutableRawBufferPointer.allocate(byteCount: dataSize, alignment: 8)
+
+    if let textureData = textureData.baseAddress {
+        stageSurface.texture.getBytes(textureData, bytesPerRow: rowSize, from: region, mipmapLevel: 0)
+
+        dataPointer.pointee = textureData.assumingMemoryBound(to: UInt8.self)
+        linesize.pointee = UInt32(rowSize)
+
+        stageSurface.data = textureData
+        return true
+    } else {
+        return false
     }
-
-    encoder.synchronize(texture: stageSurface.texture, slice: 0, level: 0)
-    encoder.endEncoding()
-
-    stageSurface.download()
-
-    stageSurface.data.withUnsafeMutableBufferPointer {
-        dataPointer.pointee = $0.baseAddress
-    }
-
-    linesize.pointee = UInt32(stageSurface.texture.width * stageSurface.texture.pixelFormat.bitsPerPixel() / 8)
-
-    return true
 }
 
 @_cdecl("gs_stagesurface_unmap")
 public func gs_stagesurface_unmap(tex: UnsafeRawPointer) {
     let stageSurface = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
-    stageSurface.upload()
+    let rowSize = stageSurface.texture.width * stageSurface.texture.pixelFormat.bitsPerPixel() / 8
+    let region = MTLRegionMake2D(0, 0, stageSurface.texture.width, stageSurface.texture.height)
+
+    if let textureData = stageSurface.data {
+        stageSurface.texture.replace(region: region, mipmapLevel: 0, withBytes: textureData, bytesPerRow: rowSize)
+
+        textureData.deallocate()
+    }
 }

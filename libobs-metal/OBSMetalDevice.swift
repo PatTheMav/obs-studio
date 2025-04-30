@@ -157,6 +157,10 @@ class MetalDevice {
             return
         }
 
+        guard state.renderTarget != nil else {
+            return
+        }
+
         guard let vertexBuffer = state.vertexBuffer else {
             preconditionFailure("MetalDevice (Draw): No vertex buffer set")
         }

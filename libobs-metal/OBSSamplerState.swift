@@ -49,7 +49,9 @@ public func gs_samplerstate_destroy(samplerState: UnsafeRawPointer) {
 
 /// Loads a sampler state into a texture unit
 ///
-///  The provided ``MetalResource`` instance contains the ID of the sampler state and will be used to find a preconfigured ``OBSSamplerState`` instance. If found, the reference will be added to the ``OBSMetalDevice``'  `currentSamplerStates` collection at the index provided by the texture unit variable.
+///  The provided ``MetalResource`` instance contains the ID of the sampler state and will be used to find a preconfigured ``OBSSamplerState``
+///  instance. If found, the reference will be added to the ``OBSMetalDevice``'  `currentSamplerStates` collection at the index provided by the texture
+///  unit variable.
 ///
 /// - Parameters:
 ///   - device: Opaque pointer to ``MetalRenderer`` instance

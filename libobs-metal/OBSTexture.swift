@@ -115,27 +115,13 @@ class OBSTexture: Equatable {
 
     public let device: MetalDevice
     public var texture: MTLTexture
-    public var data: [UInt8]
+    public var data: UnsafeMutableRawPointer?
     private let resourceID: Int
 
     init(device: MetalDevice, texture: MTLTexture) {
         self.device = device
         self.texture = texture
         self.resourceID = Hasher().finalize()
-
-        data = [UInt8]()
-    }
-
-    func download() {
-        data = texture.download()
-    }
-
-    func map(data: UnsafeMutablePointer<UInt8>) {
-        texture.map(data: data)
-    }
-
-    func upload() {
-        texture.upload(data: &data)
     }
 }
 
@@ -358,15 +344,24 @@ public func gs_texture_map(
     guard texture.texture.textureType == .type2D else {
         return false
     }
-    texture.download()
 
-    texture.data.withUnsafeMutableBufferPointer {
-        ptr.pointee = $0.baseAddress
+    let rowSize = texture.texture.width * texture.texture.pixelFormat.bitsPerPixel() / 8
+    let dataSize = rowSize * texture.texture.height
+    let region = MTLRegionMake2D(0, 0, texture.texture.width, texture.texture.height)
+
+    let textureData = UnsafeMutableRawBufferPointer.allocate(byteCount: dataSize, alignment: 8)
+
+    if let textureData = textureData.baseAddress {
+        texture.texture.getBytes(textureData, bytesPerRow: rowSize, from: region, mipmapLevel: 0)
+
+        ptr.pointee = textureData.assumingMemoryBound(to: UInt8.self)
+        linesize.pointee = UInt32(rowSize)
+
+        texture.data = textureData
+        return true
+    } else {
+        return false
     }
-
-    linesize.pointee = UInt32(texture.texture.width * texture.texture.pixelFormat.bitsPerPixel() / 8)
-
-    return true
 }
 
 @_cdecl("gs_texture_unmap")
@@ -377,7 +372,14 @@ public func gs_texture_unmap(tex: UnsafeRawPointer) {
         return
     }
 
-    texture.upload()
+    let rowSize = texture.texture.width * texture.texture.pixelFormat.bitsPerPixel() / 8
+    let region = MTLRegionMake2D(0, 0, texture.texture.width, texture.texture.height)
+
+    if let textureData = texture.data {
+        texture.texture.replace(region: region, mipmapLevel: 0, withBytes: textureData, bytesPerRow: rowSize)
+
+        textureData.deallocate()
+    }
 }
 
 @_cdecl("gs_texture_get_obj")

@@ -10,7 +10,9 @@ import Metal
 
 /// Blend State structs combine Blend Factor and Blend Channels information to contain all information necessary to customize blend operations in the renderer.
 struct OBSBlendState: Comparable {
-    /// This struct combines the ``MTLBlendFactor``s for the color channel and alpha channel into a single container. The struct is comparable, so existing blend factors can be compared with new ones to check for differences.
+    /// This struct combines the ``MTLBlendFactor``s for the color channel and alpha channel into a single container.
+    ///
+    /// The struct is comparable, so existing blend factors can be compared with new ones to check for differences.
     struct OBSBlendFactor: Comparable {
         static func < (lhs: OBSBlendFactor, rhs: OBSBlendFactor) -> Bool {
             return lhs != rhs
