@@ -10,7 +10,9 @@ import Metal
 
 // MARK: libobs Graphics API
 @_cdecl("device_stagesurface_create")
-public func device_stagesurface_create(device: UnsafeRawPointer, width: UInt32, height: UInt32, format: gs_color_format)
+public func device_stagesurface_create_OLD(
+    device: UnsafeRawPointer, width: UInt32, height: UInt32, format: gs_color_format
+)
     -> OpaquePointer?
 {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
@@ -37,33 +39,33 @@ public func device_stagesurface_create(device: UnsafeRawPointer, width: UInt32, 
 }
 
 @_cdecl("gs_stagesurface_destroy")
-public func gs_stagesurface_destroy(stageSurface: UnsafeRawPointer) {
+public func gs_stagesurface_destroy_OLD(stageSurface: UnsafeRawPointer) {
     let _ = Unmanaged<OBSTexture>.fromOpaque(stageSurface).takeRetainedValue()
 }
 
 @_cdecl("gs_stagesurface_get_width")
-public func gs_stagesurface_get_width(stageSurface: UnsafeRawPointer) -> UInt32 {
+public func gs_stagesurface_get_width_OLD(stageSurface: UnsafeRawPointer) -> UInt32 {
     let stageSurface = Unmanaged<OBSTexture>.fromOpaque(stageSurface).takeUnretainedValue()
 
     return UInt32(stageSurface.texture.width)
 }
 
 @_cdecl("gs_stagesurface_get_height")
-public func gs_stagesurface_get_height(stageSurface: UnsafeRawPointer) -> UInt32 {
+public func gs_stagesurface_get_height_OLD(stageSurface: UnsafeRawPointer) -> UInt32 {
     let stageSurface = Unmanaged<OBSTexture>.fromOpaque(stageSurface).takeUnretainedValue()
 
     return UInt32(stageSurface.texture.height)
 }
 
 @_cdecl("gs_stagesurface_get_color_format")
-public func gs_stagesurface_get_color_format(stageSurface: UnsafeRawPointer) -> gs_color_format {
+public func gs_stagesurface_get_color_format_OLD(stageSurface: UnsafeRawPointer) -> gs_color_format {
     let stageSurface = Unmanaged<OBSTexture>.fromOpaque(stageSurface).takeUnretainedValue()
 
     return stageSurface.texture.pixelFormat.toGSColorFormat()
 }
 
 @_cdecl("gs_stagesurface_map")
-public func gs_stagesurface_map(
+public func gs_stagesurface_map_OLD(
     stageSurface: UnsafeRawPointer, dataPointer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>,
     linesize: UnsafeMutablePointer<UInt32>
 ) -> Bool {
@@ -89,7 +91,7 @@ public func gs_stagesurface_map(
 }
 
 @_cdecl("gs_stagesurface_unmap")
-public func gs_stagesurface_unmap(tex: UnsafeRawPointer) {
+public func gs_stagesurface_unmap_OLD(tex: UnsafeRawPointer) {
     let stageSurface = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
     let rowSize = stageSurface.texture.width * stageSurface.texture.pixelFormat.bitsPerPixel() / 8

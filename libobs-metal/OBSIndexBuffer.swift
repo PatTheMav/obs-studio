@@ -8,7 +8,7 @@
 import Foundation
 import Metal
 
-class MetalIndexBuffer {
+class MetalIndexBuffer_OLD {
     let device: MetalDevice
 
     var indexData: UnsafeMutableRawPointer?
@@ -78,8 +78,8 @@ class MetalIndexBuffer {
 
 // MARK: libobs Graphics API
 
-@_cdecl("device_indexbuffer_create")
-public func device_indexbuffer_create(
+@_cdecl("device_indexbuffer_create_OLD")
+public func device_indexbuffer_create_OLD(
     devicePointer: UnsafeRawPointer, type: gs_index_type, indices: UnsafeMutableRawPointer, num: Int, flags: UInt32
 ) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
@@ -99,8 +99,8 @@ public func device_indexbuffer_create(
     return OpaquePointer(retained)
 }
 
-@_cdecl("device_load_indexbuffer")
-public func device_load_indexbuffer(
+@_cdecl("device_load_indexbuffer_OLD")
+public func device_load_indexbuffer_OLD(
     devicePointer: UnsafeRawPointer, ibPointer: UnsafeRawPointer?
 ) {
     let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
@@ -113,39 +113,39 @@ public func device_load_indexbuffer(
     }
 }
 
-@_cdecl("gs_indexbuffer_destroy")
-public func gs_indexbuffer_destroy(indexBufferPointer: UnsafeRawPointer) {
+@_cdecl("gs_indexbuffer_destroy_OLD")
+public func gs_indexbuffer_destroy_OLD(indexBufferPointer: UnsafeRawPointer) {
     let _ = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeRetainedValue()
 }
 
-@_cdecl("gs_indexbuffer_flush")
-public func gs_indexbuffer_flush(indexBufferPointer: UnsafeRawPointer) {
+@_cdecl("gs_indexbuffer_flush_OLD")
+public func gs_indexbuffer_flush_OLD(indexBufferPointer: UnsafeRawPointer) {
     gs_indexbuffer_flush_direct(indexBufferPointer: indexBufferPointer, data: nil)
 }
 
-@_cdecl("gs_indexbuffer_flush_direct")
-public func gs_indexbuffer_flush_direct(indexBufferPointer: UnsafeRawPointer, data: UnsafeMutableRawPointer?) {
+@_cdecl("gs_indexbuffer_flush_direct_OLD")
+public func gs_indexbuffer_flush_direct_OLD(indexBufferPointer: UnsafeRawPointer, data: UnsafeMutableRawPointer?) {
     let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     indexBuffer.setupMTLBuffers(data)
 }
 
-@_cdecl("gs_indexbuffer_get_data")
-public func gs_indexbuffer_get_data(indexBufferPointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
+@_cdecl("gs_indexbuffer_get_data_OLD")
+public func gs_indexbuffer_get_data_OLD(indexBufferPointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
     let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     return indexBuffer.indexData
 }
 
-@_cdecl("gs_indexbuffer_get_num_indices")
-public func gs_indexbuffer_get_num_indices(indexBufferPointer: UnsafeRawPointer) -> Int {
+@_cdecl("gs_indexbuffer_get_num_indices_OLD")
+public func gs_indexbuffer_get_num_indices_OLD(indexBufferPointer: UnsafeRawPointer) -> Int {
     let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     return indexBuffer.count
 }
 
-@_cdecl("gs_indexbuffer_get_type")
-public func gs_indexbuffer_get_type(indexBufferPointer: UnsafeRawPointer) -> gs_index_type {
+@_cdecl("gs_indexbuffer_get_type_OLD")
+public func gs_indexbuffer_get_type_OLD(indexBufferPointer: UnsafeRawPointer) -> gs_index_type {
     let indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexBufferPointer).takeUnretainedValue()
 
     switch indexBuffer.type {

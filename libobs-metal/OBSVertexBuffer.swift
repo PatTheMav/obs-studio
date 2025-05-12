@@ -9,7 +9,7 @@ import Foundation
 import Metal
 import simd
 
-class MetalVertexBuffer {
+class MetalVertexBuffer_OLD {
     var device: MetalDevice
 
     var vertexData: UnsafeMutablePointer<gs_vb_data>?
@@ -163,8 +163,8 @@ class MetalVertexBuffer {
 ///   - vertexData: `libobs`-internal vertex data object
 ///   - flags: `libobs`-internal vertex buffer flags
 /// - Returns: Opaque pointer of ``MetalResource`` instance with vertex buffer ID and ``OBSGraphicsDevice``
-@_cdecl("device_vertexbuffer_create")
-public func device_vertexbuffer_create(
+@_cdecl("device_vertexbuffer_create_OLD")
+public func device_vertexbuffer_create_OLD(
     devicePointer: UnsafeRawPointer, vertexData: UnsafeMutablePointer<gs_vb_data>, flags: UInt32
 ) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
@@ -185,8 +185,8 @@ public func device_vertexbuffer_create(
 /// The provided ``MetalResource`` instance contains a ``OBSGraphicsDevice`` reference and the ID of the vertex buffer. The buffer will be removed from the ``OBSResource`` collection of vertex buffers.
 ///
 /// - Parameter vertBuffer: Opaque pointer to ``MetalResource`` instance
-@_cdecl("gs_vertexbuffer_destroy")
-public func gs_vertexbuffer_destroy(vertBuffer: UnsafeRawPointer) {
+@_cdecl("gs_vertexbuffer_destroy_OLD")
+public func gs_vertexbuffer_destroy_OLD(vertBuffer: UnsafeRawPointer) {
     let _ = Unmanaged<MetalVertexBuffer>.fromOpaque(vertBuffer).takeRetainedValue()
 }
 
@@ -197,17 +197,17 @@ public func gs_vertexbuffer_destroy(vertBuffer: UnsafeRawPointer) {
 /// - Parameters:
 ///   - device: Opaque pointer to ``MetalRenderer`` instance
 ///   - vb: Opaque pointer to ``MetalResource`` instance
-@_cdecl("device_load_vertexbuffer")
-public func device_load_vertexbuffer(device: UnsafeRawPointer, vb: UnsafeRawPointer?) {
+@_cdecl("device_load_vertexbuffer_OLD")
+public func device_load_vertexbuffer_OLD(device: UnsafeRawPointer, vb: UnsafeRawPointer?) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    if let vb {
-        let vertexBuffer = Unmanaged<MetalVertexBuffer>.fromOpaque(vb).takeUnretainedValue()
-
-        device.state.vertexBuffer = vertexBuffer
-    } else {
-        device.state.vertexBuffer = nil
-    }
+    //    if let vb {
+    //        let vertexBuffer = Unmanaged<MetalVertexBuffer>.fromOpaque(vb).takeUnretainedValue()
+    //
+    //        device.state.vertexBuffer = vertexBuffer
+    //    } else {
+    //        device.state.vertexBuffer = nil
+    //    }
 }
 
 /// Flush the vertex buffer data
@@ -215,8 +215,8 @@ public func device_load_vertexbuffer(device: UnsafeRawPointer, vb: UnsafeRawPoin
 /// The provided ``MetalResource`` instance contains a ``OBSGraphicsDevice`` reference and the ID of the vertex buffer. If a valid ``OBSVertexBuffer`` instance can be found with the provided ID, the vertex buffer's `prepare` method is called without external data to prepare ``MTLBuffer`` objects for the internal vertex buffer data.
 ///
 /// - Parameter vertbuffer: Opaque pointer to ``MetalResource`` instance
-@_cdecl("gs_vertexbuffer_flush")
-public func gs_vertexbuffer_flush(vertbuffer: UnsafeRawPointer) {
+@_cdecl("gs_vertexbuffer_flush_OLD")
+public func gs_vertexbuffer_flush_OLD(vertbuffer: UnsafeRawPointer) {
     gs_vertexbuffer_flush_direct(vertbuffer: vertbuffer, data: nil)
 }
 
@@ -227,8 +227,8 @@ public func gs_vertexbuffer_flush(vertbuffer: UnsafeRawPointer) {
 /// - Parameters:
 ///   - vertbuffer: Opaque pointer to  ``MetalResource`` instance
 ///   - data: ``UnsafeMutablePointer`` of `libobs` vertex buffer data
-@_cdecl("gs_vertexbuffer_flush_direct")
-public func gs_vertexbuffer_flush_direct(vertbuffer: UnsafeRawPointer, data: UnsafeMutablePointer<gs_vb_data>?) {
+@_cdecl("gs_vertexbuffer_flush_direct_OLD")
+public func gs_vertexbuffer_flush_direct_OLD(vertbuffer: UnsafeRawPointer, data: UnsafeMutablePointer<gs_vb_data>?) {
     let vertexBuffer = Unmanaged<MetalVertexBuffer>.fromOpaque(vertbuffer).takeUnretainedValue()
     vertexBuffer.setupMTLBuffers(data)
 }
@@ -239,8 +239,8 @@ public func gs_vertexbuffer_flush_direct(vertbuffer: UnsafeRawPointer, data: Uns
 ///
 /// - Parameter vertbuffer: Opaque pointer to ``MetalResource`` instance
 /// - Returns: Optional ``UnsafeMutablePointer`` of `libobs`-specific vertex buffer data
-@_cdecl("gs_vertexbuffer_get_data")
-public func gs_vertexbuffer_get_data(vertbuffer: UnsafeRawPointer) -> UnsafeMutablePointer<gs_vb_data>? {
+@_cdecl("gs_vertexbuffer_get_data_OLD")
+public func gs_vertexbuffer_get_data_OLD(vertbuffer: UnsafeRawPointer) -> UnsafeMutablePointer<gs_vb_data>? {
     let vertexBuffer = Unmanaged<MetalVertexBuffer>.fromOpaque(vertbuffer).takeUnretainedValue()
 
     return vertexBuffer.vertexData

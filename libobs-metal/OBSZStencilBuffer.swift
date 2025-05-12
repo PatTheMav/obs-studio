@@ -10,8 +10,10 @@ import Metal
 
 // MARK: libobs Graphics API
 
-@_cdecl("device_zstencil_create")
-public func device_zstencil_create(device: UnsafeRawPointer, width: UInt32, height: UInt32, format: gs_zstencil_format)
+@_cdecl("device_zstencil_create_OLD")
+public func device_zstencil_create_OLD(
+    device: UnsafeRawPointer, width: UInt32, height: UInt32, format: gs_zstencil_format
+)
     -> OpaquePointer?
 {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
@@ -35,8 +37,8 @@ public func device_zstencil_create(device: UnsafeRawPointer, width: UInt32, heig
     return OpaquePointer(retained)
 }
 
-@_cdecl("device_get_zstencil_target")
-public func device_get_zstencil_target(device: UnsafeRawPointer) -> OpaquePointer? {
+@_cdecl("device_get_zstencil_target_OLD")
+public func device_get_zstencil_target_OLD(device: UnsafeRawPointer) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     let stencilBuffer = device.state.stencilAttachment
@@ -50,6 +52,6 @@ public func device_get_zstencil_target(device: UnsafeRawPointer) -> OpaquePointe
 }
 
 @_cdecl("gs_zstencil_destroy")
-public func gs_zstencil_destroy(zstencil: UnsafeRawPointer) {
+public func gs_zstencil_destroy_OLD(zstencil: UnsafeRawPointer) {
     let _ = Unmanaged<MTLTexture>.fromOpaque(zstencil).takeRetainedValue()
 }

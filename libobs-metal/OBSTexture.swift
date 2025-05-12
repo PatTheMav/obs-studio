@@ -8,7 +8,7 @@
 import Foundation
 import Metal
 
-extension MetalDevice {
+extension MetalDeviceOLD {
     func makeTexture2D(
         width: Int, height: Int, pixelFormat: MTLPixelFormat, mipLevels: Int, renderTarget: Bool, mipmapped: Bool
     ) -> MTLTexture? {
@@ -127,8 +127,8 @@ class OBSTexture: Equatable {
 
 // MARK: libobs Graphics API
 
-@_cdecl("device_texture_create")
-public func device_texture_create(
+@_cdecl("device_texture_create_old")
+public func device_texture_create_old(
     device: UnsafeRawPointer, width: UInt32, height: UInt32, colorFormat: gs_color_format, levels: UInt32,
     textureData: UnsafePointer<UnsafePointer<UInt8>?>?, flags: UInt32
 ) -> OpaquePointer? {
@@ -200,13 +200,13 @@ public func device_voltexture_create(
     return nil
 }
 
-@_cdecl("gs_texture_destroy")
-public func gs_texture_destroy(texture: UnsafeRawPointer) {
+@_cdecl("gs_texture_destroy_OLD")
+public func gs_texture_destroy_OLD(texture: UnsafeRawPointer) {
     let _ = Unmanaged<OBSTexture>.fromOpaque(texture).takeRetainedValue()
 }
 
-@_cdecl("device_get_texture_type")
-public func device_get_texture_type(texture: UnsafeRawPointer) -> gs_texture_type {
+@_cdecl("device_get_texture_type_OLD")
+public func device_get_texture_type_OLD(texture: UnsafeRawPointer) -> gs_texture_type {
     let texture = Unmanaged<OBSTexture>.fromOpaque(texture).takeUnretainedValue()
 
     return texture.texture.textureType.toGSTextureType()
@@ -220,16 +220,16 @@ public func device_get_texture_type(texture: UnsafeRawPointer) -> gs_texture_typ
 ///   - device: Opaque pointer to ``MetalRenderer`` instance
 ///   - tex: Opaque pointer to  ``MetalResource`` instance
 ///   - unit: Texture unit for which the texture should be set up
-@_cdecl("device_load_texture")
-public func device_load_texture(device: UnsafeRawPointer, tex: UnsafeRawPointer, unit: Int) {
+@_cdecl("device_load_texture_OLD")
+public func device_load_texture_OLD(device: UnsafeRawPointer, tex: UnsafeRawPointer, unit: Int) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
     let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
     device.state.textures[unit] = texture.texture
 }
 
-@_cdecl("device_copy_texture_region")
-public func device_copy_texture_region(
+@_cdecl("device_copy_texture_region_OLD")
+public func device_copy_texture_region_OLD(
     device: UnsafeRawPointer, dst: UnsafeRawPointer, dst_x: UInt32, dst_y: UInt32, src: UnsafeRawPointer, src_x: UInt32,
     src_y: UInt32, src_w: UInt32, src_h: UInt32
 ) {
@@ -282,8 +282,8 @@ public func device_copy_texture_region(
     encoder.endEncoding()
 }
 
-@_cdecl("device_copy_texture")
-public func device_copy_texture(device: UnsafeRawPointer, dst: UnsafeRawPointer, src: UnsafeRawPointer) {
+@_cdecl("device_copy_texture_OLD")
+public func device_copy_texture_OLD(device: UnsafeRawPointer, dst: UnsafeRawPointer, src: UnsafeRawPointer) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
     let sourceTexture = Unmanaged<OBSTexture>.fromOpaque(src).takeUnretainedValue()
     let destinationTexture = Unmanaged<OBSTexture>.fromOpaque(dst).takeUnretainedValue()
@@ -296,13 +296,13 @@ public func device_copy_texture(device: UnsafeRawPointer, dst: UnsafeRawPointer,
     encoder.endEncoding()
 }
 
-@_cdecl("device_stage_texture")
-public func device_stage_texture(device: UnsafeRawPointer, dst: UnsafeRawPointer, src: UnsafeRawPointer) {
-    device_copy_texture(device: device, dst: dst, src: src)
+@_cdecl("device_stage_texture_OLD")
+public func device_stage_texture_OLD(device: UnsafeRawPointer, dst: UnsafeRawPointer, src: UnsafeRawPointer) {
+    device_copy_texture_OLD(device: device, dst: dst, src: src)
 }
 
-@_cdecl("gs_texture_get_width")
-public func gs_texture_get_width(tex: UnsafeRawPointer) -> UInt32 {
+@_cdecl("gs_texture_get_width_OLD")
+public func gs_texture_get_width_OLD(tex: UnsafeRawPointer) -> UInt32 {
     let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
     if texture.texture.textureType == .type2D {
@@ -312,8 +312,8 @@ public func gs_texture_get_width(tex: UnsafeRawPointer) -> UInt32 {
     return 0
 }
 
-@_cdecl("gs_texture_get_height")
-public func gs_texture_get_height(tex: UnsafeRawPointer) -> UInt32 {
+@_cdecl("gs_texture_get_height_OLD")
+public func gs_texture_get_height_OLD(tex: UnsafeRawPointer) -> UInt32 {
     let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
     if texture.texture.textureType == .type2D {
@@ -323,8 +323,8 @@ public func gs_texture_get_height(tex: UnsafeRawPointer) -> UInt32 {
     return 0
 }
 
-@_cdecl("gs_texture_get_color_format")
-public func gs_texture_get_color_format(tex: UnsafeRawPointer) -> gs_color_format {
+@_cdecl("gs_texture_get_color_format_OLD")
+public func gs_texture_get_color_format_OLD(tex: UnsafeRawPointer) -> gs_color_format {
     let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
     if texture.texture.textureType == .type2D {
@@ -334,8 +334,8 @@ public func gs_texture_get_color_format(tex: UnsafeRawPointer) -> gs_color_forma
     return GS_UNKNOWN
 }
 
-@_cdecl("gs_texture_map")
-public func gs_texture_map(
+@_cdecl("gs_texture_map_OLD")
+public func gs_texture_map_OLD(
     tex: UnsafeRawPointer, ptr: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>,
     linesize: UnsafeMutablePointer<UInt32>
 ) -> Bool {
@@ -347,25 +347,23 @@ public func gs_texture_map(
 
     let rowSize = texture.texture.width * texture.texture.pixelFormat.bitsPerPixel() / 8
     let dataSize = rowSize * texture.texture.height
-    let region = MTLRegionMake2D(0, 0, texture.texture.width, texture.texture.height)
 
     let textureData = UnsafeMutableRawBufferPointer.allocate(byteCount: dataSize, alignment: 8)
 
     if let textureData = textureData.baseAddress {
-        texture.texture.getBytes(textureData, bytesPerRow: rowSize, from: region, mipmapLevel: 0)
-
         ptr.pointee = textureData.assumingMemoryBound(to: UInt8.self)
         linesize.pointee = UInt32(rowSize)
 
         texture.data = textureData
+
         return true
     } else {
         return false
     }
 }
 
-@_cdecl("gs_texture_unmap")
-public func gs_texture_unmap(tex: UnsafeRawPointer) {
+@_cdecl("gs_texture_unmap_OLD")
+public func gs_texture_unmap_OLD(tex: UnsafeRawPointer) {
     let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
     guard texture.texture.textureType == .type2D else {
@@ -382,8 +380,8 @@ public func gs_texture_unmap(tex: UnsafeRawPointer) {
     }
 }
 
-@_cdecl("gs_texture_get_obj")
-public func gs_texture_get_obj(tex: UnsafeRawPointer) -> OpaquePointer? {
+@_cdecl("gs_texture_get_obj_OLD")
+public func gs_texture_get_obj_OLD(tex: UnsafeRawPointer) -> OpaquePointer? {
     let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
 
     guard texture.texture.textureType == .type2D else {
@@ -447,13 +445,13 @@ public func gs_voltexture_get_color_format(voltex: UnsafeRawPointer) -> gs_color
     return GS_UNKNOWN
 }
 
-@_cdecl("device_shared_texture_available")
-public func device_shared_texture_available(device: UnsafeRawPointer) -> Bool {
+@_cdecl("device_shared_texture_available_OLD")
+public func device_shared_texture_available_OLD(device: UnsafeRawPointer) -> Bool {
     return true
 }
 
-@_cdecl("device_texture_create_from_iosurface")
-public func device_texture_create_from_iosurface(device: UnsafeRawPointer, iosurf: IOSurfaceRef) -> OpaquePointer? {
+@_cdecl("device_texture_create_from_iosurface_OLD")
+public func device_texture_create_from_iosurface_OLD(device: UnsafeRawPointer, iosurf: IOSurfaceRef) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     guard let texture = device.makeTextureFromIOSurface(surface: iosurf) else {
@@ -468,8 +466,8 @@ public func device_texture_create_from_iosurface(device: UnsafeRawPointer, iosur
     return OpaquePointer(retained)
 }
 
-@_cdecl("gs_texture_rebind_iosurface")
-public func gs_texture_rebind_iosurface(texture: UnsafeRawPointer, iosurf: IOSurfaceRef) -> Bool {
+@_cdecl("gs_texture_rebind_iosurface_OLD")
+public func gs_texture_rebind_iosurface_OLD(texture: UnsafeRawPointer, iosurf: IOSurfaceRef) -> Bool {
     let obsTexture = Unmanaged<OBSTexture>.fromOpaque(texture).takeUnretainedValue()
     let device = obsTexture.device
 
@@ -483,8 +481,8 @@ public func gs_texture_rebind_iosurface(texture: UnsafeRawPointer, iosurf: IOSur
     return true
 }
 
-@_cdecl("device_texture_open_shared")
-public func device_texture_open_shared(device: UnsafeRawPointer, handle: UInt32) -> OpaquePointer? {
+@_cdecl("device_texture_open_shared_OLD")
+public func device_texture_open_shared_OLD(device: UnsafeRawPointer, handle: UInt32) -> OpaquePointer? {
     if let ref = IOSurfaceLookupFromMachPort(handle) {
         let texture = device_texture_create_from_iosurface(device: device, iosurf: ref)
 

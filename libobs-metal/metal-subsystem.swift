@@ -5,271 +5,9 @@
 //  Created by Patrick Heyer on 16.04.24.
 //
 
-import AppKit
 import Foundation
 import Metal
 import simd
-
-enum OBSLogLevel: Int32 {
-    case error = 100
-    case warning = 200
-    case info = 300
-    case debug = 400
-}
-
-func OBSLog(_ level: OBSLogLevel, _ format: String, _ args: CVarArg...) {
-    let logMessage = String.localizedStringWithFormat(format, args)
-
-    logMessage.withCString { cMessage in
-        withVaList([cMessage]) { arguments in
-            blogva(level.rawValue, "%s", arguments)
-        }
-    }
-}
-
-struct BufferQueue<T> {
-    private var elements: [T] = []
-
-    mutating func push(_ value: T) {
-        elements.append(value)
-    }
-
-    mutating func pop() -> T? {
-        guard !elements.isEmpty else {
-            return nil
-        }
-
-        return elements.removeFirst()
-    }
-
-    var head: T? {
-        return elements.first
-    }
-
-    var tail: T? {
-        return elements.last
-    }
-
-    var count: Int {
-        return elements.count
-    }
-}
-
-extension MTLPixelFormat {
-    func toGSColorFormat() -> gs_color_format {
-        switch self {
-        case .a8Unorm:
-            return GS_A8
-        case .r8Unorm:
-            return GS_R8
-        case .rgba8Unorm:
-            return GS_RGBA
-        case .bgra8Unorm:
-            return GS_BGRA
-        case .rgb10a2Unorm:
-            return GS_R10G10B10A2
-        case .rgba16Unorm:
-            return GS_RGBA16
-        case .r16Unorm:
-            return GS_R16
-        case .rgba16Float:
-            return GS_RGBA16F
-        case .rgba32Float:
-            return GS_RGBA32F
-        case .rg16Float:
-            return GS_RG16F
-        case .rg32Float:
-            return GS_RG32F
-        case .r16Float:
-            return GS_R16F
-        case .r32Float:
-            return GS_R32F
-        case .bc1_rgba:
-            return GS_DXT1
-        case .bc2_rgba:
-            return GS_DXT3
-        case .bc3_rgba:
-            return GS_DXT5
-        default:
-            return GS_UNKNOWN
-        }
-    }
-
-    func bitsPerPixel() -> Int {
-        switch self {
-        case .invalid:
-            return 0
-        case .a8Unorm, .r8Unorm, .r8Unorm_srgb, .r8Snorm, .r8Uint, .r8Sint:
-            return 8
-        case .r16Unorm, .r16Snorm, .r16Uint, .r16Sint, .r16Float:
-            return 16
-        case .rg8Unorm, .rg8Unorm_srgb, .rg8Snorm, .rg8Uint, .rg8Sint:
-            return 16
-        case .b5g6r5Unorm, .a1bgr5Unorm, .abgr4Unorm, .bgr5A1Unorm:
-            return 16
-        case .r32Uint, .r32Sint, .r32Float, .rg16Unorm, .rg16Snorm, .rg16Uint, .rg16Sint, .rg16Float:
-            return 32
-        case .rgba8Unorm, .rgba8Unorm_srgb, .rgba8Snorm, .rgba8Uint, .rgba8Sint, .bgra8Unorm, .bgra8Unorm_srgb:
-            return 32
-        case .bgr10_xr, .bgr10_xr_srgb, .rgb10a2Unorm, .rgb10a2Uint, .rg11b10Float, .rgb9e5Float, .bgr10a2Unorm:
-            return 32
-        case .bgra10_xr, .bgra10_xr_srgb, .rg32Uint, .rg32Sint, .rg32Float, .rgba16Unorm, .rgba16Snorm, .rgba16Uint,
-            .rgba16Sint, .rgba16Float:
-            return 64
-        case .rgba32Uint, .rgba32Sint, .rgba32Float:
-            return 128
-        case .bc1_rgba, .bc1_rgba_srgb:
-            return 64
-        case .bc2_rgba, .bc2_rgba_srgb, .bc3_rgba, .bc3_rgba_srgb:
-            return 128
-        case .bc4_rUnorm, .bc4_rSnorm:
-            return 8
-        case .bc5_rgUnorm, .bc5_rgSnorm:
-            return 16
-        case .bc6H_rgbFloat, .bc6H_rgbuFloat, .bc7_rgbaUnorm, .bc7_rgbaUnorm_srgb:
-            return 32
-        case .pvrtc_rgb_2bpp, .pvrtc_rgb_2bpp_srgb:
-            return 6
-        case .pvrtc_rgba_2bpp, .pvrtc_rgba_2bpp_srgb:
-            return 8
-        case .pvrtc_rgb_4bpp, .pvrtc_rgb_4bpp_srgb:
-            return 12
-        case .pvrtc_rgba_4bpp, .pvrtc_rgba_4bpp_srgb:
-            return 16
-        case .eac_r11Unorm, .eac_r11Snorm:
-            return 8
-        case .eac_rg11Unorm, .eac_rg11Snorm:
-            return 16
-        case .eac_rgba8, .eac_rgba8_srgb, .etc2_rgb8a1, .etc2_rgb8a1_srgb:
-            return 32
-        case .etc2_rgb8, .etc2_rgb8_srgb:
-            return 24
-        case .astc_4x4_srgb, .astc_5x4_srgb, .astc_5x5_srgb, .astc_6x5_srgb, .astc_6x6_srgb, .astc_8x5_srgb,
-            .astc_8x6_srgb, .astc_8x8_srgb, .astc_10x5_srgb, .astc_10x6_srgb, .astc_10x8_srgb, .astc_10x10_srgb,
-            .astc_12x10_srgb, .astc_12x12_srgb:
-            return 16
-        case .astc_4x4_ldr, .astc_5x4_ldr, .astc_5x5_ldr, .astc_6x5_ldr, .astc_6x6_ldr, .astc_8x5_ldr, .astc_8x6_ldr,
-            .astc_8x8_ldr, .astc_10x5_ldr, .astc_10x6_ldr, .astc_10x8_ldr, .astc_10x10_ldr, .astc_12x10_ldr,
-            .astc_12x12_ldr:
-            return 16
-        case .astc_4x4_hdr, .astc_5x4_hdr, .astc_5x5_hdr, .astc_6x5_hdr, .astc_6x6_hdr, .astc_8x5_hdr, .astc_8x6_hdr,
-            .astc_8x8_hdr, .astc_10x5_hdr, .astc_10x6_hdr, .astc_10x8_hdr, .astc_10x10_hdr, .astc_12x10_hdr,
-            .astc_12x12_hdr:
-            return 16
-        case .gbgr422, .bgrg422:
-            return 32
-        case .depth16Unorm:
-            return 16
-        case .depth32Float:
-            return 32
-        case .stencil8:
-            return 8
-        case .depth24Unorm_stencil8:
-            return 32
-        case .depth32Float_stencil8:
-            return 40
-        case .x32_stencil8:
-            return 40
-        case .x24_stencil8:
-            return 32
-        @unknown default:
-            fatalError("Unknown MTLPixelFormat")
-        }
-    }
-}
-
-extension MTLTextureType {
-    func toGSTextureType() -> gs_texture_type {
-        switch self {
-        case .type2D:
-            return GS_TEXTURE_2D
-        case .type3D:
-            return GS_TEXTURE_3D
-        case .typeCube:
-            return GS_TEXTURE_CUBE
-        default:
-            fatalError("Unsupported texture type")
-        }
-    }
-}
-
-extension MTLCullMode {
-    func toGSMode() -> gs_cull_mode {
-        switch self {
-        case .back:
-            return GS_BACK
-        case .front:
-            return GS_FRONT
-        case .none:
-            return GS_NEITHER
-        @unknown default:
-            fatalError("Metal: Unsupported cull mode \(self)")
-        }
-    }
-}
-
-extension MTLViewport: @retroactive Equatable {
-    public static func < (lhs: MTLViewport, rhs: MTLViewport) -> Bool {
-        return lhs != rhs
-    }
-
-    public static func == (lhs: MTLViewport, rhs: MTLViewport) -> Bool {
-        if lhs.width == rhs.width && lhs.height == rhs.height && lhs.originX == rhs.originX
-            && lhs.originY == rhs.originY
-        {
-            return true
-        } else {
-            return false
-        }
-    }
-}
-
-extension FourCharCode: @retroactive ExpressibleByStringLiteral {
-    public init(stringLiteral value: String) {
-        var code: FourCharCode = 0
-
-        if value.count == 4 && value.utf8.count == 4 {
-            for byte in value.utf8 {
-                code = code << 8 + FourCharCode(byte)
-            }
-        } else {
-            code = 0x3F_3F_3F_3F
-        }
-
-        self = code
-    }
-
-    public init(extendedGraphemeClusterLiteral value: String) {
-        self = FourCharCode(stringLiteral: value)
-    }
-
-    public var string: String? {
-        let cString: [CChar] = [
-            CChar(self >> 24 & 0xFF),
-            CChar(self >> 16 & 0xFF),
-            CChar(self >> 8 & 0xFF),
-            CChar(self & 0xFF),
-            0,
-        ]
-
-        return String(utf8String: cString)
-    }
-}
-
-extension FourCharCode {
-    func convertToGSFormat() -> gs_color_format {
-        switch self.string?.lowercased() {
-        case "bgra":
-            return GS_BGRA
-        case "w30r":
-            return GS_R10G10B10A2
-        case "l10r":
-            return GS_R10G10B10A2
-        default:
-            return GS_UNKNOWN
-        }
-    }
-}
 
 @_cdecl("device_get_name")
 public func device_get_name() -> UnsafePointer<CChar> {
@@ -337,7 +75,7 @@ public func device_leave_context(device: UnsafeMutableRawPointer) {
 
 @_cdecl("device_get_device_obj")
 public func device_get_device_obj(device: UnsafeMutableRawPointer) -> OpaquePointer? {
-    return nil
+    return OpaquePointer(device)
 }
 
 @_cdecl("device_blend_function")
@@ -355,43 +93,39 @@ public func device_blend_function(device: UnsafeRawPointer, src: gs_blend_type, 
 public func device_blend_function_separate(
     device: UnsafeRawPointer, src_c: gs_blend_type, dest_c: gs_blend_type, src_a: gs_blend_type, dest_a: gs_blend_type
 ) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.renderPipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = src_c.toMTLFactor()
-    device.state.renderPipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = src_a.toMTLFactor()
-    device.state.renderPipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = dest_c.toMTLFactor()
-    device.state.renderPipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = dest_c.toMTLFactor()
+    guard let pipelineDescriptor = metalDevice.renderState.pipelineDescriptor else {
+        return
+    }
+
+    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = src_c.toMTLFactor()
+    pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = src_a.toMTLFactor()
+    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = dest_c.toMTLFactor()
+    pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = dest_c.toMTLFactor()
 }
 
 @_cdecl("device_blend_op")
 public func device_blend_op(device: UnsafeRawPointer, op: gs_blend_op_type) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.renderPipelineDescriptor.colorAttachments[0].rgbBlendOperation = op.toMTLOperation()
+    guard let pipelineDescriptor = metalDevice.renderState.pipelineDescriptor else {
+        return
+    }
+
+    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = op.toMTLOperation()
 }
 
 @_cdecl("device_get_color_space")
 public func device_get_color_space(device: UnsafeRawPointer) -> gs_color_space {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    // TODO: IMPLEMENT
 
-    return device.state.gsColorSpace
+    return GS_CS_SRGB
 }
 
 @_cdecl("device_update_color_space")
 public func device_update_color_space(device: UnsafeRawPointer) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-
-    // TODO: Figure out sRGB stuff
-}
-
-@_cdecl("device_timer_create")
-public func device_timer_create(device: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("device_timer_range_create")
-public func device_timer_range_create(device: UnsafeRawPointer) {
-    return
+    // TODO: IMPLEMENT
 }
 
 @_cdecl("device_load_default_samplerstate")
@@ -401,58 +135,56 @@ public func device_load_default_samplerstate(device: UnsafeRawPointer, b_3d: Boo
 
 @_cdecl("device_get_render_target")
 public func device_get_render_target(device: UnsafeRawPointer) -> OpaquePointer? {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    if let renderTarget = device.state.renderTarget {
-        let unretained = Unmanaged.passUnretained(renderTarget).toOpaque()
-
-        return OpaquePointer(unretained)
-    } else {
+    guard let renderTarget = metalDevice.renderState.renderTarget else {
         return nil
     }
+
+    return renderTarget.getUnretained()
 }
 
 @_cdecl("device_set_render_target")
 public func device_set_render_target(device: UnsafeRawPointer, tex: UnsafeRawPointer?, zstencil: UnsafeRawPointer?) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     defer {
-        if device.state.renderTarget == nil {
-            device.state.renderPipelineDescriptor.colorAttachments[0].pixelFormat = .invalid
-            device.state.renderPassDescriptor.colorAttachments[0].texture = nil
+        if metalDevice.renderState.renderTarget == nil {
+            metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].pixelFormat = .invalid
+            metalDevice.renderState.renderPassDescriptor?.colorAttachments[0].texture = nil
         }
     }
 
     if let tex {
-        let texture = Unmanaged<OBSTexture>.fromOpaque(tex).takeUnretainedValue()
+        let metalTexture = Unmanaged<MetalTexture>.fromOpaque(tex).takeUnretainedValue()
 
-        device.state.renderTarget = texture
-        device.state.renderTargetId = 0
-        device.state.renderPipelineDescriptor.colorAttachments[0].pixelFormat = texture.texture.pixelFormat
-        device.state.renderPassDescriptor.colorAttachments[0].texture = texture.texture
+        metalDevice.renderState.renderTarget = metalTexture
+        metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].pixelFormat = metalTexture.texture.pixelFormat
+        metalDevice.renderState.renderPassDescriptor?.colorAttachments[0].texture = metalTexture.texture
     } else {
-        device.state.renderTarget = nil
+        metalDevice.renderState.renderTarget = nil
     }
 
     defer {
-        if device.state.stencilAttachment == nil {
-            device.state.renderPipelineDescriptor.depthAttachmentPixelFormat = .invalid
-            device.state.renderPipelineDescriptor.stencilAttachmentPixelFormat = .invalid
-            device.state.renderPassDescriptor.depthAttachment.texture = nil
-            device.state.renderPassDescriptor.stencilAttachment.texture = nil
+        if metalDevice.renderState.stencilAttachment == nil {
+            metalDevice.renderState.pipelineDescriptor?.depthAttachmentPixelFormat = .invalid
+            metalDevice.renderState.pipelineDescriptor?.stencilAttachmentPixelFormat = .invalid
+            metalDevice.renderState.renderPassDescriptor?.depthAttachment.texture = nil
+            metalDevice.renderState.renderPassDescriptor?.stencilAttachment.texture = nil
         }
     }
 
     if let zstencil {
-        let stencilAttachment = Unmanaged<MTLTexture>.fromOpaque(zstencil).takeUnretainedValue()
+        let zstencilAttachment = Unmanaged<MetalTexture>.fromOpaque(zstencil).takeUnretainedValue()
 
-        device.state.stencilAttachment = stencilAttachment
-        device.state.renderPipelineDescriptor.depthAttachmentPixelFormat = stencilAttachment.pixelFormat
-        device.state.renderPipelineDescriptor.stencilAttachmentPixelFormat = stencilAttachment.pixelFormat
-        device.state.renderPassDescriptor.depthAttachment.texture = stencilAttachment
-        device.state.renderPassDescriptor.stencilAttachment.texture = stencilAttachment
+        metalDevice.renderState.stencilAttachment = zstencilAttachment
+        metalDevice.renderState.pipelineDescriptor?.depthAttachmentPixelFormat = zstencilAttachment.texture.pixelFormat
+        metalDevice.renderState.pipelineDescriptor?.stencilAttachmentPixelFormat =
+            zstencilAttachment.texture.pixelFormat
+        metalDevice.renderState.renderPassDescriptor?.depthAttachment.texture = zstencilAttachment.texture
+        metalDevice.renderState.renderPassDescriptor?.stencilAttachment.texture = zstencilAttachment.texture
     } else {
-        device.state.stencilAttachment = nil
+        metalDevice.renderState.stencilAttachment = nil
     }
 }
 
@@ -466,65 +198,48 @@ public func device_set_render_target_with_color_space(
         zstencil: zstencil
     )
 
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-    device.state.gsColorSpace = space
+    // TODO: IMPLEMENT
 }
 
 @_cdecl("device_enable_framebuffer_srgb")
 public func device_enable_framebuffer_srgb(device: UnsafeRawPointer, enable: Bool) {
-    // TODO: Figure out what to do
-
+    // TODO: IMPLEMENT
     return
 }
 
 @_cdecl("device_framebuffer_srgb_enabled")
 public func device_framebuffer_srgb_enabled(device: UnsafeRawPointer) -> Bool {
-    // TODO: Figure out what to do
+    // TODO: IMPLEMENT
     return false
-}
-
-@_cdecl("device_begin_frame")
-public func device_begin_frame(device: UnsafeRawPointer) {
-    return
 }
 
 @_cdecl("device_begin_scene")
 public func device_begin_scene(device: UnsafeRawPointer) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.commandBuffer = device.commandQueue.makeCommandBuffer()
+    metalDevice.makeCommandBuffer()
 }
 
 @_cdecl("device_draw")
 public func device_draw(device: UnsafeRawPointer, drawMode: gs_draw_mode, startVertex: UInt32, numVertices: UInt32) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.draw(
-        primitiveType: drawMode.toMTLPrimitiveType(), vertexStart: Int(startVertex), vertexCount: Int(numVertices))
-}
-
-@_cdecl("device_end_scene")
-public func device_end_scene(device: UnsafeRawPointer) {
-    return
+    metalDevice.draw(
+        primitiveType: drawMode.toMTLPrimitiveType(),
+        vertexStart: Int(startVertex),
+        vertexCount: Int(numVertices)
+    )
 }
 
 @_cdecl("device_clear")
 public func device_clear(
     device: UnsafeRawPointer, clearFlags: UInt32, color: UnsafePointer<vec4>, depth: Float, stencil: UInt8
 ) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    var clearState = MetalState.ClearState(
-        colorAction: .load,
-        depthAction: .load,
-        stencilAction: .load,
-        clearColor: nil,
-        clearDepth: 0.0,
-        clearStencil: 0,
-        clearTarget: device.state.renderTarget
-    )
+    var clearState = MetalRenderState.ClearState()
 
-    if device.state.renderTarget != nil {
+    if metalDevice.renderState.renderTarget != nil {
         if (Int32(clearFlags) & GS_CLEAR_COLOR) == 1 {
             clearState.colorAction = .clear
             clearState.clearColor = MTLClearColor(
@@ -536,7 +251,7 @@ public func device_clear(
         }
     }
 
-    if device.state.stencilAttachment != nil {
+    if metalDevice.renderState.stencilAttachment != nil {
         if (Int32(clearFlags) & GS_CLEAR_DEPTH) == 1 {
             clearState.clearDepth = Double(depth)
             clearState.depthAction = .clear
@@ -548,8 +263,8 @@ public func device_clear(
         }
     }
 
-    device.clearState = clearState
-    device.state.clearTarget = device.state.renderTarget
+    metalDevice.renderState.clearState = clearState
+    metalDevice.renderState.clearTarget = metalDevice.renderState.renderTarget
 }
 
 @_cdecl("device_is_present_ready")
@@ -559,85 +274,73 @@ public func device_is_present_ready(device: UnsafeRawPointer) -> Bool {
 
 @_cdecl("device_present")
 public func device_present(device: UnsafeRawPointer) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    device_flush(device: device)
 
-    guard let layer = device.state.layer, let drawable = layer.nextDrawable else {
-        preconditionFailure("device_present (Metal): No drawable for layer available")
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+
+    guard let swapChain = metalDevice.renderState.swapChain else {
+        return
     }
 
-    defer {
-        device.state.commandBuffer = nil
-        device.state.numDraws = 0
-
-        layer.nextDrawable = nil
-        device.state.layer = nil
-    }
-
-    device.state.commandBuffer?.present(drawable)
-
-    device.state.commandBuffer?.commit()
+    swapChain.update()
 }
 
 @_cdecl("device_flush")
-public func device_flush(devicePointer: UnsafeRawPointer) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_flush(device: UnsafeRawPointer) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.commandBuffer?.commit()
-    device.state.commandBuffer?.waitUntilCompleted()
-
-    device.state.commandBuffer = nil
-    device.state.numDraws = 0
+    metalDevice.renderState.commandBuffer?.commit()
+    metalDevice.renderState.commandBuffer?.waitUntilCompleted()
+    metalDevice.renderState.commandBuffer = nil
 }
 
 @_cdecl("device_set_cull_mode")
-public func device_set_cull_mode(devicePointer: UnsafeRawPointer, mode: gs_cull_mode) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_set_cull_mode(device: UnsafeRawPointer, mode: gs_cull_mode) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.cullMode = mode.toMTLMode()
+    metalDevice.renderState.cullMode = mode.toMTLMode()
 }
 
 @_cdecl("device_get_cull_mode")
-public func device_get_cull_mode(devicePointer: UnsafeRawPointer) -> gs_cull_mode {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_get_cull_mode(device: UnsafeRawPointer) -> gs_cull_mode {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    return device.state.cullMode.toGSMode()
+    return metalDevice.renderState.cullMode.toGSMode()
 }
 
 @_cdecl("device_enable_blending")
-public func device_enable_blending(devicePointer: UnsafeRawPointer, enable: Bool) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_enable_blending(device: UnsafeRawPointer, enable: Bool) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.renderPipelineDescriptor.colorAttachments[0].isBlendingEnabled = enable
+    metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].isBlendingEnabled = enable
 }
 
 @_cdecl("device_enable_depth_test")
-public func device_enable_depth_test(devicePointer: UnsafeRawPointer, enable: Bool) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
-    device.state.depthTestEnabled = enable
-    device.state.depthStencilDescriptor.isDepthWriteEnabled = enable
+public func device_enable_depth_test(device: UnsafeRawPointer, enable: Bool) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+
+    metalDevice.renderState.depthStencilDescriptor?.isDepthWriteEnabled = enable
 }
 
 @_cdecl("device_enable_stencil_test")
-public func device_enable_stencil_test(devicePointer: UnsafeRawPointer, enable: Bool) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_enable_stencil_test(device: UnsafeRawPointer, enable: Bool) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.stencilTestEnabled = enable
-    device.state.depthStencilDescriptor.frontFaceStencil.readMask = enable ? 1 : 0
-    device.state.depthStencilDescriptor.backFaceStencil.readMask = enable ? 1 : 0
+    metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.readMask = enable ? 1 : 0
+    metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.readMask = enable ? 1 : 0
 }
 
 @_cdecl("device_enable_stencil_write")
-public func device_enable_stencil_write(devicePointer: UnsafeRawPointer, enable: Bool) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_enable_stencil_write(device: UnsafeRawPointer, enable: Bool) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.stencilWriteTestEnabled = enable
-    device.state.depthStencilDescriptor.frontFaceStencil.writeMask = enable ? 1 : 0
-    device.state.depthStencilDescriptor.backFaceStencil.writeMask = enable ? 1 : 0
+    metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.writeMask = enable ? 1 : 0
+    metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.writeMask = enable ? 1 : 0
 }
 
 @_cdecl("device_enable_color")
-public func device_enable_color(devicePointer: UnsafeRawPointer, red: Bool, green: Bool, blue: Bool, alpha: Bool) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_enable_color(device: UnsafeRawPointer, red: Bool, green: Bool, blue: Bool, alpha: Bool) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     var colorMask = MTLColorWriteMask()
 
@@ -657,100 +360,122 @@ public func device_enable_color(devicePointer: UnsafeRawPointer, red: Bool, gree
         colorMask.insert(.alpha)
     }
 
-    device.state.renderPipelineDescriptor.colorAttachments[0].writeMask = colorMask
+    metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].writeMask = colorMask
 }
 
 @_cdecl("device_depth_function")
-public func device_depth_function(devicePointer: UnsafeRawPointer, test: gs_depth_test) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_depth_function(device: UnsafeRawPointer, test: gs_depth_test) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.state.depthStencilDescriptor.depthCompareFunction = test.toMTLFunction()
+    metalDevice.renderState.depthStencilDescriptor?.depthCompareFunction = test.toMTLFunction()
 }
 
 @_cdecl("device_stencil_function")
-public func device_stencil_function(devicePointer: UnsafeRawPointer, side: gs_stencil_side, test: gs_depth_test) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_stencil_function(device: UnsafeRawPointer, side: gs_stencil_side, test: gs_depth_test) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     let function = test.toMTLFunction()
 
     if side == GS_STENCIL_FRONT {
-        device.state.depthStencilDescriptor.frontFaceStencil.stencilCompareFunction = function
-        device.state.depthStencilDescriptor.backFaceStencil.stencilCompareFunction = .never
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.stencilCompareFunction = function
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.stencilCompareFunction = .never
     } else if side == GS_STENCIL_BACK {
-        device.state.depthStencilDescriptor.frontFaceStencil.stencilCompareFunction = .never
-        device.state.depthStencilDescriptor.backFaceStencil.stencilCompareFunction = function
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.stencilCompareFunction = .never
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.stencilCompareFunction = function
+    } else {
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.stencilCompareFunction = function
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.stencilCompareFunction = function
     }
 }
 
 @_cdecl("device_stencil_op")
 public func device_stencil_op(
-    devicePointer: UnsafeRawPointer, side: gs_stencil_side, fail: gs_stencil_op_type, zfail: gs_stencil_op_type,
+    device: UnsafeRawPointer, side: gs_stencil_side, fail: gs_stencil_op_type, zfail: gs_stencil_op_type,
     zpass: gs_stencil_op_type
 ) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     if side == GS_STENCIL_FRONT {
-        device.state.depthStencilDescriptor.frontFaceStencil.stencilFailureOperation = fail.toMTLOperation()
-        device.state.depthStencilDescriptor.frontFaceStencil.depthFailureOperation = zfail.toMTLOperation()
-        device.state.depthStencilDescriptor.frontFaceStencil.depthStencilPassOperation = zpass.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.stencilFailureOperation = fail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.depthFailureOperation = zfail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.depthStencilPassOperation =
+            zpass.toMTLOperation()
 
-        device.state.depthStencilDescriptor.backFaceStencil.stencilFailureOperation = .keep
-        device.state.depthStencilDescriptor.backFaceStencil.depthFailureOperation = .keep
-        device.state.depthStencilDescriptor.backFaceStencil.depthStencilPassOperation = .keep
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.stencilFailureOperation = .keep
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.depthFailureOperation = .keep
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.depthStencilPassOperation = .keep
     } else if side == GS_STENCIL_BACK {
-        device.state.depthStencilDescriptor.frontFaceStencil.stencilFailureOperation = .keep
-        device.state.depthStencilDescriptor.frontFaceStencil.depthFailureOperation = .keep
-        device.state.depthStencilDescriptor.frontFaceStencil.depthStencilPassOperation = .keep
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.stencilFailureOperation = .keep
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.depthFailureOperation = .keep
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.depthStencilPassOperation = .keep
 
-        device.state.depthStencilDescriptor.backFaceStencil.stencilFailureOperation = fail.toMTLOperation()
-        device.state.depthStencilDescriptor.backFaceStencil.depthFailureOperation = zfail.toMTLOperation()
-        device.state.depthStencilDescriptor.backFaceStencil.depthStencilPassOperation = zpass.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.stencilFailureOperation = fail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.depthFailureOperation = zfail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.depthStencilPassOperation =
+            zpass.toMTLOperation()
+    } else {
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.stencilFailureOperation = fail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.depthFailureOperation = zfail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.frontFaceStencil.depthStencilPassOperation =
+            zpass.toMTLOperation()
+
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.stencilFailureOperation = fail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.depthFailureOperation = zfail.toMTLOperation()
+        metalDevice.renderState.depthStencilDescriptor?.backFaceStencil.depthStencilPassOperation =
+            zpass.toMTLOperation()
     }
 }
 
 @_cdecl("device_set_viewport")
-public func device_set_viewport(devicePointer: UnsafeRawPointer, x: Int32, y: Int32, width: Int32, height: Int32) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_set_viewport(device: UnsafeRawPointer, x: Int32, y: Int32, width: Int32, height: Int32) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     let viewPort = MTLViewport(
-        originX: Double(x), originY: Double(y), width: Double(width), height: Double(height), znear: 0.0, zfar: 1.0)
+        originX: Double(x),
+        originY: Double(y),
+        width: Double(width),
+        height: Double(height),
+        znear: 0.0,
+        zfar: 1.0
+    )
 
-    device.state.viewPort = viewPort
+    metalDevice.renderState.viewPort = viewPort
 }
 
 @_cdecl("device_get_viewport")
-public func device_get_viewport(devicePointer: UnsafeRawPointer, rect: UnsafeMutablePointer<gs_rect>) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_get_viewport(device: UnsafeRawPointer, rect: UnsafeMutablePointer<gs_rect>) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    rect.pointee.x = Int32(device.state.viewPort.originX)
-    rect.pointee.y = Int32(device.state.viewPort.originY)
-    rect.pointee.cx = Int32(device.state.viewPort.width)
-    rect.pointee.cy = Int32(device.state.viewPort.height)
+    rect.pointee.x = Int32(metalDevice.renderState.viewPort.originX)
+    rect.pointee.y = Int32(metalDevice.renderState.viewPort.originY)
+    rect.pointee.cx = Int32(metalDevice.renderState.viewPort.width)
+    rect.pointee.cy = Int32(metalDevice.renderState.viewPort.height)
 }
 
 @_cdecl("device_set_scissor_rect")
-public func device_set_scissor_rect(devicePointer: UnsafeRawPointer, rect: UnsafePointer<gs_rect>?) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_set_scissor_rect(device: UnsafeRawPointer, rect: UnsafePointer<gs_rect>?) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     if let rect {
-        device.state.scissorRect = rect.pointee.toMTLScissorRect()
-        device.state.scissorEnabled = true
+        metalDevice.renderState.scissorRect = rect.pointee.toMTLScissorRect()
+        metalDevice.renderState.scissorRectEnabled = true
     } else {
-        device.state.scissorEnabled = false
+        metalDevice.renderState.scissorRect = nil
+        metalDevice.renderState.scissorRectEnabled = false
     }
 }
 
 @_cdecl("device_ortho")
 public func device_ortho(
-    devicePointer: UnsafeRawPointer, left: Float, right: Float, top: Float, bottom: Float, near: Float, far: Float
+    device: UnsafeRawPointer, left: Float, right: Float, top: Float, bottom: Float, near: Float, far: Float
 ) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     let rml = right - left
     let bmt = bottom - top
     let fmn = far - near
 
-    device.state.projectionMatrix = matrix_float4x4(
+    metalDevice.renderState.projectionMatrix = matrix_float4x4(
         rows: [
             SIMD4((2.0 / rml), 0.0, 0.0, 0.0),
             SIMD4(0.0, (2.0 / -bmt), 0.0, 0.0),
@@ -762,15 +487,15 @@ public func device_ortho(
 
 @_cdecl("device_frustum")
 public func device_frustum(
-    devicePointer: UnsafeRawPointer, left: Float, right: Float, top: Float, bottom: Float, near: Float, far: Float
+    device: UnsafeRawPointer, left: Float, right: Float, top: Float, bottom: Float, near: Float, far: Float
 ) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     let rml = right - left
     let tmb = top - bottom
     let fmn = far - near
 
-    device.state.projectionMatrix = matrix_float4x4(
+    metalDevice.renderState.projectionMatrix = matrix_float4x4(
         columns: (
             SIMD4(((2 * near) / rml), 0.0, 0.0, 0.0),
             SIMD4(0.0, ((2 * near) / tmb), 0.0, 0.0),
@@ -781,84 +506,23 @@ public func device_frustum(
 }
 
 @_cdecl("device_projection_push")
-public func device_projection_push(devicePointer: UnsafeRawPointer) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_projection_push(device: UnsafeRawPointer) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.projectionStack.push(device.state.projectionMatrix)
+    metalDevice.renderState.projections.insert(metalDevice.renderState.projectionMatrix, at: 0)
 }
 
 @_cdecl("device_projection_pop")
-public func device_projection_pop(devicePointer: UnsafeRawPointer) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(devicePointer).takeUnretainedValue()
+public func device_projection_pop(device: UnsafeRawPointer) {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    guard device.projectionStack.count > 0 else {
-        assertionFailure("device_projection_pop (Metal): Projection matrix stack is empty")
-        return
-    }
-
-    device.state.projectionMatrix = device.projectionStack.pop()!
-}
-
-@_cdecl("gs_timer_destroy")
-public func gs_timer_destroy(timer: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("gs_timer_begin")
-public func gs_timer_begin(timer: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("gs_timer_end")
-public func gs_timer_end(timer: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("gs_timer_get_data")
-public func gs_timer_get_data(timer: UnsafeRawPointer) -> Bool {
-    return false
-}
-
-@_cdecl("gs_timer_range_destroy")
-public func gs_timer_range_destroy(range: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("gs_timer_range_begin")
-public func gs_timer_range_begin(range: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("gs_timer_range_end")
-public func gs_timer_range_end(range: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("gs_timer_range_get_data")
-public func gs_timer_range_get_data(range: UnsafeRawPointer, disjoint: Bool, frequency: UInt64) -> Bool {
-    return false
+    metalDevice.renderState.projectionMatrix = metalDevice.renderState.projections.removeFirst()
 }
 
 @_cdecl("device_is_monitor_hdr")
 public func device_is_monitor_hdr(device: UnsafeRawPointer) -> Bool {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
+    // TODO: IMPLEMENT
     return false
-}
-
-@_cdecl("device_debug_marker_begin")
-public func device_debug_marker_begin(device: UnsafeRawPointer, monitor: UnsafeMutableRawPointer) {
-    return
-}
-
-@_cdecl("device_debug_marker_end")
-public func device_debug_marker_end(device: UnsafeRawPointer) {
-    return
-}
-
-@_cdecl("device_set_cube_render_target")
-public func device_set_cube_render_target(
-    device: UnsafeRawPointer, cubetex: UnsafeRawPointer, side: Int, zstencil: UnsafeRawPointer
-) {
-    return
 }

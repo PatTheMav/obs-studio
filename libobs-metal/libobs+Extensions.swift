@@ -5,7 +5,25 @@
 //  Created by Patrick Heyer on 16.04.24.
 //
 
+import Foundation
 import Metal
+
+public enum OBSLogLevel: Int32 {
+    case error = 100
+    case warning = 200
+    case info = 300
+    case debug = 400
+}
+
+public func OBSLog(_ level: OBSLogLevel, _ format: String, _ args: CVarArg...) {
+    let logMessage = String.localizedStringWithFormat(format, args)
+
+    logMessage.withCString { cMessage in
+        withVaList([cMessage]) { arguments in
+            blogva(level.rawValue, "%s", arguments)
+        }
+    }
+}
 
 extension strref {
     mutating func getString() -> String {
@@ -89,7 +107,9 @@ extension gs_shader_param_type {
             return MemoryLayout<Float32>.size * 4
         case GS_SHADER_PARAM_MATRIX4X4:
             return MemoryLayout<Float32>.size * 4 * 4
-        case GS_SHADER_PARAM_TEXTURE, GS_SHADER_PARAM_STRING, GS_SHADER_PARAM_UNKNOWN:
+        case GS_SHADER_PARAM_TEXTURE:
+            return MemoryLayout<gs_shader_texture>.size
+        case GS_SHADER_PARAM_STRING, GS_SHADER_PARAM_UNKNOWN:
             return 0
         default:
             return 0

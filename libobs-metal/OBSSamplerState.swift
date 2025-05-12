@@ -11,7 +11,7 @@ import Metal
 // MARK: libobs Graphics API
 
 @_cdecl("device_samplerstate_create")
-public func device_samplerstate_create(device: UnsafeRawPointer, info: gs_sampler_info) -> OpaquePointer? {
+public func device_samplerstate_create_OLD(device: UnsafeRawPointer, info: gs_sampler_info) -> OpaquePointer? {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     let descriptor = MTLSamplerDescriptor()
@@ -43,7 +43,7 @@ public func device_samplerstate_create(device: UnsafeRawPointer, info: gs_sample
 }
 
 @_cdecl("gs_samplerstate_destroy")
-public func gs_samplerstate_destroy(samplerState: UnsafeRawPointer) {
+public func gs_samplerstate_destroy_OLD(samplerState: UnsafeRawPointer) {
     let _ = Unmanaged<MTLSamplerState>.fromOpaque(samplerState).takeRetainedValue()
 }
 
@@ -58,7 +58,7 @@ public func gs_samplerstate_destroy(samplerState: UnsafeRawPointer) {
 ///   - ss: Opaque pointer to ``MetalResource`` instance
 ///   - unit: Texture unit for which the texture should be set up
 @_cdecl("device_load_samplerstate")
-public func device_load_samplerstate(device: UnsafeRawPointer, ss: UnsafeRawPointer, unit: Int) {
+public func device_load_samplerstate_OLD(device: UnsafeRawPointer, ss: UnsafeRawPointer, unit: Int) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
     let samplerState = Unmanaged<MTLSamplerState>.fromOpaque(ss).takeUnretainedValue()
 

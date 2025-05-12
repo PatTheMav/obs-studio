@@ -8,20 +8,30 @@ target_sources(
   PRIVATE
     libobs-metal-Bridging-Header.h
     metal-subsystem.swift
-    OBSBlendState.swift
-    OBSIndexBuffer.swift
-    OBSMetalDevice.swift
-    OBSResourceCollection.swift
-    OBSSamplerState.swift
+    MetalDevice.swift
+    MetalTexture.swift
+    MetalRenderState.swift
+    MetalBuffer.swift
+    MetalShader.swift
+    MetalShader+Extensions.swift
     OBSShader.swift
-    OBSStageSurface.swift
+    metal-stagesurf.swift
+    metal-texture2d.swift
+    metal-texture3d.swift
+    metal-indexbuffer.swift
+    metal-vertexbuffer.swift
+    metal-samplerstate.swift
+    metal-zstencilbuffer.swift
+    metal-swapchain.swift
+    metal-shader.swift
+    metal-unimplemented.swift
     OBSSwapChain.swift
-    OBSTexture.swift
-    OBSVertexBuffer.swift
-    OBSZStencilBuffer.swift
-    OBSShaderParser.swift
     libobs+Extensions.swift
     Sequence+Hashable.swift
+    MTLPixelFormat+Extensions.swift
+    MTLTextureType+Extensions.swift
+    MTLCullMode+Extensions.swift
+    MTLViewport+Extensions.swift
 )
 
 target_link_libraries(libobs-metal PRIVATE OBS::libobs)

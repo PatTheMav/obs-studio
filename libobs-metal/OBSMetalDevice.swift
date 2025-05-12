@@ -92,7 +92,7 @@ struct MetalState {
     var numDraws = 0
 }
 
-class MetalDevice {
+class MetalDeviceOLD {
     typealias MetalLayer = MetalState.MetalLayer
 
     var device: MTLDevice
@@ -339,15 +339,5 @@ class MetalDevice {
         }
 
         commandEncoder.endEncoding()
-    }
-}
-
-extension MetalDevice {
-    enum BufferType {
-        case vertex
-        case normal
-        case tangent
-        case color
-        case texcoord
     }
 }
