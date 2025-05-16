@@ -40,10 +40,10 @@ public func device_load_indexbuffer(device: UnsafeRawPointer, indexbuffer: Unsaf
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     if let indexbuffer {
-        device.renderState.currentIndexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexbuffer)
+        device.renderState.indexBuffer = Unmanaged<MetalIndexBuffer>.fromOpaque(indexbuffer)
             .takeUnretainedValue()
     } else {
-        device.renderState.currentIndexBuffer = nil
+        device.renderState.indexBuffer = nil
     }
 }
 

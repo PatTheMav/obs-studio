@@ -29,15 +29,14 @@ public func device_texture_create(
         type: .type2D,
         width: Int(width),
         height: Int(height),
+        depth: 0,
         pixelFormat: color_format.toMTLFormat(),
         mipmapLevels: Int(levels),
         isRenderTarget: (Int32(flags) & GS_RENDER_TARGET) != 0,
         isMipMapped: (Int32(flags) & GS_BUILD_MIPMAPS) != 0
     )
 
-    let metalTexture = MetalTexture(device: metalDevice, description: description)
-
-    guard let metalTexture else {
+    guard let metalTexture = MetalTexture(device: metalDevice, description: description) else {
         return nil
     }
 
@@ -48,8 +47,37 @@ public func device_texture_create(
     return metalTexture.getRetained()
 }
 
-@_cdecl("device_texture_destroy")
-public func device_texture_destroy(texture: UnsafeRawPointer) {
+@_cdecl("device_cubetexture_create")
+public func device_cubetexture_create(
+    device: UnsafeRawPointer, size: UInt32, color_format: gs_color_format, levels: UInt32,
+    data: UnsafePointer<UnsafePointer<UInt8>?>?, flags: UInt32
+) -> OpaquePointer? {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+
+    let description = MetalTextureDescription(
+        type: .typeCube,
+        width: Int(size),
+        height: Int(size),
+        depth: 0,
+        pixelFormat: color_format.toMTLFormat(),
+        mipmapLevels: Int(levels),
+        isRenderTarget: (Int32(flags) & GS_RENDER_TARGET) != 0,
+        isMipMapped: (Int32(flags) & GS_BUILD_MIPMAPS) != 0
+    )
+
+    guard let metalTexture = MetalTexture(device: metalDevice, description: description) else {
+        return nil
+    }
+
+    if let data {
+        metalTexture.upload(data: data, mipmapLevels: description.mipmapLevels)
+    }
+
+    return metalTexture.getRetained()
+}
+
+@_cdecl("gs_texture_destroy")
+public func gs_texture_destroy(texture: UnsafeRawPointer) {
     let _ = Unmanaged<MetalTexture>.fromOpaque(texture).takeRetainedValue()
 }
 
@@ -73,7 +101,6 @@ public func device_copy_texture_region(
     device: UnsafeRawPointer, dst: UnsafeRawPointer, dst_x: UInt32, dst_y: UInt32, src: UnsafeRawPointer, src_x: UInt32,
     src_y: UInt32, src_w: UInt32, src_h: UInt32
 ) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
     let source = Unmanaged<MetalTexture>.fromOpaque(src).takeUnretainedValue()
     let destination = Unmanaged<MetalTexture>.fromOpaque(dst).takeUnretainedValue()
 
@@ -86,7 +113,6 @@ public func device_copy_texture_region(
 
 @_cdecl("device_copy_texture")
 public func device_copy_texture(device: UnsafeRawPointer, dst: UnsafeRawPointer, src: UnsafeRawPointer) {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
     let source = Unmanaged<MetalTexture>.fromOpaque(src).takeUnretainedValue()
     let destination = Unmanaged<MetalTexture>.fromOpaque(dst).takeUnretainedValue()
 
@@ -166,6 +192,25 @@ public func gs_texture_get_obj(tex: UnsafeRawPointer) -> OpaquePointer {
     let unretained = Unmanaged.passUnretained(texture.texture).toOpaque()
 
     return OpaquePointer(unretained)
+}
+
+@_cdecl("gs_cubetexture_destroy")
+public func gs_cubetexture_destroy(cubetex: UnsafeRawPointer) {
+    let _ = Unmanaged<MetalTexture>.fromOpaque(cubetex).takeRetainedValue()
+}
+
+@_cdecl("gs_cubetexture_get_size")
+public func gs_cubetexture_get_size(cubetex: UnsafeRawPointer) -> UInt32 {
+    let texture = Unmanaged<MetalTexture>.fromOpaque(cubetex).takeUnretainedValue()
+
+    return UInt32(texture.texture.width)
+}
+
+@_cdecl("gs_cubetexture_get_color_format")
+public func gs_cubetexture_get_color_format(cubetex: UnsafeRawPointer) -> gs_color_format {
+    let texture = Unmanaged<MetalTexture>.fromOpaque(cubetex).takeUnretainedValue()
+
+    return texture.texture.pixelFormat.toGSColorFormat()
 }
 
 @_cdecl("device_shared_texture_available")

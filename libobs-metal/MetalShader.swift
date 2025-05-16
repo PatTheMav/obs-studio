@@ -81,6 +81,7 @@ class MetalShader {
     let function: MTLFunction
     var uniforms: [ShaderUniform]
     var vertexDescriptor: MTLVertexDescriptor?
+    var textureCount = 0
     var samplers: [MTLSamplerState]?
 
     let type: MTLFunctionType
@@ -99,6 +100,7 @@ class MetalShader {
                 data.bufferSize
             }
         self.uniformData = [UInt8](repeating: 0, count: self.uniformSize)
+        self.textureCount = data.textureCount
 
         switch type {
         case .vertex:
@@ -107,7 +109,7 @@ class MetalShader {
                 return nil
             }
 
-            self.vertexDescriptor = data.vertexDescriptor
+            self.vertexDescriptor = descriptor
         case .fragment:
             guard let samplerDescriptors = data.samplerDescriptors else {
                 assertionFailure("MetalShader: Attempted to create fragment shader without sampler descriptors")

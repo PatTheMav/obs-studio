@@ -118,7 +118,7 @@ private struct MSLTemplates {
         } [typename];
         """
 
-    static let function = "[decorator] [type] [name] ([parameters]) {[content]}"
+    static let function = "[decorator] [type] [name]([parameters]) {[content]}"
 }
 
 class OBSShader {
@@ -200,7 +200,11 @@ class OBSShader {
 
             let gsType = get_shader_param_type(uniform.gsVariable.pointee.type)
             let isTexture = uniform.storageType.contains(.typeTexture)
-            let byteSize = gsType.getSize()
+            let byteSize =
+                switch isTexture {
+                case true: 0
+                case false: gsType.getSize()
+                }
 
             if (uniformBufferSize & 15) != 0 {
                 let alignment = (uniformBufferSize + 15) & ~15
@@ -236,7 +240,8 @@ class OBSShader {
         }
 
         guard let mainFunction = functions["main"] else {
-            preconditionFailure("No main function in OBS shader")
+            assertionFailure("No main function in OBS shader")
+            return nil
         }
 
         let parameterMapper = { (mapping: String) -> MetalBuffer.BufferDataType? in
@@ -524,7 +529,7 @@ class OBSShader {
                 let parameter: UnsafeMutablePointer<shader_var>? = function.pointee.params.array.advanced(by: j)
 
                 guard let parameter, let parameterName = parameter.pointee.name,
-                    let parameterType = parameter.pointee.mapping
+                    let parameterType = parameter.pointee.type
                 else {
                     throw ParserError.parseFail
                 }
@@ -725,7 +730,7 @@ class OBSShader {
                 for suffix in ["_In", "_Out"] {
                     var variables = [String]()
 
-                    for var (structVariableId, structVariable) in shaderStruct.members.enumerated() {
+                    for (structVariableId, var structVariable) in shaderStruct.members.enumerated() {
                         let variableString: String
 
                         switch suffix {
@@ -761,7 +766,7 @@ class OBSShader {
             } else {
                 var variables = [String]()
 
-                for var (structVariableId, structVariable) in shaderStruct.members.enumerated() {
+                for (structVariableId, var structVariable) in shaderStruct.members.enumerated() {
                     if shaderStruct.storageType.contains(.typeInput) {
                         structVariable.storageType.insert(.typeInput)
                         structVariable.attributeId = structVariableId
@@ -773,7 +778,7 @@ class OBSShader {
 
                     structVariable.storageType.subtract([.typeInput, .typeOutput])
 
-                    variables.append("\(variableString)")
+                    variables.append("\(variableString);")
                     shaderStruct.members[structVariableId] = structVariable
                 }
 
@@ -852,7 +857,7 @@ class OBSShader {
                         let name = String(cString: samplerName)
 
                         if isMain {
-                            let variableString = "sampler \(name) [[sampler(\(samplerId)]]"
+                            let variableString = "sampler \(name) [[sampler(\(samplerId))]]"
                             variables.append(variableString)
                             samplerId += 1
                         } else if function.samplers.contains(name) {
@@ -987,12 +992,12 @@ class OBSShader {
 
         let qualifier =
             if variable.storageType.contains(.typeConstant) {
-                " constant"
+                " constant "
             } else {
                 ""
             }
 
-        let result = "\(String(repeating: " ", count: indent))\(qualifier)\(metalType)\(variable.name)\(metalMapping)"
+        let result = "\(String(repeating: " ", count: indent))\(qualifier)\(metalType) \(variable.name)\(metalMapping)"
 
         return result
     }
@@ -1019,6 +1024,11 @@ class OBSShader {
 
                 if type != stringToken {
                     content.append(type)
+                    continue
+                }
+
+                if let intrinsic = try convertToMTLIntrinsic(intrinsic: stringToken) {
+                    content.append(intrinsic)
                     continue
                 }
 
@@ -1445,10 +1455,12 @@ class OBSShader {
 
             for sampler in function.samplers {
                 for i in 0..<parser.samplers.num {
-                    let sampler: UnsafeMutablePointer<shader_sampler>? = parser.samplers.array.advanced(by: i)
+                    let samplerPointer: UnsafeMutablePointer<shader_sampler>? = parser.samplers.array.advanced(by: i)
 
-                    if let sampler, let samplerName = sampler.pointee.name {
-                        output.append(String(cString: samplerName))
+                    if let samplerPointer {
+                        if sampler == String(cString: samplerPointer.pointee.name) {
+                            output.append(sampler)
+                        }
                     }
                 }
             }

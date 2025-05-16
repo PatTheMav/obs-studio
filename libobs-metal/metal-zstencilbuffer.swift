@@ -28,6 +28,7 @@ public func device_zstencil_create(device: UnsafeRawPointer, width: UInt32, heig
         type: .type2D,
         width: Int(width),
         height: Int(height),
+        depth: 0,
         pixelFormat: format.toMTLFormat(),
         mipmapLevels: 0,
         isRenderTarget: false,

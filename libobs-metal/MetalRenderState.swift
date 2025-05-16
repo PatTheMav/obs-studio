@@ -30,6 +30,14 @@ struct MetalRenderState {
         var clearTarget: MetalTexture? = nil
     }
 
+    struct BlendState {
+        var sourceRgb: MTLBlendFactor = .one
+        var sourceAlpha: MTLBlendFactor = .one
+        var destinationRgb: MTLBlendFactor = .one
+        var destinationAlpha: MTLBlendFactor = .one
+        var operation: MTLBlendOperation = .add
+    }
+
     var viewMatrix: matrix_float4x4
     var viewProjectionMatrix: matrix_float4x4
     var projectionMatrix: matrix_float4x4
@@ -57,6 +65,7 @@ struct MetalRenderState {
     var swapChain: OBSSwapChain?
 
     var clearState: ClearState?
+    var blendState: BlendState = BlendState()
     var viewPort: MTLViewport
     var cullMode: MTLCullMode
 

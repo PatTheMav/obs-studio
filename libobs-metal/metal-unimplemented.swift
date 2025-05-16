@@ -15,6 +15,16 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
+@_cdecl("device_enter_context")
+public func device_enter_context(device: UnsafeMutableRawPointer) {
+    return
+}
+
+@_cdecl("device_leave_context")
+public func device_leave_context(device: UnsafeMutableRawPointer) {
+    return
+}
+
 @_cdecl("device_timer_create")
 public func device_timer_create(device: UnsafeRawPointer) {
     return

@@ -30,8 +30,8 @@ public func device_vertexbuffer_create(device: UnsafeRawPointer, data: UnsafeMut
     return vertexBuffer.getRetained()
 }
 
-@_cdecl("device_vertexbuffer_destroy")
-public func device_vertexbuffer_destroy(vertBuffer: UnsafeRawPointer) {
+@_cdecl("gs_vertexbuffer_destroy")
+public func gs_vertexbuffer_destroy(vertBuffer: UnsafeRawPointer) {
     let _ = Unmanaged<MetalBuffer>.fromOpaque(vertBuffer).takeRetainedValue()
 }
 

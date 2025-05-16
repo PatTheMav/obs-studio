@@ -18,12 +18,13 @@
 import AppKit
 import Foundation
 
+@MainActor
 @_cdecl("device_swapchain_create")
 public func device_swapchain_create(device: UnsafeMutableRawPointer, data: UnsafePointer<gs_init_data>)
     -> OpaquePointer?
 {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-    var view = data.pointee.window.view.takeUnretainedValue() as! NSView
+    let view = data.pointee.window.view.takeUnretainedValue() as! NSView
     let size = MTLSize(
         width: Int(data.pointee.cx),
         height: Int(data.pointee.cy),
@@ -35,13 +36,7 @@ public func device_swapchain_create(device: UnsafeMutableRawPointer, data: Unsaf
         return nil
     }
 
-    device.renderState.swapChain = swapChain
-
-    nonisolated(unsafe) let unsafeSwap = swapChain
-
-    Task { @MainActor in
-        unsafeSwap.updateView(view)
-    }
+    swapChain.updateView(view)
 
     return swapChain.getRetained()
 }
@@ -55,14 +50,6 @@ public func device_resize(device: UnsafeMutableRawPointer, width: UInt32, height
     }
 
     swapChain.resize(MTLSize(width: Int(width), height: Int(height), depth: 0))
-
-    guard let renderTarget = swapChain.renderTarget else {
-        return
-    }
-
-    device.renderState.renderPassDescriptor?.colorAttachments[0].texture = renderTarget.texture
-    device.renderState.renderPassDescriptor?.depthAttachment.texture = nil
-    device.renderState.renderPassDescriptor?.stencilAttachment.texture = nil
 }
 
 @_cdecl("device_get_size")
@@ -108,18 +95,12 @@ public func device_load_swapchain(device: UnsafeRawPointer, swap: UnsafeRawPoint
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
     let swapChain = Unmanaged<OBSSwapChain>.fromOpaque(swap).takeUnretainedValue()
 
-    guard let renderTarget = swapChain.renderTarget else {
-        return
-    }
+    swapChain.prepareDrawable()
 
-    device.renderState.renderTarget = renderTarget
-    device.renderState.renderPassDescriptor?.colorAttachments[0].texture = renderTarget.texture
-    device.renderState.renderPassDescriptor?.depthAttachment.texture = nil
-    device.renderState.renderPassDescriptor?.stencilAttachment.texture = nil
-    device.renderState.pipelineDescriptor?.colorAttachments[0].pixelFormat = renderTarget.texture.pixelFormat
+    device.renderState.swapChain = swapChain
 }
 
 @_cdecl("gs_swapchain_destroy")
-public func gs_swapchain_destroy(swapChain: UnsafeRawPointer) {
+public func gs_swapchain_destroy(swapChain: UnsafeMutableRawPointer) {
     let _ = Unmanaged<OBSSwapChain>.fromOpaque(swapChain).takeRetainedValue()
 }

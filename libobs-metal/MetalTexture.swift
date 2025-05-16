@@ -25,6 +25,7 @@ struct MetalTextureDescription {
     let type: MTLTextureType
     let width: Int
     let height: Int
+    let depth: Int
     let pixelFormat: MTLPixelFormat
     let mipmapLevels: Int
     let isRenderTarget: Bool
@@ -83,7 +84,7 @@ class MetalTexture: Equatable {
 
         descriptor.usage = [.shaderRead]
 
-        let texture = device.makeTexture2D(descriptor)
+        let texture = device.makeTexture(descriptor)
 
         return texture
     }
@@ -91,27 +92,54 @@ class MetalTexture: Equatable {
     init?(device: MetalDevice, description: MetalTextureDescription) {
         self.device = device
 
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: description.pixelFormat,
-            width: description.width,
-            height: description.height,
-            mipmapped: description.isMipMapped
-        )
+        let descriptor: MTLTextureDescriptor
 
-        descriptor.arrayLength = 1
+        switch description.type {
+        case .type2D:
+            descriptor = MTLTextureDescriptor.texture2DDescriptor(
+                pixelFormat: description.pixelFormat,
+                width: description.width,
+                height: description.height,
+                mipmapped: description.isMipMapped
+            )
+            descriptor.arrayLength = 1
+        case .type3D:
+            descriptor = MTLTextureDescriptor()
+            descriptor.textureType = .type3D
+            descriptor.pixelFormat = description.pixelFormat
+            descriptor.width = description.width
+            descriptor.height = description.height
+            descriptor.depth = description.depth
+            descriptor.arrayLength = 1
+        case .typeCube:
+            descriptor = MTLTextureDescriptor.textureCubeDescriptor(
+                pixelFormat: description.pixelFormat,
+                size: description.width * 6 * 6,
+                mipmapped: description.isMipMapped
+            )
+            descriptor.arrayLength = 6
+        default:
+            assertionFailure("MetalTexture: Unsupported texture format: \(description.type)")
+            return nil
+        }
+
         descriptor.cpuCacheMode = .writeCombined
-        descriptor.storageMode = .shared
+        descriptor.storageMode =
+            switch description.isRenderTarget {
+            case true: .private
+            case false: .shared
+            }
         descriptor.usage =
             switch description.isRenderTarget {
             case true: [.shaderRead, .renderTarget]
             case false: .shaderRead
             }
 
-        if description.isMipMapped {
+        if description.type != .type3D && description.isMipMapped {
             descriptor.mipmapLevelCount = description.mipmapLevels
         }
 
-        let texture = device.makeTexture2D(descriptor)
+        let texture = device.makeTexture(descriptor)
 
         guard let texture else {
             assertionFailure(
@@ -133,6 +161,13 @@ class MetalTexture: Equatable {
             return nil
         }
 
+        self.texture = texture
+        self.resourceID = Hasher().finalize()
+        self.mappingMode = .unmapped
+    }
+
+    init?(device: MetalDevice, texture: MTLTexture) {
+        self.device = device
         self.texture = texture
         self.resourceID = Hasher().finalize()
         self.mappingMode = .unmapped
@@ -161,20 +196,60 @@ class MetalTexture: Equatable {
 
     func upload(data: UnsafePointer<UnsafePointer<UInt8>?>, mipmapLevels: Int) {
         let bytesPerPixel = texture.pixelFormat.bitsPerPixel() / 8
-        let data = UnsafeBufferPointer(start: data, count: mipmapLevels)
 
-        for (mipmapLevel, mipmapData) in data.enumerated() {
-            guard let mipmapData else { break }
+        switch texture.textureType {
+        case .type2D, .typeCube:
+            let textureCount = if texture.textureType == .typeCube { 6 } else { 1 }
 
-            let mipmapWidth = texture.width >> mipmapLevel
-            let mipmapHeight = texture.height >> mipmapLevel
-            let rowSize = mipmapWidth * bytesPerPixel
-            let region = MTLRegionMake2D(0, 0, mipmapWidth, mipmapHeight)
+            let data = UnsafeBufferPointer(start: data, count: (textureCount * mipmapLevels))
 
-            texture.replace(region: region, mipmapLevel: mipmapLevel, withBytes: mipmapData, bytesPerRow: rowSize)
+            for i in 0..<textureCount {
+                for mipmapLevel in 0..<mipmapLevels {
+                    let index = mipmapLevels * i + mipmapLevel
+
+                    guard let data = data[index] else { break }
+
+                    let mipmapWidth = texture.width >> mipmapLevel
+                    let mipmapHeight = texture.height >> mipmapLevel
+                    let rowSize = mipmapWidth * bytesPerPixel
+                    let imageSize = rowSize * mipmapHeight
+
+                    let region = MTLRegionMake2D(0, 0, mipmapWidth, mipmapHeight)
+
+                    texture.replace(
+                        region: region, mipmapLevel: mipmapLevel, slice: i, withBytes: data, bytesPerRow: rowSize,
+                        bytesPerImage: imageSize)
+                }
+            }
+        case .type3D:
+            let data = UnsafeBufferPointer(start: data, count: mipmapLevels)
+
+            for (mipmapLevel, mipmapData) in data.enumerated() {
+                guard let mipmapData else { break }
+
+                let mipmapWidth = texture.width >> mipmapLevel
+                let mipmapHeight = texture.height >> mipmapLevel
+                let mipmapDepth = texture.depth >> mipmapLevel
+                let rowSize = mipmapWidth * bytesPerPixel
+                let imageSize = rowSize * mipmapHeight
+
+                let region = MTLRegionMake3D(0, 0, 0, mipmapWidth, mipmapHeight, mipmapDepth)
+
+                texture.replace(
+                    region: region,
+                    mipmapLevel: mipmapLevel,
+                    slice: 0,
+                    withBytes: mipmapData,
+                    bytesPerRow: rowSize,
+                    bytesPerImage: imageSize
+                )
+            }
+        default:
+            assertionFailure("MetalTexture: Unsupported texture type \(texture.textureType)")
+            return
         }
 
-        if texture.mipmapLevelCount > 0 {
+        if texture.mipmapLevelCount > 1 {
             guard let encoder = device.renderState.commandBuffer?.makeBlitCommandEncoder() else {
                 assertionFailure("MetalDevice: Unable to create Blit command encoder")
                 return
@@ -282,7 +357,7 @@ class MetalTexture: Equatable {
             sourceSlice: 0,
             sourceLevel: 0,
             sourceOrigin: sourceOrigin,
-            sourceSize: size,
+            sourceSize: actualSize,
             to: destination.texture,
             destinationSlice: 0,
             destinationLevel: 0,

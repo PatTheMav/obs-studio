@@ -16,57 +16,74 @@
  ******************************************************************************/
 
 import AppKit
+import CoreVideo
 import Foundation
 import Metal
 
 class OBSSwapChain {
     private let device: MetalDevice
-    var renderTarget: MetalTexture?
-    var pixelFormat: MTLPixelFormat
-    private let layer: CALayer
+    private let layer: CAMetalLayer
     private var view: NSView?
+    private var drawable: CAMetalDrawable?
+
     var viewSize: MTLSize
+    var requiresViewUpdate: Bool = false
 
     init?(device: MetalDevice, size: MTLSize, pixelFormat: MTLPixelFormat) {
         self.device = device
         self.viewSize = size
-        self.layer = CALayer()
-        self.pixelFormat = pixelFormat
+        self.layer = device.makeLayer()
+        self.layer.pixelFormat = pixelFormat
 
         resize(size)
     }
 
     @MainActor
     func updateView(_ view: NSView) {
+        layer.drawableSize = CGSize(width: viewSize.width, height: viewSize.height)
         view.layer = self.layer
         view.wantsLayer = true
 
         self.view = view
-        update()
     }
 
     func resize(_ size: MTLSize) {
         viewSize = size
 
-        let description = MetalTextureDescription(
-            type: .type2D,
-            width: viewSize.width,
-            height: viewSize.height,
-            pixelFormat: pixelFormat,
-            mipmapLevels: 0,
-            isRenderTarget: true,
-            isMipMapped: false
-        )
-
-        self.renderTarget = MetalTexture(device: device, description: description)
+        layer.drawableSize = CGSize(width: viewSize.width, height: viewSize.height)
     }
 
-    func update() {
-        guard let renderTarget else {
+    func prepareDrawable() {
+        guard device.requiresSync else {
             return
         }
 
-        layer.contents = renderTarget.texture.iosurface
+        guard let renderPassDescriptor = device.renderState.renderPassDescriptor else { return }
+        guard let renderPipelineDescriptor = device.renderState.pipelineDescriptor else { return }
+
+        guard let drawable = layer.nextDrawable() else { return }
+
+        self.drawable = drawable
+
+        device.renderState.renderTarget = MetalTexture(device: device, texture: drawable.texture)
+        renderPassDescriptor.colorAttachments[0].texture = drawable.texture
+        renderPassDescriptor.depthAttachment.texture = nil
+        renderPassDescriptor.stencilAttachment.texture = nil
+        renderPipelineDescriptor.colorAttachments[0].pixelFormat = drawable.texture.pixelFormat
+    }
+
+    func update() {
+        guard let drawable = self.drawable else {
+            return
+        }
+
+        guard let commandBuffer = device.renderState.commandBuffer else {
+            return
+        }
+
+        commandBuffer.present(drawable)
+
+        self.drawable = nil
     }
 
     func getRetained() -> OpaquePointer {

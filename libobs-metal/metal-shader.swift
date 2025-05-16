@@ -23,7 +23,6 @@ public func device_vertexshader_create(
     device: UnsafeRawPointer, shader: UnsafePointer<CChar>, file: UnsafePointer<CChar>,
     error_string: UnsafeMutablePointer<UnsafeMutablePointer<CChar>>
 ) -> OpaquePointer? {
-
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     let content = String(cString: shader)
@@ -97,8 +96,8 @@ public func device_load_vertexsahder(device: UnsafeRawPointer, vertShader: Unsaf
 public func device_load_pixelshader(device: UnsafeRawPointer, pixelShader: UnsafeRawPointer?) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    device.renderState.textures.removeAll()
-    device.renderState.samplers.removeAll()
+    device.renderState.textures = Array(repeating: nil, count: Int(GS_MAX_TEXTURES))
+    device.renderState.samplers = Array(repeating: nil, count: Int(GS_MAX_TEXTURES))
 
     if let pixelShader {
         let metalShader = Unmanaged<MetalShader>.fromOpaque(pixelShader).takeUnretainedValue()
@@ -112,6 +111,7 @@ public func device_load_pixelshader(device: UnsafeRawPointer, pixelShader: Unsaf
         device.renderState.pipelineDescriptor?.fragmentFunction = metalShader.function
 
         if let samplers = metalShader.samplers {
+            device.renderState.samplers.reserveCapacity(samplers.count)
             device.renderState.samplers.replaceSubrange(0..<samplers.count, with: samplers)
         }
     } else {
@@ -300,7 +300,7 @@ public func gs_shader_set_val(shaderParam: UnsafeRawPointer, val: UnsafeRawPoint
     let shaderUniform = Unmanaged<MetalShader.ShaderUniform>.fromOpaque(shaderParam).takeUnretainedValue()
 
     let size = Int(size)
-    var valueSize = shaderUniform.gsType.getSize()
+    let valueSize = shaderUniform.gsType.getSize()
 
     guard valueSize == size else {
         assertionFailure("gs_shader_set_val: Required size of uniform does not match size of input")

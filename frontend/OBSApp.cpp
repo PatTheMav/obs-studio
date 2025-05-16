@@ -226,9 +226,9 @@ bool OBSApp::InitGlobalConfigDefaults()
 	config_set_default_string(appConfig, "Video", "Renderer", "Direct3D 11");
 #else
 #if defined(__APPLE__) && defined(__aarch64__)
-    config_set_default_string(appConfig, "Video", "Renderer", "Metal");
+	config_set_default_string(appConfig, "Video", "Renderer", "Metal");
 #else
-    config_set_default_string(appConfig, "Video", "Renderer", "OpenGL");
+	config_set_default_string(appConfig, "Video", "Renderer", "OpenGL");
 #endif
 #endif
 
@@ -989,12 +989,12 @@ const char *OBSApp::GetRenderModule() const
 	const char *renderer = config_get_string(appConfig, "Video", "Renderer");
 
 #if defined(_WIN32)
-    return (astrcmpi(renderer, "Direct3D 11") == 0) ? DL_D3D11 : DL_OPENGL;
+	return (astrcmpi(renderer, "Direct3D 11") == 0) ? DL_D3D11 : DL_OPENGL;
 #else
 #if defined(__APPLE__) && defined(__aarch64__)
-    return (astrcmpi(renderer, "Metal") == 0) ? DL_METAL : DL_OPENGL;
+	return (astrcmpi(renderer, "Metal") == 0) ? DL_METAL : DL_OPENGL;
 #else
-    return DL_OPENGL;
+	return DL_OPENGL;
 #endif
 #endif
 }

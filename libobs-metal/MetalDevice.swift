@@ -22,16 +22,18 @@ import simd
 
 class MetalDevice {
     private let device: MTLDevice
-    private let commandQueue: MTLCommandQueue
-    private var pipelines: [Int: MTLRenderPipelineState]
+    let commandQueue: MTLCommandQueue
+    private var pipelines = [Int: MTLRenderPipelineState]()
 
     private let identityMatrix: matrix_float4x4
 
-    public var renderState: MetalRenderState
+    var renderState: MetalRenderState
+    var requiresSync: Bool = false
+
+    private var displayLink: CVDisplayLink?
 
     init(device: MTLDevice) {
         self.device = device
-        self.pipelines = [:]
 
         guard let commandQueue = device.makeCommandQueue() else {
             preconditionFailure("MetalDevice: Failed to create command queue")
@@ -46,26 +48,58 @@ class MetalDevice {
             viewProjectionMatrix: identityMatrix,
             projectionMatrix: identityMatrix,
             renderTarget: nil,
-            textures: Array(repeating: nil, count: Int(GS_MAX_TEXTURES)),
-            samplers: Array(repeating: nil, count: Int(GS_MAX_TEXTURES)),
+            textures: [],
+            samplers: [],
             commandBuffer: nil,
             clearState: nil,
             viewPort: MTLViewport(),
             cullMode: .none,
             scissorRectEnabled: false,
             scissorRect: nil
-
         )
+
+        renderState.pipelineDescriptor = MTLRenderPipelineDescriptor()
+        renderState.renderPassDescriptor = MTLRenderPassDescriptor()
+        renderState.depthStencilDescriptor = MTLDepthStencilDescriptor()
+
+        CVDisplayLinkCreateWithActiveCGDisplays(&displayLink)
+
+        guard let displayLink else {
+            preconditionFailure("MetalDevice: Failed to set up display link")
+        }
+
+        func enableSync(data: UnsafeMutableRawPointer?) {
+            guard let data else { return }
+            let metalDevice = unsafeBitCast(data, to: MetalDevice.self)
+
+            metalDevice.requiresSync = true
+        }
+
+        func displayLinkCallback(
+            displayLink: CVDisplayLink, _ now: UnsafePointer<CVTimeStamp>, _ outputTime: UnsafePointer<CVTimeStamp>,
+            _ flagsIn: CVOptionFlags, _ flagsOut: UnsafeMutablePointer<CVOptionFlags>,
+            _ displayLinkContext: UnsafeMutableRawPointer?
+        ) -> CVReturn {
+
+            guard obs_initialized() else { return kCVReturnSuccess }
+
+            obs_queue_task(OBS_TASK_GRAPHICS, enableSync, displayLinkContext, false)
+
+            return kCVReturnSuccess
+        }
+
+        let opaqueSelf = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        CVDisplayLinkSetOutputCallback(displayLink, displayLinkCallback, opaqueSelf)
+        CVDisplayLinkStart(displayLink)
     }
 
-    func makeTexture2D(_ descriptor: MTLTextureDescriptor) -> MTLTexture? {
+    func makeTexture(_ descriptor: MTLTextureDescriptor) -> MTLTexture? {
         return device.makeTexture(descriptor: descriptor)
     }
 
     func makeBuffer(bytes: UnsafeRawPointer, length: Int) -> MTLBuffer? {
-        let options: MTLResourceOptions = [.cpuCacheModeWriteCombined, .storageModeShared]
-
-        return device.makeBuffer(bytes: bytes, length: length, options: options)
+        return device.makeBuffer(
+            bytes: bytes, length: length, options: [.cpuCacheModeWriteCombined, .storageModeShared])
     }
 
     func makeCommandBuffer() {
@@ -74,6 +108,14 @@ class MetalDevice {
         }
 
         renderState.commandBuffer = commandBuffer
+    }
+
+    func makeLayer() -> CAMetalLayer {
+        let layer = CAMetalLayer()
+        layer.device = device
+        //layer.displaySyncEnabled = false
+
+        return layer
     }
 
     func makeSamplerState(descriptor: MTLSamplerDescriptor) -> MTLSamplerState? {
@@ -269,5 +311,16 @@ class MetalDevice {
         }
 
         commandEncoder.endEncoding()
+    }
+
+    func shutdown() {
+        guard let displayLink else { return }
+
+        CVDisplayLinkStop(displayLink)
+        self.displayLink = nil
+    }
+
+    deinit {
+        shutdown()
     }
 }

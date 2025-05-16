@@ -122,7 +122,7 @@ final class MetalVertexBuffer: MetalBuffer {
             unpackedColors.reserveCapacity(4)
 
             for i in 0..<numVertices {
-                var vertexColor = colorsData.advanced(by: i)
+                let vertexColor = colorsData.advanced(by: i)
 
                 vertexColor.withMemoryRebound(to: UInt8.self, capacity: 4) {
                     let colorValues = UnsafeBufferPointer<UInt8>(start: $0, count: 4)
@@ -184,7 +184,7 @@ final class MetalVertexBuffer: MetalBuffer {
             case .color:
                 if let vertexColors { bufferList.append(vertexColors) }
             case .texcoord:
-                guard shader.textureCount != uvCoordinates.count else {
+                guard shader.textureCount == uvCoordinates.count else {
                     assertionFailure(
                         "MetalBuffer: Amount of available texture uv coordinates not sufficient for vertex shader")
                     break
@@ -238,7 +238,7 @@ final class MetalIndexBuffer: MetalBuffer {
                 fatalError("MTLIndexType \(type) is not supported")
             }
 
-        data?.withMemoryRebound(to: UInt8.self, capacity: byteSize) {
+        indexData.withMemoryRebound(to: UInt8.self, capacity: byteSize) {
             createOrUpdateBuffer(buffer: &indices, data: $0, count: byteSize, dynamic: isDynamic)
         }
 

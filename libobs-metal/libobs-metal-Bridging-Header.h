@@ -9,6 +9,8 @@
 #import <util/cf-parser.h>
 #import <util/cf-lexer.h>
 
+#import <obs.h>
+
 #import <graphics/graphics.h>
 #import <graphics/device-exports.h>
 #import <graphics/vec2.h>

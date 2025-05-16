@@ -60,17 +60,9 @@ public func device_create(devicePointer: UnsafeMutableRawPointer, adapter: UInt3
 
 @_cdecl("device_destroy")
 public func device_destroy(device: UnsafeMutableRawPointer) {
-    _ = Unmanaged<MetalDevice>.fromOpaque(device).takeRetainedValue()
-}
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeRetainedValue()
 
-@_cdecl("device_enter_context")
-public func device_enter_context(device: UnsafeMutableRawPointer) {
-    return
-}
-
-@_cdecl("device_leave_context")
-public func device_leave_context(device: UnsafeMutableRawPointer) {
-    return
+    metalDevice.shutdown()
 }
 
 @_cdecl("device_get_device_obj")
@@ -95,25 +87,17 @@ public func device_blend_function_separate(
 ) {
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    guard let pipelineDescriptor = metalDevice.renderState.pipelineDescriptor else {
-        return
-    }
-
-    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = src_c.toMTLFactor()
-    pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = src_a.toMTLFactor()
-    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = dest_c.toMTLFactor()
-    pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = dest_c.toMTLFactor()
+    metalDevice.renderState.blendState.sourceRgb = src_c.toMTLFactor()
+    metalDevice.renderState.blendState.sourceAlpha = src_a.toMTLFactor()
+    metalDevice.renderState.blendState.destinationRgb = dest_c.toMTLFactor()
+    metalDevice.renderState.blendState.destinationAlpha = dest_a.toMTLFactor()
 }
 
 @_cdecl("device_blend_op")
 public func device_blend_op(device: UnsafeRawPointer, op: gs_blend_op_type) {
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    guard let pipelineDescriptor = metalDevice.renderState.pipelineDescriptor else {
-        return
-    }
-
-    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = op.toMTLOperation()
+    metalDevice.renderState.blendState.operation = op.toMTLOperation()
 }
 
 @_cdecl("device_get_color_space")
@@ -214,8 +198,19 @@ public func device_framebuffer_srgb_enabled(device: UnsafeRawPointer) -> Bool {
 }
 
 @_cdecl("device_begin_scene")
-public func device_begin_scene(device: UnsafeRawPointer) {
+public func device_begin_scene(device: UnsafeMutableRawPointer) {
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+
+    func disableSync(data: UnsafeMutableRawPointer?) {
+        guard let data else { return }
+        let metalDevice = unsafeBitCast(data, to: MetalDevice.self)
+
+        metalDevice.requiresSync = true
+    }
+
+    if metalDevice.requiresSync {
+        obs_queue_task(OBS_TASK_GRAPHICS, disableSync, device, false)
+    }
 
     metalDevice.makeCommandBuffer()
 }
@@ -269,13 +264,13 @@ public func device_clear(
 
 @_cdecl("device_is_present_ready")
 public func device_is_present_ready(device: UnsafeRawPointer) -> Bool {
-    return true
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+
+    return metalDevice.requiresSync
 }
 
 @_cdecl("device_present")
 public func device_present(device: UnsafeRawPointer) {
-    device_flush(device: device)
-
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     guard let swapChain = metalDevice.renderState.swapChain else {
@@ -283,6 +278,7 @@ public func device_present(device: UnsafeRawPointer) {
     }
 
     swapChain.update()
+    metalDevice.renderState.commandBuffer?.commit()
 }
 
 @_cdecl("device_flush")
@@ -290,7 +286,7 @@ public func device_flush(device: UnsafeRawPointer) {
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     metalDevice.renderState.commandBuffer?.commit()
-    metalDevice.renderState.commandBuffer?.waitUntilCompleted()
+    metalDevice.renderState.commandBuffer?.waitUntilScheduled()
     metalDevice.renderState.commandBuffer = nil
 }
 
@@ -312,7 +308,18 @@ public func device_get_cull_mode(device: UnsafeRawPointer) -> gs_cull_mode {
 public func device_enable_blending(device: UnsafeRawPointer, enable: Bool) {
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].isBlendingEnabled = enable
+    guard let pipelineDescriptor = metalDevice.renderState.pipelineDescriptor else {
+        return
+    }
+
+    pipelineDescriptor.colorAttachments[0].isBlendingEnabled = enable
+    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = metalDevice.renderState.blendState.sourceRgb
+    pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = metalDevice.renderState.blendState.sourceAlpha
+    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = metalDevice.renderState.blendState.destinationRgb
+    pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor =
+        metalDevice.renderState.blendState.destinationAlpha
+    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = metalDevice.renderState.blendState.operation
+
 }
 
 @_cdecl("device_enable_depth_test")
@@ -521,7 +528,7 @@ public func device_projection_pop(device: UnsafeRawPointer) {
 
 @_cdecl("device_is_monitor_hdr")
 public func device_is_monitor_hdr(device: UnsafeRawPointer) -> Bool {
-    let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+    let _ = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     // TODO: IMPLEMENT
     return false
