@@ -58,6 +58,10 @@ class MetalShader {
 
             hasUpdates = true
         }
+
+        deinit {
+            return
+        }
     }
 
     struct ShaderData {
@@ -71,7 +75,7 @@ class MetalShader {
         let textureCount: Int
     }
 
-    private let device: MetalDevice
+    private weak var device: MetalDevice?
     let source: String
     private var uniformData: [UInt8]
     private var uniformSize: Int
@@ -120,7 +124,7 @@ class MetalShader {
             samplers.reserveCapacity(samplerDescriptors.count)
 
             for descriptor in samplerDescriptors {
-                guard let samplerState = device.makeSamplerState(descriptor: descriptor) else {
+                guard let samplerState = device.device.makeSamplerState(descriptor: descriptor) else {
                     assertionFailure("MetalShader: Failed to create sampler state with descriptor")
                     return nil
                 }
@@ -133,7 +137,9 @@ class MetalShader {
             preconditionFailure("MetalShader: Unsupported shader type \(type)")
         }
 
-        guard let library = device.makeShaderLibrary(source: source, options: nil) else {
+        do {
+            library = try device.device.makeLibrary(source: source, options: nil)
+        } catch {
             assertionFailure("MetalShader: Failed to create shader library")
             return nil
         }
@@ -143,14 +149,12 @@ class MetalShader {
             return nil
         }
 
-        self.library = library
         self.function = function
     }
 
     private func updateUniform(uniform: inout ShaderUniform) {
-        guard let currentValues = uniform.currentValues else {
-            return
-        }
+        guard let device = self.device else { return }
+        guard let currentValues = uniform.currentValues else { return }
 
         if uniform.gsType == GS_SHADER_PARAM_TEXTURE {
             let shaderTexture = currentValues.withUnsafeBufferPointer {
@@ -182,6 +186,8 @@ class MetalShader {
     }
 
     private func createOrUpdateBuffer(buffer: inout MTLBuffer?, data: inout [UInt8]) {
+        guard let device = self.device else { return }
+
         let size = MemoryLayout<UInt8>.size * data.count
         let alignedSize = (size + 0x0F) & ~0x0F
 
@@ -192,7 +198,7 @@ class MetalShader {
             }
         }
 
-        buffer = device.makeBuffer(bytes: data, length: alignedSize)
+        buffer = device.device.makeBuffer(bytes: data, length: alignedSize)
     }
 
     func uploadShaderParameters(encoder: MTLRenderCommandEncoder) {
@@ -240,5 +246,9 @@ class MetalShader {
         let unretained = Unmanaged.passUnretained(self).toOpaque()
 
         return OpaquePointer(unretained)
+    }
+
+    deinit {
+        return
     }
 }

@@ -32,11 +32,11 @@ class MetalBuffer {
         case texcoord
     }
 
-    private let device: MetalDevice
+    private let device: MTLDevice
     fileprivate let isDynamic: Bool
 
     init(device: MetalDevice, isDynamic: Bool) {
-        self.device = device
+        self.device = device.device
         self.isDynamic = isDynamic
     }
 
@@ -53,7 +53,8 @@ class MetalBuffer {
             }
         }
 
-        buffer = device.makeBuffer(bytes: data, length: alignedSize)
+        buffer = device.makeBuffer(
+            bytes: data, length: alignedSize, options: [.cpuCacheModeWriteCombined, .storageModeShared])
     }
 
     func getRetained() -> OpaquePointer {

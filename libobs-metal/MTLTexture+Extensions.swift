@@ -19,5 +19,15 @@ import Foundation
 import Metal
 
 extension MTLTexture {
+    func getRetained() -> OpaquePointer {
+        let retained = Unmanaged.passRetained(self).toOpaque()
 
+        return OpaquePointer(retained)
+    }
+
+    func getUnretained() -> OpaquePointer {
+        let unretained = Unmanaged.passUnretained(self).toOpaque()
+
+        return OpaquePointer(unretained)
+    }
 }

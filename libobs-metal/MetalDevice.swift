@@ -21,7 +21,7 @@ import Metal
 import simd
 
 class MetalDevice {
-    private let device: MTLDevice
+    let device: MTLDevice
     let commandQueue: MTLCommandQueue
     private var pipelines = [Int: MTLRenderPipelineState]()
 
@@ -93,15 +93,6 @@ class MetalDevice {
         CVDisplayLinkStart(displayLink)
     }
 
-    func makeTexture(_ descriptor: MTLTextureDescriptor) -> MTLTexture? {
-        return device.makeTexture(descriptor: descriptor)
-    }
-
-    func makeBuffer(bytes: UnsafeRawPointer, length: Int) -> MTLBuffer? {
-        return device.makeBuffer(
-            bytes: bytes, length: length, options: [.cpuCacheModeWriteCombined, .storageModeShared])
-    }
-
     func makeCommandBuffer() {
         guard let commandBuffer = commandQueue.makeCommandBuffer() else {
             preconditionFailure("MetalDevice: Unable to create command buffer")
@@ -116,10 +107,6 @@ class MetalDevice {
         //layer.displaySyncEnabled = false
 
         return layer
-    }
-
-    func makeSamplerState(descriptor: MTLSamplerDescriptor) -> MTLSamplerState? {
-        return device.makeSamplerState(descriptor: descriptor)
     }
 
     func makeShaderLibrary(source: String, options: MTLCompileOptions?) -> MTLLibrary? {

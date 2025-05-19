@@ -45,7 +45,7 @@ struct MetalTextureMapping {
 }
 
 class MetalTexture: Equatable {
-    private let device: MetalDevice
+    private weak var device: MetalDevice?
     private let resourceID: Int
     private var mappingMode: MetalTextureMapMode
 
@@ -84,7 +84,7 @@ class MetalTexture: Equatable {
 
         descriptor.usage = [.shaderRead]
 
-        let texture = device.makeTexture(descriptor)
+        let texture = device.device.makeTexture(descriptor: descriptor)
 
         return texture
     }
@@ -139,7 +139,7 @@ class MetalTexture: Equatable {
             descriptor.mipmapLevelCount = description.mipmapLevels
         }
 
-        let texture = device.makeTexture(descriptor)
+        let texture = device.device.makeTexture(descriptor: descriptor)
 
         guard let texture else {
             assertionFailure(
@@ -173,8 +173,24 @@ class MetalTexture: Equatable {
         self.mappingMode = .unmapped
     }
 
+    init?(device: MetalDevice) {
+        self.device = device
+
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .bgra8Unorm, width: 2, height: 2, mipmapped: false)
+
+        guard let texture = device.device.makeTexture(descriptor: descriptor) else {
+            assertionFailure("MetalTexture: Failed to create placeholder texture object")
+            return nil
+        }
+
+        self.texture = texture
+        self.resourceID = Hasher().finalize()
+        self.mappingMode = .unmapped
+    }
+
     func rebind(surface: IOSurfaceRef) -> Bool {
-        guard let texture = MetalTexture.bindSurface(device: device, surface: surface) else {
+        guard let device = self.device, let texture = MetalTexture.bindSurface(device: device, surface: surface) else {
             assertionFailure("MetalTexture: Failed to rebind IOSurface to texture")
             return false
         }
@@ -250,7 +266,8 @@ class MetalTexture: Equatable {
         }
 
         if texture.mipmapLevelCount > 1 {
-            guard let encoder = device.renderState.commandBuffer?.makeBlitCommandEncoder() else {
+            guard let device = self.device, let encoder = device.renderState.commandBuffer?.makeBlitCommandEncoder()
+            else {
                 assertionFailure("MetalDevice: Unable to create Blit command encoder")
                 return
             }
@@ -347,7 +364,7 @@ class MetalTexture: Equatable {
 
         let actualSize = MTLSize(width: copyWidth, height: copyheight, depth: 1)
 
-        guard let encoder = device.renderState.commandBuffer?.makeBlitCommandEncoder() else {
+        guard let device = self.device, let encoder = device.renderState.commandBuffer?.makeBlitCommandEncoder() else {
             assertionFailure("MetalDevice: Unable to create Blit command encoder")
             return
         }
@@ -368,7 +385,7 @@ class MetalTexture: Equatable {
     }
 
     func copy(to destination: MetalTexture) {
-        guard let encoder = device.renderState.commandBuffer?.makeBlitCommandEncoder() else {
+        guard let device = self.device, let encoder = device.renderState.commandBuffer?.makeBlitCommandEncoder() else {
             assertionFailure("MetalDevice: Unable to create Blit command encoder")
             return
         }
@@ -387,5 +404,9 @@ class MetalTexture: Equatable {
         let unretained = Unmanaged.passUnretained(self).toOpaque()
 
         return OpaquePointer(unretained)
+    }
+
+    deinit {
+        return
     }
 }

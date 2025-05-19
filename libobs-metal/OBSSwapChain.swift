@@ -21,10 +21,12 @@ import Foundation
 import Metal
 
 class OBSSwapChain {
-    private let device: MetalDevice
+    private weak var device: MetalDevice?
     private let layer: CAMetalLayer
     private var view: NSView?
     private var drawable: CAMetalDrawable?
+    private var renderTarget: MetalTexture
+    private var placeHolder: MTLTexture
 
     var viewSize: MTLSize
     var requiresViewUpdate: Bool = false
@@ -34,6 +36,13 @@ class OBSSwapChain {
         self.viewSize = size
         self.layer = device.makeLayer()
         self.layer.pixelFormat = pixelFormat
+
+        guard let texture = MetalTexture(device: device) else {
+            preconditionFailure("OBSSwapChain: Failed to initialize MetalTexture object")
+        }
+
+        self.renderTarget = texture
+        self.placeHolder = texture.texture
 
         resize(size)
     }
@@ -54,7 +63,7 @@ class OBSSwapChain {
     }
 
     func prepareDrawable() {
-        guard device.requiresSync else {
+        guard let device = self.device, device.requiresSync else {
             return
         }
 
@@ -65,7 +74,8 @@ class OBSSwapChain {
 
         self.drawable = drawable
 
-        device.renderState.renderTarget = MetalTexture(device: device, texture: drawable.texture)
+        self.renderTarget.texture = drawable.texture
+        device.renderState.renderTarget = self.renderTarget
         renderPassDescriptor.colorAttachments[0].texture = drawable.texture
         renderPassDescriptor.depthAttachment.texture = nil
         renderPassDescriptor.stencilAttachment.texture = nil
@@ -73,16 +83,15 @@ class OBSSwapChain {
     }
 
     func update() {
-        guard let drawable = self.drawable else {
-            return
-        }
-
-        guard let commandBuffer = device.renderState.commandBuffer else {
+        guard let device = self.device, let drawable = self.drawable,
+            let commandBuffer = device.renderState.commandBuffer
+        else {
             return
         }
 
         commandBuffer.present(drawable)
 
+        renderTarget.texture = placeHolder
         self.drawable = nil
     }
 
@@ -96,5 +105,9 @@ class OBSSwapChain {
         let unretained = Unmanaged.passUnretained(self).toOpaque()
 
         return OpaquePointer(unretained)
+    }
+
+    deinit {
+        return
     }
 }

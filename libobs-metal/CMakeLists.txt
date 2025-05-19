@@ -32,6 +32,7 @@ target_sources(
     MTLTextureType+Extensions.swift
     MTLCullMode+Extensions.swift
     MTLViewport+Extensions.swift
+    MTLTexture+Extensions.swift
 )
 
 target_link_libraries(libobs-metal PRIVATE OBS::libobs)

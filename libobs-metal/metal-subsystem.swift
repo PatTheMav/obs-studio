@@ -259,7 +259,7 @@ public func device_clear(
     }
 
     metalDevice.renderState.clearState = clearState
-    metalDevice.renderState.clearTarget = metalDevice.renderState.renderTarget
+    //metalDevice.renderState.clearTarget = metalDevice.renderState.renderTarget
 }
 
 @_cdecl("device_is_present_ready")

@@ -44,7 +44,7 @@ public func device_samplerstate_create(device: UnsafeRawPointer, info: gs_sample
             .opaqueBlack
         }
 
-    guard let samplerState = device.makeSamplerState(descriptor: descriptor) else {
+    guard let samplerState = device.device.makeSamplerState(descriptor: descriptor) else {
         preconditionFailure("device_samplerstate_create: Unable to create sampler state")
     }
 
