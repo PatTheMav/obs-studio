@@ -1106,7 +1106,7 @@ class OBSShader {
                             functionParameters.append(
                                 "int(\(intParameters[0])), int(\(intParameters[1])), int(\(intParameters[2]))")
                         case 2:
-                            functionParameters.append("int2(\(intParameters[1])), int(\(intParameters[1]))")
+                            functionParameters.append("int2(\(intParameters[0])), int(\(intParameters[1]))")
                         case 1:
                             functionParameters.append("\(intParameters)")
                         default:

@@ -84,8 +84,7 @@ class MetalTexture: Equatable {
 
         descriptor.usage = [.shaderRead]
 
-        let texture = device.device.makeTexture(descriptor: descriptor)
-
+        let texture = device.device.makeTexture(descriptor: descriptor, iosurface: surface, plane: 0)
         return texture
     }
 
