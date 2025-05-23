@@ -26,6 +26,7 @@ class MetalDevice {
     private var pipelines = [Int: MTLRenderPipelineState]()
 
     private let identityMatrix: matrix_float4x4
+    private let fallbackVertexBuffer: MTLBuffer
 
     var renderState: MetalRenderState
     var requiresSync: Bool = false
@@ -43,6 +44,12 @@ class MetalDevice {
 
         identityMatrix = matrix_float4x4.init(diagonal: SIMD4(1.0, 1.0, 1.0, 1.0))
 
+        guard let buffer = device.makeBuffer(length: 1, options: .storageModePrivate) else {
+            preconditionFailure("MetalDevice: Failed to create fallback vertex buffer")
+        }
+
+        fallbackVertexBuffer = buffer
+
         renderState = MetalRenderState(
             viewMatrix: identityMatrix,
             viewProjectionMatrix: identityMatrix,
@@ -55,7 +62,8 @@ class MetalDevice {
             viewPort: MTLViewport(),
             cullMode: .none,
             scissorRectEnabled: false,
-            scissorRect: nil
+            scissorRect: nil,
+            gsColorSpace: GS_CS_SRGB
         )
 
         renderState.pipelineDescriptor = MTLRenderPipelineDescriptor()
@@ -124,11 +132,12 @@ class MetalDevice {
             return
         }
 
-        guard renderState.renderTarget != nil else {
+        guard let renderTarget = renderState.renderTarget else {
             return
         }
 
-        guard let vertexBuffer = renderState.vertexBuffer else {
+        guard renderState.vertexBuffer != nil || vertexCount > 0 else {
+            //        guard let vertexBuffer = renderState.vertexBuffer else {
             assertionFailure("MetalDevice: Attempted to render without a vertex buffer set")
             return
         }
@@ -148,6 +157,34 @@ class MetalDevice {
             return
         }
 
+        guard let renderPassDescriptor = renderState.renderPassDescriptor else {
+            assertionFailure("MetalDevice: Unable to create command encoder without render pass descriptor")
+            return
+        }
+
+        if renderState.updateRenderTarget {
+            if renderState.srgbState && renderTarget.sRGBtexture != nil {
+                renderPipelineDescriptor.colorAttachments[0].pixelFormat = renderTarget.sRGBtexture!.pixelFormat
+                renderPassDescriptor.colorAttachments[0].texture = renderTarget.sRGBtexture!
+            } else {
+                renderPipelineDescriptor.colorAttachments[0].pixelFormat = renderTarget.texture.pixelFormat
+                renderPassDescriptor.colorAttachments[0].texture = renderTarget.texture
+            }
+
+            if let zstencilAttachment = renderState.stencilAttachment {
+                renderPipelineDescriptor.depthAttachmentPixelFormat = zstencilAttachment.texture.pixelFormat
+                renderPipelineDescriptor.stencilAttachmentPixelFormat = zstencilAttachment.texture.pixelFormat
+                renderPassDescriptor.depthAttachment.texture = zstencilAttachment.texture
+                renderPassDescriptor.stencilAttachment.texture = zstencilAttachment.texture
+            } else {
+                renderPipelineDescriptor.depthAttachmentPixelFormat = .invalid
+                renderPipelineDescriptor.stencilAttachmentPixelFormat = .invalid
+                renderPassDescriptor.depthAttachment.texture = nil
+                renderPassDescriptor.stencilAttachment.texture = nil
+
+            }
+        }
+
         let stateHash = renderState.pipelineDescriptor.hashValue
 
         var renderPipelineState = pipelines[stateHash]
@@ -161,11 +198,6 @@ class MetalDevice {
                 assertionFailure("MetalDevice: Failed to create render pipeline state")
                 return
             }
-        }
-
-        guard let renderPassDescriptor = renderState.renderPassDescriptor else {
-            assertionFailure("MetalDevice: Unable to create command encoder without render pass descriptor")
-            return
         }
 
         if let clearState = renderState.clearState {
@@ -247,14 +279,20 @@ class MetalDevice {
         vertexShader.uploadShaderParameters(encoder: commandEncoder)
         fragmentShader.uploadShaderParameters(encoder: commandEncoder)
 
-        let vertexBuffers = vertexBuffer.getShaderBuffers(shader: vertexShader)
-        let offsets = Array(repeating: 0, count: vertexBuffers.count)
+        if renderState.vertexBuffer == nil {
+            commandEncoder.setVertexBuffers([fallbackVertexBuffer], offsets: [0], range: 0..<1)
+        } else {
+            let vertexBuffers = renderState.vertexBuffer!.getShaderBuffers(shader: vertexShader)
+            let offsets = Array(repeating: 0, count: vertexBuffers.count)
 
-        commandEncoder.setVertexBuffers(
-            vertexBuffers,
-            offsets: offsets,
-            range: 0..<vertexBuffers.count
-        )
+            commandEncoder.setVertexBuffers(
+                vertexBuffers,
+                offsets: offsets,
+                range: 0..<vertexBuffers.count
+            )
+        }
+
+        //        let vertexBuffers = vertexBuffer.getShaderBuffers(shader: vertexShader)
 
         for (index, texture) in renderState.textures.enumerated() {
             if let texture {
@@ -277,24 +315,22 @@ class MetalDevice {
                 indexBufferOffset: 0
             )
         } else {
-            let count: Int
-
-            if vertexCount == 0 {
-                guard let vertexData = vertexBuffer.vertexData else {
+            if renderState.vertexBuffer == nil {
+                commandEncoder.drawPrimitives(
+                    type: primitiveType,
+                    vertexStart: vertexStart,
+                    vertexCount: vertexCount)
+            } else {
+                guard let vertexData = renderState.vertexBuffer!.vertexData else {
                     assertionFailure("MetalDevice: No vertex count provided and vertex buffer has no vertex data")
                     return
                 }
 
-                count = vertexData.pointee.num
-            } else {
-                count = vertexCount
+                commandEncoder.drawPrimitives(
+                    type: primitiveType,
+                    vertexStart: vertexStart,
+                    vertexCount: vertexData.pointee.num)
             }
-
-            commandEncoder.drawPrimitives(
-                type: primitiveType,
-                vertexStart: vertexStart,
-                vertexCount: count
-            )
         }
 
         commandEncoder.endEncoding()

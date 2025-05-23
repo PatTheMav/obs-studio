@@ -72,7 +72,7 @@ public func gs_stagesurface_map(
 ) -> Bool {
     let stageSurface = Unmanaged<MetalTexture>.fromOpaque(stagesurf).takeUnretainedValue()
 
-    guard stageSurface.type == .type2D else {
+    guard stageSurface.texture.textureType == .type2D else {
         return false
     }
 
@@ -90,7 +90,7 @@ public func gs_stagesurface_map(
 public func gs_stagesurface_unmap(stagesurf: UnsafeRawPointer) {
     let stageSurface = Unmanaged<MetalTexture>.fromOpaque(stagesurf).takeUnretainedValue()
 
-    guard stageSurface.type == .type2D else {
+    guard stageSurface.texture.textureType == .type2D else {
         return
     }
 

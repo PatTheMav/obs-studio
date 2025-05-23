@@ -194,7 +194,11 @@ static inline bool render_display_begin(struct obs_display *display, uint32_t cx
 	if (success) {
 		gs_begin_scene();
 
-		if (gs_get_color_space() == GS_CS_SRGB)
+		/* Metal and D3D12 will automatically engamma the clear color when the frame buffer uses sRGB gamma. Thus
+           the clear color has to use linear RGB values which will then automatically be "engamma'd" when written into
+           the frame buffer much like a fragment shader return value would.
+        */
+		if (gs_get_color_space() == GS_CS_SRGB && gs_get_device_type() != GS_DEVICE_METAL)
 			vec4_from_rgba(&clear_color, display->background_color);
 		else
 			vec4_from_rgba_srgb(&clear_color, display->background_color);

@@ -27,6 +27,7 @@ class OBSSwapChain {
     private var drawable: CAMetalDrawable?
     private var renderTarget: MetalTexture
     private var placeHolder: MTLTexture
+    var edrHeadroom: CGFloat = 0.0
 
     var viewSize: MTLSize
     var requiresViewUpdate: Bool = false
@@ -35,7 +36,20 @@ class OBSSwapChain {
         self.device = device
         self.viewSize = size
         self.layer = device.makeLayer()
-        self.layer.pixelFormat = pixelFormat
+
+        switch pixelFormat {
+        case .bgra8Unorm:
+            self.layer.pixelFormat = .bgra8Unorm_srgb
+            self.layer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
+        case .rgba8Unorm_srgb:
+            self.layer.pixelFormat = .rgba8Unorm_srgb
+            self.layer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
+        case .bgra10_xr:
+            self.layer.pixelFormat = .bgra10_xr_srgb
+            self.layer.colorspace = CGColorSpace(name: CGColorSpace.extendedSRGB)
+        default:
+            self.layer.pixelFormat = pixelFormat
+        }
 
         guard let texture = MetalTexture(device: device) else {
             preconditionFailure("OBSSwapChain: Failed to initialize MetalTexture object")
@@ -54,6 +68,18 @@ class OBSSwapChain {
         view.wantsLayer = true
 
         self.view = view
+
+        if let screen = view.window?.screen {
+            self.edrHeadroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue
+        } else {
+            self.edrHeadroom = CGFloat(1.0)
+        }
+
+        if self.edrHeadroom > 1.0 {
+            self.layer.pixelFormat = .bgra10_xr_srgb
+            self.layer.colorspace = CGColorSpace(name: CGColorSpace.extendedSRGB)
+            self.layer.wantsExtendedDynamicRangeContent = true
+        }
     }
 
     func resize(_ size: MTLSize) {
@@ -73,13 +99,14 @@ class OBSSwapChain {
         guard let drawable = layer.nextDrawable() else { return }
 
         self.drawable = drawable
-
         self.renderTarget.texture = drawable.texture
         device.renderState.renderTarget = self.renderTarget
-        renderPassDescriptor.colorAttachments[0].texture = drawable.texture
-        renderPassDescriptor.depthAttachment.texture = nil
-        renderPassDescriptor.stencilAttachment.texture = nil
-        renderPipelineDescriptor.colorAttachments[0].pixelFormat = drawable.texture.pixelFormat
+        device.renderState.updateRenderTarget = true
+
+        //        renderPassDescriptor.colorAttachments[0].texture = drawable.texture
+        //        renderPassDescriptor.depthAttachment.texture = nil
+        //        renderPassDescriptor.stencilAttachment.texture = nil
+        //        renderPipelineDescriptor.colorAttachments[0].pixelFormat = drawable.texture.pixelFormat
     }
 
     func update() {
@@ -105,9 +132,5 @@ class OBSSwapChain {
         let unretained = Unmanaged.passUnretained(self).toOpaque()
 
         return OpaquePointer(unretained)
-    }
-
-    deinit {
-        return
     }
 }

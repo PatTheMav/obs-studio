@@ -44,6 +44,7 @@ struct MetalRenderState {
     var projections = [matrix_float4x4]()
 
     var renderTarget: MetalTexture?
+    var sRGBrenderTarget: MetalTexture?
     var clearTarget: MetalTexture?
 
     var textures: [MTLTexture?]
@@ -65,10 +66,14 @@ struct MetalRenderState {
     var swapChain: OBSSwapChain?
 
     var clearState: ClearState?
-    var blendState: BlendState = BlendState()
     var viewPort: MTLViewport
     var cullMode: MTLCullMode
 
     var scissorRectEnabled: Bool
     var scissorRect: MTLScissorRect?
+
+    var srgbState: Bool = false
+    var updateRenderTarget: Bool = false
+
+    var gsColorSpace: gs_color_space
 }

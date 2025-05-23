@@ -31,7 +31,16 @@ public func device_swapchain_create(device: UnsafeMutableRawPointer, data: Unsaf
         depth: 0
     )
 
-    guard let swapChain = OBSSwapChain(device: device, size: size, pixelFormat: data.pointee.format.toMTLFormat())
+    //    let pixelFormat: MTLPixelFormat = switch data.pointee.format {
+    //    case GS_BGRA, GS_BGRX, GS_BGRA_UNORM, GS_BGRX_UNORM:
+    //            .bgra8Unorm_srgb
+    //    default:
+    //        data.pointee.format.toMTLFormat()
+    //    }
+
+    let pixelFormat = data.pointee.format.toMTLFormat()
+
+    guard let swapChain = OBSSwapChain(device: device, size: size, pixelFormat: pixelFormat)
     else {
         return nil
     }

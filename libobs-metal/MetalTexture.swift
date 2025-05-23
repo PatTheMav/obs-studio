@@ -49,11 +49,9 @@ class MetalTexture: Equatable {
     private let resourceID: Int
     private var mappingMode: MetalTextureMapMode
 
-    public var data: UnsafeMutableRawPointer?
-    public var texture: MTLTexture
-    public var type: MTLTextureType {
-        texture.textureType
-    }
+    var data: UnsafeMutableRawPointer?
+    var texture: MTLTexture
+    var sRGBtexture: MTLTexture?
 
     static func == (lhs: MetalTexture, rhs: MetalTexture) -> Bool {
         lhs.resourceID == rhs.resourceID
@@ -82,7 +80,7 @@ class MetalTexture: Equatable {
             height: IOSurfaceGetHeight(surface),
             mipmapped: false)
 
-        descriptor.usage = [.shaderRead]
+        descriptor.usage = [.shaderRead, .pixelFormatView]
 
         let texture = device.device.makeTexture(descriptor: descriptor, iosurface: surface, plane: 0)
         return texture
@@ -131,7 +129,7 @@ class MetalTexture: Equatable {
         descriptor.usage =
             switch description.isRenderTarget {
             case true: [.shaderRead, .renderTarget]
-            case false: .shaderRead
+            case false: [.shaderRead]
             }
 
         if description.type != .type3D && description.isMipMapped {
@@ -148,6 +146,20 @@ class MetalTexture: Equatable {
 
         self.texture = texture
 
+        let sRGBFormat: MTLPixelFormat? =
+            switch description.pixelFormat {
+            case .bgra8Unorm: .bgra8Unorm_srgb
+            case .rgba8Unorm: .rgba8Unorm_srgb
+            case .r8Unorm: .r8Unorm_srgb
+            case .rg8Unorm: .rg8Unorm_srgb
+            case .bgra10_xr: .bgra10_xr_srgb
+            default: nil
+            }
+
+        if let sRGBFormat {
+            self.sRGBtexture = texture.makeTextureView(pixelFormat: sRGBFormat)
+        }
+
         self.resourceID = Hasher().finalize()
         self.mappingMode = .unmapped
     }
@@ -155,12 +167,28 @@ class MetalTexture: Equatable {
     init?(device: MetalDevice, surface: IOSurfaceRef) {
         self.device = device
 
-        guard let texture = MetalTexture.bindSurface(device: device, surface: surface) else {
+        let texture = MetalTexture.bindSurface(device: device, surface: surface)
+
+        guard let texture else {
             assertionFailure("MetalTexture: Failed to create texture with IOSurface")
             return nil
         }
 
         self.texture = texture
+
+        let sRGBFormat: MTLPixelFormat? =
+            switch texture.pixelFormat {
+            case .bgra8Unorm: .bgra8Unorm_srgb
+            case .rgba8Unorm: .rgba8Unorm_srgb
+            case .r8Unorm: .r8Unorm_srgb
+            case .rg8Unorm: .rg8Unorm_srgb
+            case .bgra10_xr: .bgra10_xr_srgb
+            default: nil
+            }
+
+        if let sRGBFormat {
+            self.sRGBtexture = texture.makeTextureView(pixelFormat: sRGBFormat)
+        }
         self.resourceID = Hasher().finalize()
         self.mappingMode = .unmapped
     }
@@ -168,6 +196,7 @@ class MetalTexture: Equatable {
     init?(device: MetalDevice, texture: MTLTexture) {
         self.device = device
         self.texture = texture
+        self.sRGBtexture = texture.makeTextureView(pixelFormat: .bgra8Unorm_srgb)
         self.resourceID = Hasher().finalize()
         self.mappingMode = .unmapped
     }
@@ -184,6 +213,7 @@ class MetalTexture: Equatable {
         }
 
         self.texture = texture
+        self.sRGBtexture = nil
         self.resourceID = Hasher().finalize()
         self.mappingMode = .unmapped
     }
@@ -195,6 +225,7 @@ class MetalTexture: Equatable {
         }
 
         self.texture = texture
+        self.sRGBtexture = texture.makeTextureView(pixelFormat: .bgra8Unorm_srgb)
 
         return true
     }
@@ -403,9 +434,5 @@ class MetalTexture: Equatable {
         let unretained = Unmanaged.passUnretained(self).toOpaque()
 
         return OpaquePointer(unretained)
-    }
-
-    deinit {
-        return
     }
 }

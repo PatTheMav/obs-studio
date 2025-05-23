@@ -118,6 +118,18 @@ extension gs_shader_param_type {
 }
 
 extension gs_color_format {
+    func toMTLsRGBFormat() -> MTLPixelFormat {
+        switch self {
+        case GS_RGBA:
+            return .rgba8Unorm_srgb
+        case GS_BGRX:
+            return .bgra8Unorm_srgb
+        case GS_BGRA:
+            return .bgra8Unorm_srgb
+        default:
+            return self.toMTLFormat()
+        }
+    }
     func toMTLFormat() -> MTLPixelFormat {
         switch self {
         case GS_UNKNOWN:
@@ -158,6 +170,8 @@ extension gs_color_format {
             return .bc3_rgba
         case GS_R8G8:
             return .rg8Unorm
+        case GS_RG16:
+            return .rg16Unorm
         default:
             return .invalid
         }

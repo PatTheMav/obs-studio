@@ -58,10 +58,6 @@ class MetalShader {
 
             hasUpdates = true
         }
-
-        deinit {
-            return
-        }
     }
 
     struct ShaderData {
@@ -157,16 +153,24 @@ class MetalShader {
         guard let currentValues = uniform.currentValues else { return }
 
         if uniform.gsType == GS_SHADER_PARAM_TEXTURE {
-            let shaderTexture = currentValues.withUnsafeBufferPointer {
+            var textureObject: OpaquePointer?
+            var isSrgb = false
+
+            currentValues.withUnsafeBufferPointer {
                 $0.baseAddress?.withMemoryRebound(to: gs_shader_texture.self, capacity: 1) {
-                    $0.pointee.tex
+                    textureObject = $0.pointee.tex
+                    isSrgb = $0.pointee.srgb
                 }
             }
 
-            if let shaderTexture {
-                let texture = Unmanaged<MetalTexture>.fromOpaque(UnsafeRawPointer(shaderTexture)).takeUnretainedValue()
+            if let textureObject {
+                let texture = Unmanaged<MetalTexture>.fromOpaque(UnsafeRawPointer(textureObject)).takeUnretainedValue()
 
-                device.renderState.textures[uniform.textureSlot] = texture.texture
+                if texture.sRGBtexture != nil, isSrgb {
+                    device.renderState.textures[uniform.textureSlot] = texture.sRGBtexture!
+                } else {
+                    device.renderState.textures[uniform.textureSlot] = texture.texture
+                }
             }
 
             if let samplerState = uniform.samplerState {
@@ -246,9 +250,5 @@ class MetalShader {
         let unretained = Unmanaged.passUnretained(self).toOpaque()
 
         return OpaquePointer(unretained)
-    }
-
-    deinit {
-        return
     }
 }

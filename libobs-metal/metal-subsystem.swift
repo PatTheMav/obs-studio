@@ -87,24 +87,32 @@ public func device_blend_function_separate(
 ) {
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    metalDevice.renderState.blendState.sourceRgb = src_c.toMTLFactor()
-    metalDevice.renderState.blendState.sourceAlpha = src_a.toMTLFactor()
-    metalDevice.renderState.blendState.destinationRgb = dest_c.toMTLFactor()
-    metalDevice.renderState.blendState.destinationAlpha = dest_a.toMTLFactor()
+    guard let pipelineDescriptor = metalDevice.renderState.pipelineDescriptor else {
+        return
+    }
+
+    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = src_c.toMTLFactor()
+    pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = src_a.toMTLFactor()
+    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = dest_c.toMTLFactor()
+    pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = dest_a.toMTLFactor()
 }
 
 @_cdecl("device_blend_op")
 public func device_blend_op(device: UnsafeRawPointer, op: gs_blend_op_type) {
     let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    metalDevice.renderState.blendState.operation = op.toMTLOperation()
+    guard let pipelineDescriptor = metalDevice.renderState.pipelineDescriptor else {
+        return
+    }
+
+    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = op.toMTLOperation()
 }
 
 @_cdecl("device_get_color_space")
 public func device_get_color_space(device: UnsafeRawPointer) -> gs_color_space {
-    // TODO: IMPLEMENT
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    return GS_CS_SRGB
+    return metalDevice.renderState.gsColorSpace
 }
 
 @_cdecl("device_update_color_space")
@@ -130,71 +138,72 @@ public func device_get_render_target(device: UnsafeRawPointer) -> OpaquePointer?
 
 @_cdecl("device_set_render_target")
 public func device_set_render_target(device: UnsafeRawPointer, tex: UnsafeRawPointer?, zstencil: UnsafeRawPointer?) {
-    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
-
-    defer {
-        if metalDevice.renderState.renderTarget == nil {
-            metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].pixelFormat = .invalid
-            metalDevice.renderState.renderPassDescriptor?.colorAttachments[0].texture = nil
-        }
-    }
-
-    if let tex {
-        let metalTexture = Unmanaged<MetalTexture>.fromOpaque(tex).takeUnretainedValue()
-
-        metalDevice.renderState.renderTarget = metalTexture
-        metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].pixelFormat = metalTexture.texture.pixelFormat
-        metalDevice.renderState.renderPassDescriptor?.colorAttachments[0].texture = metalTexture.texture
-    } else {
-        metalDevice.renderState.renderTarget = nil
-    }
-
-    defer {
-        if metalDevice.renderState.stencilAttachment == nil {
-            metalDevice.renderState.pipelineDescriptor?.depthAttachmentPixelFormat = .invalid
-            metalDevice.renderState.pipelineDescriptor?.stencilAttachmentPixelFormat = .invalid
-            metalDevice.renderState.renderPassDescriptor?.depthAttachment.texture = nil
-            metalDevice.renderState.renderPassDescriptor?.stencilAttachment.texture = nil
-        }
-    }
-
-    if let zstencil {
-        let zstencilAttachment = Unmanaged<MetalTexture>.fromOpaque(zstencil).takeUnretainedValue()
-
-        metalDevice.renderState.stencilAttachment = zstencilAttachment
-        metalDevice.renderState.pipelineDescriptor?.depthAttachmentPixelFormat = zstencilAttachment.texture.pixelFormat
-        metalDevice.renderState.pipelineDescriptor?.stencilAttachmentPixelFormat =
-            zstencilAttachment.texture.pixelFormat
-        metalDevice.renderState.renderPassDescriptor?.depthAttachment.texture = zstencilAttachment.texture
-        metalDevice.renderState.renderPassDescriptor?.stencilAttachment.texture = zstencilAttachment.texture
-    } else {
-        metalDevice.renderState.stencilAttachment = nil
-    }
+    device_set_render_target_with_color_space(
+        device: device,
+        tex: tex,
+        zstencil: zstencil,
+        space: GS_CS_SRGB
+    )
 }
 
 @_cdecl("device_set_render_target_with_color_space")
 public func device_set_render_target_with_color_space(
     device: UnsafeRawPointer, tex: UnsafeRawPointer?, zstencil: UnsafeRawPointer?, space: gs_color_space
 ) {
-    device_set_render_target(
-        device: device,
-        tex: tex,
-        zstencil: zstencil
-    )
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    // TODO: IMPLEMENT
+    //    defer {
+    //        if metalDevice.renderState.renderTarget == nil {
+    //            metalDevice.renderState.pipelineDescriptor?.colorAttachments[0].pixelFormat = .invalid
+    //            metalDevice.renderState.renderPassDescriptor?.colorAttachments[0].texture = nil
+    //        }
+    //    }
+
+    if let tex {
+        let metalTexture = Unmanaged<MetalTexture>.fromOpaque(tex).takeUnretainedValue()
+
+        metalDevice.renderState.renderTarget = metalTexture
+        metalDevice.renderState.updateRenderTarget = true
+    } else {
+        metalDevice.renderState.renderTarget = nil
+    }
+
+    //    defer {
+    //        if metalDevice.renderState.stencilAttachment == nil {
+    //            metalDevice.renderState.pipelineDescriptor?.depthAttachmentPixelFormat = .invalid
+    //            metalDevice.renderState.pipelineDescriptor?.stencilAttachmentPixelFormat = .invalid
+    //            metalDevice.renderState.renderPassDescriptor?.depthAttachment.texture = nil
+    //            metalDevice.renderState.renderPassDescriptor?.stencilAttachment.texture = nil
+    //        }
+    //    }
+
+    if let zstencil {
+        let zstencilAttachment = Unmanaged<MetalTexture>.fromOpaque(zstencil).takeUnretainedValue()
+
+        metalDevice.renderState.stencilAttachment = zstencilAttachment
+        metalDevice.renderState.updateRenderTarget = true
+    } else {
+        metalDevice.renderState.stencilAttachment = nil
+    }
+
+    metalDevice.renderState.gsColorSpace = space
 }
 
 @_cdecl("device_enable_framebuffer_srgb")
 public func device_enable_framebuffer_srgb(device: UnsafeRawPointer, enable: Bool) {
-    // TODO: IMPLEMENT
-    return
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+
+    if metalDevice.renderState.srgbState != enable {
+        metalDevice.renderState.srgbState = enable
+        metalDevice.renderState.updateRenderTarget = true
+    }
 }
 
 @_cdecl("device_framebuffer_srgb_enabled")
 public func device_framebuffer_srgb_enabled(device: UnsafeRawPointer) -> Bool {
-    // TODO: IMPLEMENT
-    return false
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+
+    return metalDevice.renderState.srgbState
 }
 
 @_cdecl("device_begin_scene")
@@ -313,13 +322,6 @@ public func device_enable_blending(device: UnsafeRawPointer, enable: Bool) {
     }
 
     pipelineDescriptor.colorAttachments[0].isBlendingEnabled = enable
-    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = metalDevice.renderState.blendState.sourceRgb
-    pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = metalDevice.renderState.blendState.sourceAlpha
-    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = metalDevice.renderState.blendState.destinationRgb
-    pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor =
-        metalDevice.renderState.blendState.destinationAlpha
-    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = metalDevice.renderState.blendState.operation
-
 }
 
 @_cdecl("device_enable_depth_test")
@@ -527,9 +529,12 @@ public func device_projection_pop(device: UnsafeRawPointer) {
 }
 
 @_cdecl("device_is_monitor_hdr")
-public func device_is_monitor_hdr(device: UnsafeRawPointer) -> Bool {
-    let _ = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
+public func device_is_monitor_hdr(device: UnsafeRawPointer, monitor: UnsafeRawPointer) -> Bool {
+    let metalDevice = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
-    // TODO: IMPLEMENT
-    return false
+    guard let swapChain = metalDevice.renderState.swapChain else {
+        return false
+    }
+
+    return swapChain.edrHeadroom > 1.0
 }

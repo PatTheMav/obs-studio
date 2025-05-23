@@ -835,7 +835,11 @@ class OBSShader {
             if type == .fragment {
                 var textureId = 0
 
-                for uniform in uniforms.values {
+                for uniformName in uniformsOrder {
+                    guard let uniform = uniforms[uniformName] else {
+                        break
+                    }
+
                     if uniform.storageType.contains(.typeTexture) {
                         if isMain {
                             let variableString = try transpileVariable(variable: uniform)

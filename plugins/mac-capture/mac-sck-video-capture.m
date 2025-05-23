@@ -354,8 +354,13 @@ API_AVAILABLE(macos(12.5)) static void sck_video_capture_render(void *data, gs_e
     gs_eparam_t *param = gs_effect_get_param_by_name(sc->effect, "image");
     gs_effect_set_texture(param, sc->tex);
 
-    while (gs_effect_loop(sc->effect, "DrawD65P3"))
-        gs_draw_sprite(sc->tex, 0, 0, 0);
+    if (gs_get_device_type() == GS_DEVICE_OPENGL) {
+        while (gs_effect_loop(sc->effect, "DrawD65P3"))
+            gs_draw_sprite(sc->tex, 0, 0, 0);
+    } else {
+        while (gs_effect_loop(sc->effect, "Draw"))
+            gs_draw_sprite(sc->tex, 0, 0, 0);
+    }
 
     gs_enable_framebuffer_srgb(previous);
 }

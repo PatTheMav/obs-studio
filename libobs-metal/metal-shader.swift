@@ -71,7 +71,7 @@ public func device_pixelshader_create(
 }
 
 @_cdecl("device_load_vertexshader")
-public func device_load_vertexsahder(device: UnsafeRawPointer, vertShader: UnsafeRawPointer?) {
+public func device_load_vertexshader(device: UnsafeRawPointer, vertShader: UnsafeRawPointer?) {
     let device = Unmanaged<MetalDevice>.fromOpaque(device).takeUnretainedValue()
 
     if let vertShader {
