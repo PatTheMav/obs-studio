@@ -45,6 +45,9 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
+#if defined(__APPLE__)
+#include <os/log.h>
+#endif
 #include <signal.h>
 #endif
 
@@ -76,6 +79,10 @@ bool opt_disable_missing_files_check = false;
 string opt_starting_collection;
 string opt_starting_profile;
 string opt_starting_scene;
+
+#ifdef __APPLE__
+static os_log_t obs_log = os_log_create("com.obsproject.obs-studio", "obs-main");
+#endif
 
 bool restart = false;
 bool restart_safe = false;
@@ -219,7 +226,27 @@ static void do_log(int log_level, const char *msg, va_list args, void *param)
 	}
 #endif
 
-#if !defined(_WIN32) && defined(_DEBUG)
+#if defined(__APPLE__) && defined(_DEBUG)
+	os_log_type_t macos_log_type = OS_LOG_TYPE_DEFAULT;
+	switch (log_level) {
+	case LOG_DEBUG:
+		macos_log_type = OS_LOG_TYPE_DEBUG;
+		break;
+	case LOG_INFO:
+		macos_log_type = OS_LOG_TYPE_INFO;
+		break;
+	case LOG_WARNING:
+		macos_log_type = OS_LOG_TYPE_FAULT;
+		break;
+	case LOG_ERROR:
+		macos_log_type = OS_LOG_TYPE_ERROR;
+		break;
+	}
+
+	os_log_with_type(obs_log, macos_log_type, "%{public}s", str);
+#endif
+
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(_DEBUG)
 	def_log_handler(log_level, msg, args2, nullptr);
 #endif
 
