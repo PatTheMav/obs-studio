@@ -75,15 +75,14 @@ PluginManagerWindow::PluginManagerWindow(std::vector<ModuleInfo> const &modules,
 
 	int row = 0;
 	for (auto &metadata : modules_) {
-		std::string id = metadata.module_name;
-		// Check if the module is missing:
-		bool missing = !obs_get_module(id.c_str()) && !obs_get_disabled_module(id.c_str());
+		if (!metadata.available) {
+			// TODO: Handle presentation of known but unavailable modules
+			continue;
+		}
 
+		std::string id = metadata.module_name;
 		QString name = !metadata.display_name.empty() ? metadata.display_name.c_str()
 							      : metadata.module_name.c_str();
-		if (missing) {
-			name += " " + QTStr("PluginManager.MissingPlugin");
-		}
 
 		auto item = new QCheckBox(name);
 		item->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
@@ -93,9 +92,6 @@ PluginManagerWindow::PluginManagerWindow(std::vector<ModuleInfo> const &modules,
 			item->setProperty("class", "text-muted");
 		}
 
-		if (missing) {
-			item->setEnabled(false);
-		}
 		ui->modulesList->layout()->addWidget(item);
 
 		connect(item, &QCheckBox::toggled, this, [this, row](bool checked) {
