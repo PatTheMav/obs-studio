@@ -1,0 +1,7 @@
+#include <obs-core-modules.h>
+
+const char *obs_core_modules[] = {
+@OBS_CORE_MODULE_LIST@
+};
+
+const unsigned int obs_core_modules_count = @OBS_CORE_MODULE_COUNT@;

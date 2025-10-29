@@ -21,6 +21,7 @@
 #include "obs-defs.h"
 #include "obs-internal.h"
 #include "obs-module.h"
+#include "obs-core-modules.h"
 
 extern const char *get_module_extension(void);
 
@@ -577,6 +578,12 @@ static const char *obs_load_all_modules2_name = "obs_load_all_modules2";
 
 void obs_load_all_modules2(struct obs_module_failure_info *mfi)
 {
+	for (size_t index = 0; index < obs_core_modules_count; ++index) {
+		const char *core_module_name = *(obs_core_modules + index);
+
+		blog(LOG_DEBUG, "Registered core module: %s", core_module_name);
+	}
+
 	struct fail_info fail_info = {0};
 	memset(mfi, 0, sizeof(*mfi));
 

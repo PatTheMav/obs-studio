@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.28...3.30)
 
 include(cmake/obs-version.cmake)
+include(cmake/obs-core-modules.cmake)
 
 if(OS_WINDOWS AND NOT OBS_PARENT_ARCHITECTURE STREQUAL CMAKE_VS_PLATFORM_NAME)
   include(cmake/os-windows.cmake)
@@ -241,6 +242,7 @@ target_link_libraries(
   PRIVATE
     OBS::caption
     OBS::libobs-version
+    OBS::libobs-core-modules
     FFmpeg::avcodec
     FFmpeg::avformat
     FFmpeg::avutil
