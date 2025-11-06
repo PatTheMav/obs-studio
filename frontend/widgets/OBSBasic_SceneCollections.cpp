@@ -1537,6 +1537,9 @@ void OBSBasic::ClearSceneData()
 
 	for (const auto &canvas : canvases) {
 		obs_canvas_enum_scenes(canvas, cb, nullptr);
+
+		obs_canvas_remove(canvas);
+		obs_canvas_release(canvas);
 	}
 
 	canvases.clear();

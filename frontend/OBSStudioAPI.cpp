@@ -673,12 +673,21 @@ void OBSStudioAPI::obs_frontend_get_canvases(obs_frontend_canvas_list *canvas_li
 
 obs_canvas_t *OBSStudioAPI::obs_frontend_add_canvas(const char *name, obs_video_info *ovi, int flags)
 {
-	auto &canvas = main->AddCanvas(std::string(name), ovi, flags);
+	if (!name) {
+		return nullptr;
+	}
+
+	std::string canvasName{name};
+
+	auto &canvas = main->AddCanvas(canvasName, ovi, flags);
+
 	return obs_canvas_get_ref(canvas);
 }
 
 bool OBSStudioAPI::obs_frontend_remove_canvas(obs_canvas_t *canvas)
 {
+	obs_canvas_release(canvas);
+
 	return main->RemoveCanvas(canvas);
 }
 
