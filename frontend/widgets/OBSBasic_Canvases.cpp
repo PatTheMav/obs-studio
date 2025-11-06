@@ -38,8 +38,11 @@ bool OBSBasic::RemoveCanvas(OBSCanvas canvas)
 
 	auto canvas_it = std::find(std::begin(canvases), std::end(canvases), canvas);
 	if (canvas_it != std::end(canvases)) {
-		canvases.erase(canvas_it);
+		obs_canvas_t *canvas = *canvas_it;
+
 		OnEvent(OBS_FRONTEND_EVENT_CANVAS_REMOVED);
+		canvases.erase(canvas_it);
+		obs_canvas_remove(canvas);
 		return true;
 	}
 

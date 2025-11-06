@@ -33,8 +33,6 @@ Canvas::~Canvas() noexcept
 	if (!canvas)
 		return;
 
-	obs_canvas_remove(canvas);
-	obs_canvas_release(canvas);
 	canvas = nullptr;
 }
 
