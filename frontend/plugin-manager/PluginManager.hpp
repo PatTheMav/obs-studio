@@ -32,6 +32,7 @@ struct ModuleInfo {
 	std::string version;
 	bool enabled;
 	bool enabledAtLaunch;
+	bool available;
 	std::vector<std::string> sources;
 	std::vector<std::string> outputs;
 	std::vector<std::string> encoders;
