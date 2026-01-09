@@ -80,8 +80,8 @@ jobs:
           : Set Up Environment 🔧
           if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
-          print '::group::Enable Xcode 16.4'
-          sudo xcode-select --switch /Applications/Xcode_16.4.app/Contents/Developer
+          print '::group::Enable Xcode 26.1'
+          sudo xcode-select --switch /Applications/Xcode_26.1.app/Contents/Developer
           print '::endgroup::'
 
           print '::group::Clean Homebrew Environment'
@@ -97,13 +97,12 @@ jobs:
           local -A arch_names=(x86_64 intel arm64 apple)
           print "cpuName=${arch_names[${{ matrix.target }}]}" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache/restore@v4
-        id: ccache-cache
+      - uses: irgaly/xcode-cache@v1.9.2
         with:
-          path: ${{ github.workspace }}/.ccache
-          key: ${{ runner.os }}-ccache-${{ matrix.target }}-${{ needs.check-event.outputs.config }}
-          restore-keys: |
-            ${{ runner.os }}-ccache-${{ matrix.target }}-
+          key: ${{ runner.os }}-xcode-${{ matrix.target }}-${{ needs.check-event.outputs.config }}
+          restore-keys: ${{ runner.os }}-xcode-${{ matrix.target }}-
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          delete-used-deriveddata-cache: ${{ github.event_name == 'schedule' }}
 
       - name: Set Up Code Signing 🔑
         uses: ./.github/actions/setup-macos-codesigning
@@ -161,12 +160,6 @@ jobs:
         with:
           name: obs-studio-macos-${{ matrix.target }}-${{ needs.check-event.outputs.commitHash }}-dSYMs
           path: ${{ github.workspace }}/build_macos/obs-studio-*-macos-${{ steps.setup.outputs.cpuName }}-dSYMs.tar.xz
-
-      - uses: actions/cache/save@v4
-        if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
-        with:
-          path: ${{ github.workspace }}/.ccache
-          key: ${{ runner.os }}-ccache-${{ matrix.target }}-${{ needs.check-event.outputs.config }}
 
   ubuntu-build:
     name: Ubuntu 🐧
