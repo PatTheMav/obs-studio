@@ -103,6 +103,7 @@ jobs:
           restore-keys: ${{ runner.os }}-xcode-${{ matrix.target }}-
           cache-read-only: ${{ github.event_name == 'pull_request' }}
           delete-used-deriveddata-cache: ${{ github.event_name == 'schedule' }}
+          verbose: true
 
       - name: Set Up Code Signing 🔑
         uses: ./.github/actions/setup-macos-codesigning
