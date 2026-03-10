@@ -52,12 +52,13 @@ void addModuleToPluginManagerImpl(void *param, obs_module_t *newModule)
 
 	if (it == instance.modules_.end()) {
 		instance.modules_.push_back({display_name ? display_name : "", module_name, id ? id : "",
-					     version ? version : "", true, true});
+					     version ? version : "", true, true, true});
 	} else {
 		it->display_name = display_name ? display_name : "";
 		it->module_name = module_name;
 		it->id = id ? id : "";
 		it->version = version ? version : "";
+		it->available = true;
 	}
 }
 
@@ -107,20 +108,23 @@ void PluginManager::loadModules_()
 		for (auto it : data) {
 			ModuleInfo obsModule;
 			try {
-				obsModule = {it.at("display_name"),
-					     it.at("module_name"),
-					     it.at("id"),
-					     it.at("version"),
-					     it.at("enabled"),
-					     it.at("enabled"),
-					     it.at("sources"),
-					     it.at("outputs"),
-					     it.at("encoders"),
-					     it.at("services"),
-					     {},
-					     {},
-					     {},
-					     {}};
+				obsModule = {
+					it.at("display_name"),
+					it.at("module_name"),
+					it.at("id"),
+					it.at("version"),
+					it.at("enabled"),
+					it.at("enabled"),
+					false,
+					it.at("sources"),
+					it.at("outputs"),
+					it.at("encoders"),
+					it.at("services"),
+					{},
+					{},
+					{},
+					{},
+				};
 			} catch (const nlohmann::json::out_of_range &error) {
 				blog(LOG_WARNING, "Error loading module info: %s", error.what());
 				continue;
