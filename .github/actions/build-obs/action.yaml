@@ -1,0 +1,91 @@
+name: Set Up and Build obs-studio
+description: Builds obs-studio for specified architecture and build config
+inputs:
+  config:
+    description: Build configuration
+    required: false
+    default: RelWithDebInfo
+  target:
+    description: Build target for obs-studio
+    required: true
+  codesign:
+    description: Enable codesigning (macOS only)
+    required: false
+    default: 'false'
+  codesign-ident:
+    description: Developer ID for application codesigning (macOS only)
+    required: false
+    default: '-'
+  codesign-team:
+    description: Team ID for application codesigning (macOS only)
+    required: false
+    default: ''
+  provisioning-profile-id:
+    description: UUID of provisioning profile (macOS only)
+    required: false
+    default: ''
+  analyze:
+    description: Run build as static analzer build
+    required: false
+    default: 'false'
+  path:
+    description: Destination of generated builds.
+    required: false
+    default: ${{ runner.temp }}
+  working-directory:
+    description: Working directory for packaging
+    required: false
+    default: ${{ github.workspace }}
+outputs:
+  analyzer-output-path:
+    description: Path to generated clang-analyze output files
+    value: ${{ steps.build.outputs.analyzer-output-path }}
+runs:
+  using: composite
+  steps:
+    - name: Run macOS Build
+      id: build
+      if: runner.os == 'macOS'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BUILD_CONFIG: ${{ inputs.config }}
+        BUILD_TARGET: ${{ inputs.target }}
+        BUILD_CODESIGNING: ${{ inputs.codesign }}
+        CODESIGN_IDENT: ${{ inputs.codesign-ident }}
+        CODESIGN_TEAM: ${{ inputs.codesign-team }}
+        PROVISIONING_PROFILE: ${{ inputs.provisioning-profile-id }}
+        OUTPUT_PATH: ${{ inputs.path }}
+        ANALYZE: ${{ inputs.analyze }}
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/build-macos.zsh
+
+    - name: Install Ubuntu Build Dependencies
+      id: ubuntu-setup
+      if: runner.os == 'Linux'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      env:
+        BUILD_TARGET: ${{ inputs.target }}
+        OUTPUT_PATH: ${{ inputs.path }}
+      run: ${GITHUB_ACTION_PATH}/setup-ubuntu.bash
+
+    - name: Run Ubuntu Build
+      id: build
+      if: runner.os == 'Linux'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      env:
+        BUILD_CONFIG: ${{ inputs.config }}
+        BUILD_TARGET: ${{ inputs.target }}
+        OUTPUT_PATH: ${{ inputs.path }}
+      working-directory: ${{ inputs.working-directory }}
+      run: ${GITHUB_ACTION_PATH}/build-ubuntu.bash
+
+    - name: Run Windows Build
+      id: build
+      if: runner.os == 'Windows'
+      shell: pwsh -command ". '{0}'"
+      env:
+        BUILD_CONFIG: ${{ inputs.config }}
+        BUILD_TARGET: ${{ inputs.target }}
+        OUTPUT_PATH: ${{ inputs.path }}
+      working-directory: ${{ inputs.working-directory }}
+      run: ${GITHUB_ACTION_PATH}/Build-Windows.ps1
