@@ -151,11 +151,12 @@ jobs:
           target: ${{ matrix.target }}
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
-          codesign: ${{ fromJSON(needs.check-event.outputs.codesign) && fromJSON(steps.codesign.outputs.haveCodesignIdent) }}
-          codesignIdent: ${{ steps.codesign.outputs.codesignIdent }}
-          notarize: ${{ fromJSON(needs.check-event.outputs.notarize) && fromJSON(steps.codesign.outputs.haveNotarizationUser) }}
-          codesignUser: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
-          codesignPass: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+          codesign: ${{ fromJSON(needs.check-event.outputs.codesign) && fromJSON(steps.codesign.outputs.can-codesign) }}
+          codesign-ident: ${{ steps.codesign.outputs.identity }}
+          notarize: ${{ fromJSON(needs.check-event.outputs.notarize) && fromJSON(steps.codesign.outputs.can-notarize) }}
+          codesign-user: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
+          codesign-pass: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+          path: ${{ github.workspace }}
 
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -224,6 +225,7 @@ jobs:
           target: x86_64
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
+          path: ${{ github.workspace }}
 
       - name: Upload Source Tarball 🗜️
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -420,6 +422,7 @@ jobs:
           target: ${{ matrix.architecture }}
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
+          path: ${{ github.workspace }}
 
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
