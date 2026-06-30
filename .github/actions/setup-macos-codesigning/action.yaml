@@ -1,0 +1,84 @@
+name: Set up macOS Code Signing
+description: Sets up code signing certificates, provisioning profiles, and notarization information
+inputs:
+  identity:
+    description: Code signing identity
+    required: true
+  cert:
+    description: PKCS12 certificate in base64 format
+    required: true
+  cert-password:
+    description: Password required to install PKCS12 certificate
+    required: true
+  provisioning-profile:
+    description: Provisioning profile in base64 format
+    required: false
+  apple-id:
+    description: Apple ID to use for notarization
+    required: false
+  apple-secret:
+    description: Application password for notarization
+outputs:
+  can-codesign:
+    description: True if necessary code signing credentials were found
+    value: ${{ steps.codesign.outputs.have-codesign-ident }}
+  identity:
+    description: Code signing identity
+    value: ${{ steps.codesign.outputs.codesign-ident }}
+  team:
+    description: Code signing team
+    value: ${{ steps.codesign.outputs.codesign-team }}
+  profile:
+    description: True if necessary provisioning profile credentials were found
+    value: ${{ steps.provisioning.outputs.have-rovisioning-profile }}
+  profile-uuid:
+    description: UUID of imported provisioning profile
+    value: ${{ steps.provisioning.outputs.profile-uuid }}
+  can-notarize:
+    description: True if necessary notarization credentials were found
+    value: ${{ steps.notarization.outputs.have-notarization-user }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'macOS'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      run: |
+        : Check Runner Operating System
+        echo '::notice::setup-macos-codesigning action requires a macOS-based runner.'
+        exit 1
+
+    - name: Set Up Keychain
+      id: codesign
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      env:
+        SIGNING_IDENTITY: ${{ inputs.identity }}
+        SIGNING_CERT: ${{ inputs.cert }}
+        SIGNING_CERT_PASSWORD: ${{ inputs.cert-password }}
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/setup-keychain.zsh
+
+    - name: Set Up Provisioning Profile
+      id: provisioning
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      env:
+          CODESIGN_TEAM: ${{ steps.codesign.outputs.codesign-team }}
+          PROVISIONING_PROFILE: ${{ inputs.provisioning-profile }}
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/setup-provisioning.zsh
+
+    - name: Set Up Notarization
+      id: notarization
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      env:
+          APPLE_ID: ${{ inputs.apple-id }}
+          APPLE_SECRET: ${{ inputs.apple-secret }}
+      run: |
+        : Notarization
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+        {
+          if [[ -n "${APPLE_ID}" && -n "${APPLE_SECRET}" ]]; then
+            echo 'haveNotarizationUser=true'
+          } else {
+            echo 'haveNotarizationUser=false'
+          }
+        } >> "${GITHUB_OUTPUT}"
