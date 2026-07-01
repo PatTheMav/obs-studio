@@ -423,3 +423,117 @@ Both file formats are predominantly used for build system configuration or conti
     * **Exception:** If the key of a variable is used for an underlying system e.g., to define environment variables in a shell environment that commonly uses `UPPER_SNAKE_CASE` names.
 * Use **double quotes** for **key names** and **string values** in JSON files.
 * Use **single quotes** for **complex strings in YAML files** that might otherwise not be correctly interpreted as strings, quoting is otherwise not necessary.
+
+### Shell Scripts
+
+Shell scripts are used in two areas: GitHub Actions workflows and actions, and additional helper scripts in the `build-aux` directory.
+
+For best compatibility with the main platforms supported by OBS Studio scripts are provided for the "native" format used by each:
+
+* Powershell Core scripts for Windows
+* Zsh scripts for macOS
+* Bash scripts for Linux, BSDs, and others
+
+While Zsh and Bash share a lot of common ground, they differ in important ways that impact the way scripts can be designed for them, while the Powershell script language is a much more powerful object-oriented language.
+
+#### Scripts Used On CI
+
+Scripts can be used in two forms in GitHub Actions: Either as inline snippets in `steps` or as full scripts invoked directly. In the former variant, GitHub Actions will take the text body defined inline and copy it into a script file on the runner's drive, before invoking it just like in the second form.
+
+The following rules apply to all scripting languages when used in GitHub Actions workflows and composite actions:
+
+* Ensure the validity of environment variables
+    * It is good practice to provide inputs to shell scripts as environment variables, but their definition as well as their values cannot be assumed.
+    * For inline script snippets it is allowed to assume that variables like `GITHUB_OUTPUT` are set and contain a non-null value.
+    * For non-inline scripts check all environment variables for whether they are set and whether non-optional variables are not empty.
+    * Always abort script execution if the "magic" environment variable `CI` is not set.
+    * Use **Shell Parameter Expansion** in [Bash](https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Shell-Parameter-Expansion-1) and [Zsh](https://zsh.sourceforge.io/Doc/Release/Expansion.html#Parameter-Expansion) to handle potentially unset or empty variables.
+        * Use `${VARIABLE:?}` to have the script fail immediately if an environment variable is not set or has an empty string value.
+        * A simple early check is to add `: "${VARIABLE:?}` early in a script to have execution fail if the variable is not set.
+        * Use `${VARIABLE:=default}` to initialize an empty or unset variable with a default value.
+        * Use `${VARIABLE:-default}` to temporarily use a fallback value if the variable is unset or empty.
+    * Use inline evaluation (`$(if ( $null -ne $env:VARIABLE ) { $env:VARIABLE } else { "Fallback" } )` or explicit checks to handle unset or empty environment variables in Powershell
+* For Bash and Zsh, always wrap the main functionionality of a script in a separate function, preferable with the name of the script itself, and call this function from the global scope.
+* For Powershell, always use a `[CmdletBinding]` and wrap the functionality of the script in a `process` block.
+* Use GitHub Actions output modifiers like `::warning::` and `::error::` to make them stand out.
+    * For actual errors, return `1` as the error code (Bash, Zsh) or `throw` (Powershell) to follow the "fail early" approach.
+* Do not assume the current working directory of a script holds a checkout of the project.
+    * The working directory of a script can be changed in multiple ways and can also be set explicitly by a workflow or composite action before the script is invoked.
+    * Design composite actions in such a way that they can either be run from any working directory (whether that yields any benefit is up the caller) or fails early if the working directory does not fulfil specific requirements (e.g. a necessary file or directory is present).
+    * A common pattern is to provide callers a way to set the working directory for a composite action (e.g. if the checkout has been placed in an alternative location) but use `github.workspace` as the default value, which aligns with the checkout action's default behavior. Scripts associated with the action should still run checks to confirm the working directory indeed contains the required file(s).
+    * Design scripts in a way that they only pass absolute file paths to commands and functions that support them, removing the working directory as a source of failure.
+    * If the working directory needs to be adjusted (e.g. to create `tar` archives with relative paths), use `pushd` and `popd` to set and restore the working directories _with absolute paths_. This ensures that the script switches from whichever current working directory and also returns back to it before continuing the script.
+* Scripts used for GitHub Actions do not need elaborate argument or error handling, as they are not meant for "human consumption".
+    * Error and warning messages should be designed to be easily digistable at GitHub Action's workflow summary page.
+    * Script and function arguments are not required as script inputs are realized using environment variables, which are checked per the rule above.
+* Scripts should enable tracing when the `RUNNER_DEBUG` environment variable is set:
+    * Bash: `set -x`
+    * Zsh: `setopt XTRACE`
+    * Powershell: `Set-PSDebug -Trace 1` (Can be set to `2` if values should be expanded)
+
+#### Bash
+
+Bash scripts require **Bash 5.0 or newer** as the scripts make use of some more recent features added to the shell. In general each shell script should follow the best practices outlined by [ShellCheck](https://www.shellcheck.net) and scripts (as well as script snippets used in GitHub composite actions) checked against it.
+
+> [!IMPORTANT]
+> Use `shellcheck --severity=style --shell=bash --enable=all` when linting Bash scripts.
+
+* Ensure scripts themselves fail early on failures by external commands or nested function calls
+    * Use the common practice of enabling `errexit`, `pipefail`, and `nounset` for all scripts.
+    * Use conditional blocks or list operators like `&&` and `||` to gracefully handle non-zero return codes.
+* Use doubles quotes for all variables by default, be aware of necessary exceptions.
+    * Bash uses automatic word expansion and globbing on all variables by default, which can introduce unforeseen side-effects. Thus it is best practice to always wrap variables in double quotes like so: `"${VARIABLE}"`.
+* The exception to this rule is composition of glob expressions:
+    * When composing a glob expression from one or more variables, avoid quotes for the parts that are intended to be subject to glob expansion, e.g. `"${path_prefix}"/some_path/*.txt`. Otherwise Bash will simply use the literal string `*.txt` and not expand it.
+* When the contents of a variable should be split into an array, use `read -a array_name <<< "${variable}"` instead of direct declaration (`declare -a array_name=(${variable})`) (ShellCheck will commonly suggest this automatically).
+* Prefer built-in shell functionality over use of external commands as much as possible except if a shell built-in has known deficiencies or its capabilities are too limited and resulting code becomes harder to reason about.
+    * Use glob expressions for simple matching, use POSIX regular expressions with `BASH_REMATCH` otherwise, use `sed` with extended regular expressions last.
+* Be aware of the pitfalls of arithmetic expressions, as even the judicious use of double quotes will not prevent a command substition from executing.
+    * The test `$(( "${x}" ))` with `x` set to `a[0$(uname>&2)]` will execute `uname`. This is an existing issue with arithmetic evaluations in all modern shells.
+    * To make matters worse, several builtin commands will automatically evaluate variables as arithmetic expressions depending on their invocation. E.g. `[[ "${x}" -lt 2 ]]` is converted into an arithmetic comparison and thus `x` is evaluated accordingly (and runs `uname`). The same applies when assigning `x` to a variable declared as numeric (e.g. `typeset -i a; a="${x}`).
+    * Always sanitize any user-provided value that is directly or indirectly used in an arithmetic expression.
+        * This includes the use of `(( ))`, `$(( ))`, `[[ ]]` when a numerical comparison is used (e.g. `-lt`, `-gt`, etc), setting numerical variables (`let`, `typeset -i`), or as indices for arrays. **Double quoting the variable will not prevent this**.
+
+#### Zsh
+
+Zsh scripts require **Zsh 5.8 or newer**, which should align with the build requirements on macOS. Due to its differences to Bash and its cousins, ShellCheck cannot be used to lint Zsh scripts. In general a large set of ShellCheck best practices do apply to Zsh scripts as well, with some differences.
+
+* Ensure that scripts themselves fail early on failures by external commands or nested function calls.
+    * Use `setopt` to set `ERR_EXIT`, `ERR_RETURN`, `PIPE_FAIL`, `NO_UNSET`, and also `WARN_CREATE_GLOBAL`, and `WARN_NESTED_VAR` for all scripts.
+    * Use conditional blocks or list operators like `&&` and `||` to gracefully handle non-zero return codes.
+* Ensure that scripts run in `zsh` mode by calling `builtin emulate -L zsh` as early as possible to prevent emulation of other shells' behavior.
+* This enables Zsh's default behavior which will **not automatically expand variables**. Indeed Zsh only does so if specific modifiers are used. By default any variable stays a string, even if it could be split into words or its contents could be interpreted as a glob expression.
+    * To have Zsh interpret a string as a glob expression, it needs to be written as `${~variable}`.
+    * This effectively enables the `GLOB_SUBST` shell option for the evaluation of this variable only. Do not enable `GLOB_SUBST` in a script if you want to make use of this behavior.
+    * Likewise to have Zsh split a string per default shell rules, it needs to be written as `${=variable}`.
+    * This can be used to split a variable containing words into an array via `typeset -a array=(${=variable})`, otherwise `typeset -a array=(${(s: :)variable})` or `read -A array <<< "${variable}"` can be used. Either way, the splitting needs be requested explicitly.
+* While this reduces the potential impact of unquoted expansions, it does not eliminate them entirely:
+    * Command substitutions (e.g. `$(some-command some_argument)`) are still broken into words using the `IFS` parameter in Zsh, so those should always be quoted (e.g. `output="$(some-command some-argument)"`).
+    * Zsh (like other shells) elides empty variables if they are not enclosed in double quotes. This can lead to problems if variables are used with commands that have a strict requirement for positional arguments like `printf`.
+    * Combined with the arithmetic evaluation issue shared with other shells, this can lead to unforeseen command execution. Consider `printf '[%d] %s'` which requires an even number of arguments. If provided with `1 ${empty_variable} 2 ${malicious_variable}`, the empty variable is elided and the `malicious_variable` is now used as input for `%d`, which will trigger arithmetic evaluation.
+        * If `malicious_variable` is set to the string `psvar[0$(uname>&2)]`, `uname` will be executed. Note that double quoting will **not** prevent the execution, but if `empty_variable` where enclosed in double quotes, it would not have been elided and `malicious_variable` would not be subject to arithmetic evaluation.
+* Thus the following rules apply for Zsh scripts:
+    * Always use double quotes for command substitutions (`result="$(some_command)"`).
+    * Always use double quotes when composing strings with parameter expansion (`string="some_${other_string}"`).
+    * Always use double quotes to ensure that even an empty argument is passed to a command or function that _requires_ a positional argument (`some_command "${possibly_empty}"`).
+    * Always sanitize any user-provided value that is directly or indirectly used in an arithmetic expression
+        * On top of the examples mentioned for Bash, Zsh will implicitly use arithmetic evaluation for `printf`, `integer`, and `exit`.
+
+#### Powershell
+
+Powershell scripts require **Powershell Core 7.3 or newer**. In general Powershell scripts should be checked using `Invoke-ScriptAnalyzer` available in the `PSScriptAnalyzer` module. Some basic rules (which accomodate the requirements by the script analyzer) are:
+
+* Always use `CmdletBinding`.
+* Prefer named parameter bindings over the use of `$Args`.
+* Each function needs to have at least a `process` block. Use `begin` for setup code, use `end` for cleanup.
+* Use `Verb-PascalCase` for function names, and use `PascalCase` for variables.
+    * Environment variables commonly use `CAPITALCASE` but are wrapped in the `Env` object on Powershell.
+* Splat arrays into arguments when passed to functions or other commands via `@ArrayVariable`.
+    * Pack command arguments into an array if the command line would exceed a column limit of 120 characters and splat it in the invocation.
+* Powershell has much less implicit expansion features than POSIX shells but provides a more extensive and modern set of tools for splitting, matching, and evaluations. Those features need to be invoked manually however.
+    * While POSIX shells operate in a string-based manner, Powershell is object-based. The majority of first-party commands actually return an object that usually has a `ToString` method which is then implicitly called by the interpreter when passed to any other command that potentially takes a `String` as input.
+    * This allows Powershell scripts to pass complex objects between commands using the `|` operator, and allows sub-commands to access all the instance properties and methods present on the object rather then just operating on a textual representation.
+* Use functional patterns via piping as they are more canonical in Powershell:
+    * As an example, `Get-ChildItem` can get a list of file entries. While this command can be supplied with a limited set of inclusion, exclusion, and filter arguments, they each have very specific behaviors.
+    * Thus it is easier to pipe its output to `Where-Object` which is called for each "child item" and either returns `$true` or `$false` depending on whether the item fulfills a requirement. Similarly `ForEach-Object` is called for each item and can transform the input into a new output, which then replaces the original item.
+    * `Get-ChildItem | Where-Object { $_.Name -match 'My Desired Name Prefix .+' } | ForEach-Object { $_.Name.Uppercase() }` is thus similar to patterns like `list.filter( _ =~ "My Desired Name Prefix .+" }.map( to_upper(_)` in other languages.
