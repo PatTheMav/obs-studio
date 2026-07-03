@@ -222,7 +222,7 @@ jobs:
 
       - name: Run Services Validation
         if: fromJSON(steps.checks.outputs.has-changed-files)
-        uses: ./.github/actions/services-validator
+        uses: ./.github/actions/lint-obs/validate-services-data
         with:
           path: ${{ steps.checks.outputs.changed-repo-files }}
           github-token: ${{ github.token }}
