@@ -1,0 +1,41 @@
+name: Setup PVS-Studio
+description: Set up Sparkle for use on GitHub Actions runners
+inputs:
+  version:
+    description: PVS-Studio Version to install
+    required: true
+  checksum:
+    description: Checksum of PVS-Studio download to confirm authenticity
+    required: true
+  url:
+    description: PVS-Studio download URL
+    required: false
+    default: 'https://files.pvs-studio.com/PVS-Studio_setup.exe'
+  user:
+    description: PVS-Studio license user name
+    required: true
+  license:
+    description: PVS-Studio license key
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Windows'
+      shell: bash --noprofile --norc -eo pipefail {0}
+      run: |
+        : Check Runner Operating System
+        print '::notice::setup-pvs-studio action requires a Windows-based runner.'
+        return 1
+
+    - name: Setup PVS-Studio
+      id: setup
+      shell: pwsh -command ". '{0}'"
+      working-directory: ${{ inputs.workingDirectory }}
+      env:
+        PVS_STUDIO_URL: ${{ inputs.url }}
+        PVS_STUDIO_VERSION: ${{ inputs.version }}
+        PVS_STUDIO_CHECKSUM: ${{ inputs.checksum }}
+        PVS_STUDIO_USERNAME: ${{ inputs.user }}
+        PVS_STUDIO_LICENSE: ${{ inputs.license }}
+      run: ${{ github.action_path }}/Setup-PVSStudio.ps1

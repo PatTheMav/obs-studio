@@ -1,0 +1,24 @@
+name: Merge clang sarif files
+description: Merges clang-generated SARIF files into a single tool run as required by CodeQL
+inputs:
+  path:
+    description: Location of SARIF files that need to be merged
+    required: true
+  output-name:
+    description: File name for merged SARIF file.
+    required: false
+    default: 'merged.sarif'
+outputs:
+  path:
+    description: Location of the generated merged sarif file
+    value: ${{ steps.merge.outputs.sarif-file }}
+runs:
+  using: composite
+  steps:
+    - name: Merge SARIF Files
+      id: merge
+      shell: bash --noprofile --norc -eo pipefail {0}
+      env:
+        SARIF_PATH: ${{ inputs.path }}
+        OUTPUT_NAME: ${{ inputs.output-name }}
+      run: ${{ github.action_path }}/merge-sarif.bash

@@ -1,0 +1,65 @@
+name: Run PVS-Studio
+description: Runs PVS-Studio with the provided Visual Studio project and uploads results as artifacts
+inputs:
+  architecture:
+    description: Build architecture used for project build
+    required: true
+  config:
+    description: Build configuration for project build
+    required: true
+  upload-codeql:
+    description: Enable automatic upload of SARIF report to CodeQL
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Windows'
+      shell: bash --noprofile --norc -eo pipefail {0}
+      run: |
+        : Check Runner Operating System
+        print '::notice::setup-pvs-studio action requires a Windows-based runner.'
+        return 1
+
+    - name: Build OBS Studio
+      id: build
+      uses: ./.github/actions/build-obs
+      env:
+        TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+        TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
+        RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
+        RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
+        YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENTID }}
+        YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+        YOUTUBE_SECRET: ${{ secrets.YOUTUBE_SECRET }}
+        YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_SECRET_HASH }}
+      with:
+        config: ${{ inputs.config }}
+        target: ${{ inputs.architecture }}
+        path: ${{ github.workspace }}
+
+    - name: Invoke PVS-Studio
+      id: analyze
+      shell: pwsh -command ". '{0}'"
+      working-directory: ${{ inputs.workingDirectory }}
+      env:
+        BUILD_SOLUTION: '${{ github.workspace }}/build_${{ inputs.architecture }}/obs-studio.sln?'
+        BUILD_ARCHITECTURE: ${{ inputs.architecture }}
+        BUILD_CONFIG: ${{ inputs.config }}
+      run: ${{ github.action_path }}/Invoke-PVSStudio.ps1
+
+    - name: Upload PVS-Studio Output
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: 'pvs-analysis-log'
+        path: |
+          ${{ runner.temp }}/analysis.plog
+          ${{ runner.temp }}/analysis.plog.sarif
+
+    - name: Upload PVS-Studio CodeQL Report
+      uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+      if: ${{ fromJSON(inputs.upload-codeql) }}
+      with:
+        sarif_file: ${{ runner.temp }}/analysis.plog.sarif
+        category: 'PVS-Studio (Windows)'
