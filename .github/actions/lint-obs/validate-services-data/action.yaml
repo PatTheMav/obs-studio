@@ -1,0 +1,99 @@
+name: Validate Services Data
+description: Checks services configuration file and checks for defunct services
+inputs:
+  path:
+    description: A string representing either a JSON array of file names, a glob expression, or file path.
+    required: true
+  api-token:
+    description: Token used to access the server check API.
+    required: true
+  api-servers:
+    description: List of servers to use with server check API.
+    required: true
+  run-schema-checks:
+    description: A string value to indicate whether JSON schema checks should be run.
+    default: 'true'
+  run-service-checks:
+    description: A string value to indicate whether checks for defunct services should be run.
+    default: 'false'
+  create-pull-request:
+    description: A string value to indicate whether a pull request with defunct services should be created.
+    default: 'false'
+  github-token:
+    description: The GitHub token used to make authenticated API requests.
+    default: ${{ github.token }}
+  working-directory:
+    description: Working directory to run checks from.
+    default: ${{ github.workspace }}
+outputs:
+  has-defunct-services:
+    description: A string value to indicate whether any defunct services were detected.
+    value: ${{ toJSON(steps.check.outputs.failures > 0) }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os == 'Windows'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      run: |
+        : Check Runner Operating System
+        echo '::notice::services-validation action requires a macOS-based or Linux-based runner.'
+        exit 1
+
+    - name: Validate Services File JSON Schema
+      id: validate-services
+      if: fromJSON(inputs.run-schema-checks)
+      uses: ./.github/actions/lint-obs/validate-json-schema
+      with:
+        path: ${{ inputs.path }}
+        github-token: ${{ inputs.github-token }}
+
+    - name: Restore Timestamp Cache
+      if: fromJSON(inputs.run-service-checks)
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ${{ runner.temp }}/timestamps
+        key: service-check-${{ github.run_id }}
+        restore-keys: service-check-
+
+    - name: Install and Configure Python
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      run: ${GITHUB_ACTION_PATH}/setup-action.bash
+
+    - name: Check for defunct services
+      id: services-check
+      if: fromJSON(inputs.run-service-checks)
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        API_KEY: ${{ inputs.api-token }}
+        API_SERVERS: ${{ inputs.api-servers }}
+        CACHE_DIR: ${{ runner.temp }}/timestamps
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPOSITORY: ${{ github.repository }}
+        WORKFLOW_RUN_ID: ${{ github.run_id }}
+      run: |
+        : Check for defunct services
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+        source "${RUNNER_TEMP}/services-validator-venv/bin/activate"
+        python3 -u "${GITHUB_ACTION_PATH}/check-services.py"
+
+    - name: Upload Timestamp Cache
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      if: fromJSON(inputs.run-service-checks)
+      with:
+        name: timestamps
+        path: ${{ runner.temp }}/timestamps/*
+
+    - name: Create Pull Request
+      uses: ./.github/actions/create-pull-request
+      if: fromJSON(inputs.create-pull-request) && fromJSON(inputs.run-service-checks) && steps.services-check.outputs.failures > 0
+      with:
+        author: 'Service Checker <commits@obsproject.com>'
+        branch: 'automated/clean-services'
+        commit-message: 'rtmp-services: Remove defunct servers/services'
+        title: 'rtmp-services: Remove defunct servers/services'
+        body: ${{ steps.services-check.outputs.pr_message }}
+        delete-unused: true
+        github-token: ${{ inputs.github-token }}
