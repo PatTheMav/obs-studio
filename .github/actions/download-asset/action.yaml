@@ -1,0 +1,81 @@
+name: Download Asset
+description: Downloads OBS Studio release asset for publishing on Steam
+inputs:
+  platform:
+    description: Platform to download asset for.
+    required: true
+  architecture:
+    description: Architecture to download asset for.
+    required: true
+  custom-asset:
+    description: Custom asset to download.
+    required: false
+    default: ''
+  verify:
+    description: Verify asset using attestation
+    required: false
+    default: 'false'
+  path:
+    description: Destination path for download assets
+    required: false
+    default: ${{ github.workspace }}
+outputs:
+  path:
+    description: Path to downloaded asset (if successful)
+    value: ${{ steps.download.outputs.path }}
+  verified:
+    description: Verification status from attestation
+    value: ${{ steps.verify.outputs.verified }}
+runs:
+  using: composite
+  steps:
+    - name: Install Bash
+      id: install-bash
+      if: runner.os == 'macOS'
+      shell: bash --noprofile --norc -eo pipefail {0}
+      run: |
+        : Install Bash
+
+        local brew_prefix="$(brew --prefix)"
+        if [[ ! -d "${brew_prefix}/bin/bash" ]]; then
+          brew install --quiet bash
+        fi
+
+    - name: Download Asset
+      id: download
+      shell: bash --noprofile --norc -eo pipefail {0}
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PLATFORM: ${{ inputs.platform }}
+        ARCHITECTURE: ${{ inputs.architecture }}
+        DESTINATION: ${{ inputs.path }}
+        TAG_NAME: ${{ github.ref_name }}
+      run: ${{ github.action_path }}/download-asset.bash
+
+    - name: Download Custom Asset
+      id: download-custom
+      if: ${{ github.event_name == 'workflow_dispatch' && customAsset != '' }}
+      shell: bash --noprofile --norc -eo pipefail {0}
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PLATFORM: ${{ inputs.platform }}
+        ARCHITECTURE: ${{ inputs.architecture }}
+        CUSTOM_ASSET: ${{ inputs.customAsset }}
+        DESTINATION: ${{ inputs.path }}
+      run: ${{ github.action_path }}/download-custom-asset.bash
+
+    - name: Verify Asset
+      id: verify
+      if: ${{ fromJSON(inputs.verify) && inputs.customAsset == '' }}
+      shell: bash --noprofile --norc -eo pipefail {0}
+      env:
+        GH_TOKEN: ${{ github.token }}
+        ASSET_PATH: ${{ steps.download.outputs.path }}
+      run: |
+        : Verify Asset
+        local verified='false'
+        if gh attestation verify "${ASSET_PATH}" -owner obsproject; then
+          verified='true'
+        fi
+
+        echo "verified=${verified}" >> "${GITHUB_OUTPUT}"
