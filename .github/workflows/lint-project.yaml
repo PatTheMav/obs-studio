@@ -126,9 +126,9 @@ jobs:
 
       - name: Validate Flatpak Manifest
         if: fromJSON(steps.checks.outputs.has-changed-files)
-        uses: ./.github/actions/flatpak-manifest-validator
+        uses: ./.github/actions/lint-obs/validate-flatpak-manifest
         with:
-          failCondition: error
+          fail-on: error
 
   qt-xml-validator:
     name: qt-xml-validator
