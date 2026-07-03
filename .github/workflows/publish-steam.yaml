@@ -2,51 +2,64 @@ name: Publish On Steam
 on:
   workflow_call:
     inputs:
+      environment:
+        description: Deployment environment to use for jobs.
+        required: true
+        type: string
       dry-run:
-        type: boolean
         description: Enable dry-run mode (no side-effects).
-        required: false
+        type: boolean
         default: false
       ref:
         type: string
         description: Git reference to use for workflow
-        required: false
+        default: ${{ github.ref }}
       windows-x64-url:
         type: string
         description: Optional Windows X64 asset URL
-        required: false
+        default: ''
       windows-arm64-url:
         type: string
         description: Optional Windows ARM64 asset URL
-        required: false
+        default: ''
       macos-apple-url:
         type: string
         description: Optional macOS Apple Silicon asset URL
-        required: false
+        default: ''
       macos-intel-url:
         type: string
         description: Optional macOS Intel asset URL
-        required: false
+        default: ''
+    secrets:
+      STEAM_SHARED_SECRET:
+        required: true
+      STEAM_USER:
+        required: true
+      STEAM_PASSWORD:
+        required: true
 
-permissions: {}
+permissions:
+  contents: read    # Necessary for repository checkouts.
+defaults:
+  run:
+    shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
   macos-build:
     name: macOS
     runs-on: macos-26
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         architecture: [arm64, x86_64]
-    defaults:
-      run:
-        shell: zsh --no-rcs --errexit --pipefail {0}
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-          submodules: recursive
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Setup Custom Asset
         id: setup
@@ -56,12 +69,18 @@ jobs:
           ARCHITECTURE: ${{ matrix.architecture }}
         run: |
           : Setup Custom Asset
-          if (( ${+RUNNER_DEBUG} )) setopt XTRACE
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-          case ${(L)ARCHITECTURE} {
-            arm64) print "url=${APPLE_ASSET_URL}" >> ${GITHUB_OUTPUT} ;;
-            x86_64) print "url=${INTEL_ASSET_URL}" >> ${GITHUB_OUTPUT} ;;
-          }
+          {
+            case "${ARCHITECTURE}" in
+              arm64) echo "url=${APPLE_ASSET_URL}" ;;
+              x86_64) echo "url=${INTEL_ASSET_URL}" ;;
+              *)
+                echo "::error::Unsupported architecture '${ARCHITECTURE}'."
+                exit 1
+                ;;
+            esac
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Download Asset
         id: download
@@ -69,7 +88,7 @@ jobs:
         with:
           platform: macOS
           architecture: ${{ matrix.architecture }}
-          path: ${{ github.workspace }}/steam_asset
+          path: ${{ format('{0}/steam_asset', github.workspace) }}
           custom-asset: ${{ steps.custom.setup.url }}
 
       - name: Prepare Asset
@@ -78,14 +97,13 @@ jobs:
         with:
           platform: macOS
           architecture: ${{ matrix.architecture }}
-          target: ${{ matrix.target }}
-          path: ${{ github.workspace }}/steam_asset
+          path: ${{ steps.download.outputs.path }}
 
       - name: Upload Asset Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: steam-asset-macos-${{ matrix.architecture }}
-          path: ${{ steps.prepare.outputs.asset-path }}
+          name: ${{ format('steam-asset-macos-{0}', matrix.architecture) }}
+          path: ${{ steps.prepare.outputs.path }}
 
   windows-build:
     name: Windows
@@ -93,10 +111,9 @@ jobs:
       matrix:
         architecture: [x64]
     runs-on: windows-2025-vs2026
-    needs: check-event
-    defaults:
-      run:
-        shell: bash --noprofile --norc -eo pipefail {0}
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -113,12 +130,18 @@ jobs:
           ARCHITECTURE: ${{ matrix.architecture }}
         run: |
           : Setup Custom Asset
-          if (( ${+RUNNER_DEBUG} )) setopt XTRACE
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-          case ${(L)ARCHITECTURE} {
-            arm64) print "url=${ARM64_ASSET_URL}" >> ${GITHUB_OUTPUT} ;;
-            x64) print "url=${X64_ASSET_URL}" >> ${GITHUB_OUTPUT} ;;
-          }
+          {
+            case "${ARCHITECTURE}" in
+              arm64) echo "url=${ARM64_ASSET_URL}" ;;
+              x64) echo "url=${X64_ASSET_URL}" ;;
+              *)
+                echo "::error::Unsupported architecture '${ARCHITECTURE}'."
+                exit 1
+                ;;
+            esac
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Download Assets
         id: download
@@ -126,7 +149,7 @@ jobs:
         with:
           platform: Windows
           architecture: ${{ matrix.architecture }}
-          path: ${{ github.workspace }}/steam_asset
+          path: ${{ format('{0}/steam_asset', github.workspace) }}
           custom-asset: ${{ steps.custom.setup.url }}
 
       - name: Prepare Asset
@@ -136,21 +159,21 @@ jobs:
           platform: Windows
           architecture: ${{ matrix.architecture }}
           target: ${{ matrix.target }}
-          path: ${{ github.workspace }}/steam_asset
+          path: ${{ format('{0}/steam_asset', github.workspace) }}
 
       - name: Upload Asset Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: steam-asset-windows-${{ matrix.architecture }}
+          name: ${{ format('steam-asset-windows-{0}', matrix.architecture) }}
           path: ${{ steps.prepare.outputs.asset-path }}
 
   create-package:
     name: Create Steam Package
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     needs: [macos-build, windows-build]
-    defaults:
-      run:
-        shell: bash --noprofile --norc -eo pipefail {0}
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -166,16 +189,24 @@ jobs:
           pattern: steam-asset-*
           merge-multiple: true
 
+      - name: Generate Short GitHub SHA
+        id: short-sha
+        uses: ./.github/actions/generate-short-sha
+
       - name: Setup Branches
         id: setup
         uses: ./.github/actions/publish-steam/setup-branches
         with:
-          ref-name: ${{ github.ref_name }}
+          ref-name: >-
+            ${{ case(
+              inputs.ref == '', steps.short-sha.outputs.sha,
+              inputs.ref
+            ) }}
 
       - name: Upload Steam Assets
         uses: ./.github/actions/publish-steam/upload-assets
         with:
-          path: ${{ github.workspace }}/steam-assets
+          path: ${{ format('{0}/steam_asset', runner.temp) }}
           dry-run: ${{ inputs.dry-run }}
           steam-secret: ${{ secrets.STEAM_SHARED_SECRET }}
           steam-user: ${{ secrets.STEAM_USER }}
@@ -187,10 +218,17 @@ jobs:
         if: ${{ fromJSON(steps.setup.outputs.is-prerelease )}}
         uses: ./.github/actions/publish-steam/upload-assets
         with:
-          path: ${{ github.workspace }}//steam-assets
+          path: ${{ format('{0}/steam_asset', github.workspace) }}
           dry-run: ${{ inputs.dry-run }}
           steam-secret: ${{ secrets.STEAM_SHARED_SECRET }}
           steam-user: ${{ secrets.STEAM_USER }}
           steam-password: ${{ secrets.STEAM_PASSWORD }}
           branch-name: ${{ steps.setup.outputs.branch-name }}
           use-playtest: ${{ steps.setup.outputs.is-prerelease }}
+
+      - name: Merge Steam Publish Logs
+        uses: actions/upload-artifact/merge@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: steam-build-logs
+          pattern: steam-build-logs-*
+          delete-merged: true
