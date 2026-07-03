@@ -24,11 +24,11 @@ runs:
       uses: ./.github/actions/check-changes
       id: checks
       with:
-        checkGlob: "'*.cmake' '*CMakeLists.txt'"
-        diffFilter: 'ACM'
+        pathspec: "'*.cmake' '*CMakeLists.txt'"
+        filter: 'ACM'
 
     - name: Install Dependencies 🛍️
-      if: runner.os == 'Linux' && fromJSON(steps.checks.outputs.hasChangedFiles)
+      if: runner.os == 'Linux' && fromJSON(steps.checks.outputs.has-changed-files)
       shell: bash
       run: |
         : Install Dependencies 🛍️
@@ -39,12 +39,12 @@ runs:
         echo ::endgroup::
 
     - name: Run gersemi 🎛️
-      if: fromJSON(steps.checks.outputs.hasChangedFiles)
+      if: fromJSON(steps.checks.outputs.has-changed-files)
       id: result
       shell: zsh --no-rcs --errexit --pipefail {0}
       working-directory: ${{ github.workspace }}
       env:
-        CHANGED_FILES: ${{ steps.checks.outputs.changedFiles }}
+        CHANGED_FILES: ${{ steps.checks.outputs.changed-files }}
       run: |
         : Run gersemi 🎛️
         if (( ${+RUNNER_DEBUG} )) setopt XTRACE
