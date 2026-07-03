@@ -59,7 +59,14 @@ create-archive() {
 
 create-tarball() {
   echo '::group::Create sources tarball'
-  /usr/bin/cmake "${cmake_args[@]//package/package_source}"
+
+  local -a cmake_args=(
+    --build "${build_dir}"
+    --config "${BUILD_CONFIG}"
+    --target package_source
+  )
+
+  /usr/bin/cmake "${cmake_args[@]}"
 
   OUTPUT_NAME="${OUTPUT_NAME}-sources"
 

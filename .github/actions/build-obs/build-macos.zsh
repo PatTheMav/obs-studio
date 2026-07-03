@@ -96,12 +96,15 @@ build-macos() {
 
     print 'analyzer-output-path=${build_dir}/analytics' >> ${GITHUB_OUTPUT}
   } else {
+    local match
+    local mbegin
+    local mend
     local version_regex='[0-9]+\.[0-9]+\.[0-9]+(-(rc|beta).+)?'
-    if [[ "${GITHUB_EVENT_NAME:-}" == 'push' && "${GITHUB_REF_NAME:-}" =~ ${version_regex} ]] {
+    if [[ "${GITHUB_EVENT_NAME:-}" == 'push' && "${GITHUB_REF_NAME:-}" =~ ${version_regex} && -n ${CODESIGN_TEAM} ]] {
       common_args+=(-scheme obs-studio -archivePath obs-studio.xcarchive archive)
 
       local -a export_args=(
-        -exportArchive -archivePath obs-studio.xcarchive  -exportOptionsPlist exportOptions.plist
+        -exportArchive -archivePath obs-studio.xcarchive -exportOptionsPlist exportOptions.plist
         -exportPath ${OUTPUT_PATH}
       )
 

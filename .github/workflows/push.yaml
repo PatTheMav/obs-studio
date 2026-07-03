@@ -47,8 +47,8 @@ jobs:
   update-documentation:
     name: Update Documentation
     if: |-
-      fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE) &&
-      contains(fromJSON('["master", "main"]'), github.ref_name)
+      fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
+      && contains(fromJSON('["master", "main"]'), github.ref_name)
     runs-on: ubuntu-26.04
     outputs:
       artifact-name: ${{ steps.generate.outputs.artifact-name }}

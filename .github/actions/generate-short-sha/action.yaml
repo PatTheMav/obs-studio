@@ -1,0 +1,26 @@
+name: Generate Short Sha
+description: Generates a shortened version of a commit SHA
+inputs:
+  sha:
+    description: Git commit SHA to generate shortened SHA for.
+    default: ${{ github.sha }}
+outputs:
+  sha:
+    description: Shortened SHA of provided git commit SHA
+    value: ${{ steps.short-sha.outputs.sha }}
+runs:
+  using: composite
+  steps:
+    - name: Generate Short SHA
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      id: short-sha
+      env:
+        GIT_SHA: ${{ inputs.sha }}
+      run: |
+        : Generate Short SHA
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+        declare github_output
+        github_output="$(git rev-parse --short "${GITHUB_SHA}")"
+        echo "sha=${github_output}" >> "${GITHUB_OUTPUT}"
+        echo "Short GitHub SHA: '${github_output}'."

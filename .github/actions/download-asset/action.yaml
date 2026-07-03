@@ -9,16 +9,16 @@ inputs:
     required: true
   custom-asset:
     description: Custom asset to download.
-    required: false
     default: ''
   verify:
     description: Verify asset using attestation
-    required: false
     default: 'false'
   path:
     description: Destination path for download assets
-    required: false
     default: ${{ github.workspace }}
+  github-token:
+    description: The GitHub token used to make authenticated API requests.
+    default: ${{ github.token }}
 outputs:
   path:
     description: Path to downloaded asset (if successful)
@@ -35,17 +35,15 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Install Bash
-
-        local brew_prefix="$(brew --prefix)"
-        if [[ ! -d "${brew_prefix}/bin/bash" ]]; then
-          brew install --quiet bash
-        fi
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+        declare brew_prefix="$(brew --prefix)"
+        if [[ ! -d "${brew_prefix}/bin/bash" ]]; then brew install --quiet bash; fi
 
     - name: Download Asset
       id: download
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         PLATFORM: ${{ inputs.platform }}
         ARCHITECTURE: ${{ inputs.architecture }}
         DESTINATION: ${{ inputs.path }}
@@ -54,10 +52,10 @@ runs:
 
     - name: Download Custom Asset
       id: download-custom
-      if: ${{ github.event_name == 'workflow_dispatch' && customAsset != '' }}
+      if: github.event_name == 'workflow_dispatch' && customAsset != ''
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         PLATFORM: ${{ inputs.platform }}
         ARCHITECTURE: ${{ inputs.architecture }}
         CUSTOM_ASSET: ${{ inputs.customAsset }}
@@ -66,16 +64,15 @@ runs:
 
     - name: Verify Asset
       id: verify
-      if: ${{ fromJSON(inputs.verify) && inputs.customAsset == '' }}
+      if: fromJSON(inputs.verify) && inputs.customAsset == ''
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         ASSET_PATH: ${{ steps.download.outputs.path }}
       run: |
         : Verify Asset
-        local verified='false'
-        if gh attestation verify "${ASSET_PATH}" -owner obsproject; then
-          verified='true'
-        fi
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
+        declare verified='false'
+        if gh attestation verify "${ASSET_PATH}" -owner obsproject; then verified='true'; fi
         echo "verified=${verified}" >> "${GITHUB_OUTPUT}"

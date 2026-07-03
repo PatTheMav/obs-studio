@@ -4,9 +4,6 @@ inputs:
   ref:
     description: Git reference to check with.
     required: true
-  working-directory:
-    description: Working directory to run git checks from.
-    default: ${{ github.workspace }}
 outputs:
   version:
     description: A string representing the full version identifier.
@@ -32,9 +29,8 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Check Git Ref
+    - name: Check Version Tag
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-      working-directory: ${{ inputs.working-directory }}
       id: semver
       env:
         GIT_REF: ${{ inputs.ref }}

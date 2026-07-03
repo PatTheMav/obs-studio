@@ -124,7 +124,7 @@ create-dsym-archive() {
 create-developer-archive() {
   print '::group::Create Framework and Libraries For Plugin Development'
   xattr -r -w com.apple.xcode.CreatedByBuildSystem true ${build_dir}
-  cmake --build ${build_dir} --config Release --target obs-frontend-api
+  cmake --build ${build_dir} --config Release --target obs-frontend-api | xcbeautify
 
   local install_location="${OUTPUT_PATH}/libobs_release"
   cmake --install ${build_dir} --component Development --config Release --prefix ${install_location}

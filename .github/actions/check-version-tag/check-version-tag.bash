@@ -14,24 +14,30 @@ check-version-tag() {
   if [[ "${GIT_REF}" =~ ${version_regex} ]]; then
     local -i num_matches="${#BASH_REMATCH[@]}"
 
-    {
-      if (( num_matches >= 4 )); then
+    if (( num_matches >= 4 )); then
+      echo "Semantic version detected for ${GIT_REF}."
+      {
         echo "version=${BASH_REMATCH[0]}"
         echo "major=${BASH_REMATCH[2]}"
         echo "minor=${BASH_REMATCH[3]}"
         echo "patch=${BASH_REMATCH[4]}"
-      fi
+        echo "is-valid-semver=true"
+      } >> "${GITHUB_OUTPUT}"
+      return 0
+    fi
 
-      if (( num_matches == 8 )); then
+    if (( num_matches == 8 )); then
+      echo "Semantic pre-release version detected for ${GIT_REF}."
+      {
         echo "prerelease=${BASH_REMATCH[-2]}"
         echo "number=${BASH_REMATCH[-1]}"
-      fi
-
-      echo "is-valid-semver=true"
-    } >> "${GITHUB_OUTPUT}"
-  else
-    echo "is-valid-semver=false" >> "${GITHUB_OUTPUT}"
+        echo "is-valid-semver=true"
+      } >> "${GITHUB_OUTPUT}"
+      return 0
+    fi
   fi
+  echo "No semantic version detected for ${GIT_REF}."
+  echo "is-valid-semver=false" >> "${GITHUB_OUTPUT}"
 }
 
 check-version-tag

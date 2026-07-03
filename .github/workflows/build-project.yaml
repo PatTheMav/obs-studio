@@ -76,39 +76,32 @@ jobs:
 
       - name: Generate Short GitHub SHA
         id: short-sha
-        run: |
-          : Generate Short GitHub SHA
-          {
-            github_output="$(git rev-parse --short "${GITHUB_SHA}")"
-            echo "sha=${github_output}"
-          } >> "${GITHUB_OUTPUT}"
+        uses: ./.github/actions/generate-short-sha
 
       - name: Restore Xcode Compilation Cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: xcode-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
           key: |-
-            ${{ format('{0}-xcode-{1}-{2}',
-              runner.os,
-              matrix.architecture,
-              case(
-                (github.event_name == 'push') &&
-                (github.ref_name == 'tag') &&
-                fromJSON(steps.semver.is-valid-semver),
-                'Release',
-                'RelWithDebInfo'
-              )
-            ) }}
+            ${{ format(
+                '{0}-xcode-{1}-{2}', runner.os, matrix.architecture,
+                case(
+                  github.event_name == 'push'
+                  && github.ref_type == 'tag'
+                  && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+                  'RelWithDebInfo'
+                )
+              ) }}
           restore-keys: |
             ${{ format('{0}-xcode-{1}-', runner.os, matrix.architecture) }}
 
       - name: Set Up Code Signing
+        id: codesign
         uses: ./.github/actions/codesign-obs/setup-macos
         if: |-
-          fromJSON(vars.ENABLE_MACOS_CODE_SIGNING) &&
+          fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false') &&
           contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
-        id: codesign
         with:
           identity: ${{ secrets.macos-signing-identity }}
           cert: ${{ secrets.macos-signing-certificate }}
@@ -132,68 +125,62 @@ jobs:
         with:
           config: |-
             ${{ case(
-                github.event_name == 'push' &&
-                github.ref_name == 'tag' &&
-                fromJSON(steps.semver.is-valid-semver), 'Release',
+                github.event_name == 'push' && github.ref_type == 'tag'
+                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
                 'RelWithDebInfo'
             ) }}
           target: ${{ matrix.architecture }}
           codesign: |-
-            ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING) &&
-                contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name) &&
-                fromJSON(steps.codesign.outputs.can-codesign)
+            ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
+                && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+                && fromJSON(steps.codesign.outputs.can-codesign)
             }}
           codesign-ident: ${{ steps.codesign.outputs.identity }}
           codesign-team: ${{ steps.codesign.outputs.team }}
           provisioning-profile-id: ${{ steps.codesign.outputs.profile-uuid }}
           xcode-version: '26.5'
-          xcode-cas-path: ${{ runner.temp }}/CompilationCache.noindex
+          xcode-cas-path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
 
       - name: Package OBS Studio
-        uses: ./.github/actions/package-obs
         id: package
+        uses: ./.github/actions/package-obs
         if: |-
           case(
-            github.event_name == 'pull_request' &&
-            contains(github.event.labels.*.name, 'Seeking Testers'), true,
-            contains(
-              fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name
-            ), true,
+            github.event_name == 'pull_request'
+            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+            contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
             false
           )
         with:
           config: |-
             ${{ case(
-                github.event_name == 'push' &&
-                github.ref_name == 'tag' &&
-                fromJSON(steps.semver.is-valid-semver), 'Release',
+                github.event_name == 'push' && github.ref_type == 'tag'
+                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
                 'RelWithDebInfo'
               ) }}
           target: ${{ matrix.architecture }}
           package: ${{ case(github.event_name == 'pull_request', false, true) }}
           output-name: ${{ format('obs-studio-macos-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
           codesign: |-
-            ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING) &&
-                contains(
-                  fromJSON('["push", "workflow_dispatch", "schedule"]'
-                ), github.event_name) &&
-                fromJSON(steps.codesign.outputs.can-codesign)
+            ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
+                && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+                && fromJSON(steps.codesign.outputs.can-codesign)
             }}
           codesign-ident: ${{ steps.codesign.outputs.identity }}
           codesign-user: ${{ secrets.macos-notarization-user }}
           codesign-pass: ${{ secrets.macos-notarization-password }}
           notarize: |-
-            ${{ fromJSON(vars.ENABLE_MACOS_NOTARIZATION) &&
-                github.event_name == 'push' &&
-                fromJSON(steps.codesign.outputs.can-notarize)
+            ${{ fromJSON(vars.ENABLE_MACOS_NOTARIZATION || 'false')
+                && github.event_name == 'push'
+                && fromJSON(steps.codesign.outputs.can-notarize)
             }}
 
       - name: Upload Application
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
           case(
-            github.event_name == 'pull_request' &&
-            contains(github.event.labels.*.name, 'Seeking Testers'), true,
+            github.event_name == 'pull_request'
+            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
             contains(fromJSON('["push", "schedule"]'), github.event_name), true,
             false
           )
@@ -201,51 +188,63 @@ jobs:
           archive: false
           name: ${{ format('obs-studio-macos-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
           path: |-
-            ${{ format('{0}/obs-studio-macos-{1}-{2}.*',
-            runner.temp, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-macos-{1}-{2}.*',
+              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Upload Debug Symbols
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
-          github.event_name == 'push' &&
-          github.ref_name == 'tag' &&
-          fromJSON(steps.semver.is-valid-semver)
+          github.event_name == 'push'
+          && github.ref_type == 'tag'
+          && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
           archive: false
           name: |-
-            ${{ format('obs-studio-macos-{0}-{1}-debug-symbols',
-            matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-macos-{0}-{1}-debug-symbols',
+              matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           path: |-
-            ${{ format('{0}/obs-studio-macos-{1}-{2}-dSYMs.tar.xz',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-macos-{1}-{2}-dSYMs.tar.xz',
+              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Upload Developer Library
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
-          github.event_name == 'push' &&
-          github.ref_name == 'tag' &&
-          fromJSON(steps.semver.is-valid-semver)
+          github.event_name == 'push'
+          && github.ref_type == 'tag'
+          && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
           archive: false
           name: |-
-            ${{ format('obs-studio-macos-{0}-{1}-plugin-dev',
-            matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-macos-{0}-{1}-plugin-dev',
+              matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           path: |-
-            ${{ format('{0}/obs-studio-macos-{1}-{2}-plugin-dev.tar.xz',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-macos-{1}-{2}-plugin-dev.tar.xz',
+              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Save Xcode Compilation Cache
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: github.event_name != 'pull_request' && steps.xcode-cache.outputs.cache-hit != 'true'
+        if: |-
+          github.event_name != 'pull_request'
+          && steps.xcode-cache.outputs.cache-hit != 'true'
         with:
           path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
           key: |-
-            ${{ format('{0}-xcode-{1}-{2}',
-              runner.os,
-              matrix.architecture,
+            ${{ format(
+              '{0}-xcode-{1}-{2}', runner.os, matrix.architecture,
               case(
-                ((github.event_name == 'push') && (github.ref_name == 'tag') && fromJSON(steps.semver.is-valid-semver)),
-                'Release',
+                github.event_name == 'push'
+                && github.ref_type == 'tag'
+                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
                 'RelWithDebInfo'
               )
             ) }}
@@ -274,33 +273,25 @@ jobs:
 
       - name: Generate Short GitHub SHA
         id: short-sha
-        run: |
-          : Generate Short GitHub SHA
-          {
-            github_output="$(git rev-parse --short "${GITHUB_SHA}")"
-            echo "sha=${github_output}"
-          } >> "${GITHUB_OUTPUT}"
+        uses: ./.github/actions/generate-short-sha
 
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: ccache-cache
         with:
           path: ${{ format('{0}/.ccache', runner.temp) }}
           key: |-
-           ${{ format(
-            '{0}-{1}-ccache-{2}-{3}',
-            runner.os,
-            matrix.runner-os,
-            matrix.architecture,
-            case(
-              (github.event_name == 'push') &&
-              (github.ref_name == 'tag') &&
-              fromJSON(steps.semver.outputs.is-valid-semver),
-              'Release',
-              'RelWithDebInfo'
-            )
+            ${{ format(
+              '{0}-{1}-ccache-{2}-{3}',
+              runner.os, matrix.runner-os, matrix.architecture,
+              case(
+                github.event_name == 'push'
+                && github.ref_type == 'tag'
+                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+                'RelWithDebInfo'
+              )
             ) }}
           restore-keys: |
-            ${{ format('{0}-{1}-ccache-{2}-', runner.os, matrix.os, matrix.architecture) }}
+            ${{ format('{0}-{1}-ccache-{2}-', runner.os, matrix.runner-os, matrix.architecture) }}
 
       - name: Build OBS Studio
         uses: ./.github/actions/build-obs
@@ -316,10 +307,10 @@ jobs:
         with:
           config: |-
             ${{ case(
-                github.event_name == 'push' &&
-                github.ref_name == 'tag' &&
-                fromJSON(steps.semver.is-valid-semver), 'Release',
-                'RelWithDebInfo'
+              github.event_name == 'push'
+              && github.ref_type == 'tag'
+              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+              'RelWithDebInfo'
             ) }}
           target: ${{ matrix.architecture }}
 
@@ -327,90 +318,101 @@ jobs:
         uses: ./.github/actions/package-obs
         if: |-
           case(
-            github.event_name == 'pull_request' &&
-            contains(github.event.labels.*.name, 'Seeking Testers'), true,
-            contains(
-              fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name
-            ), true,
+            github.event_name == 'pull_request'
+            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+            contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
             false
           )
         with:
           config: |-
             ${{ case(
-                github.event_name == 'push' &&
-                github.ref_name == 'tag' &&
-                fromJSON(steps.semver.is-valid-semver), 'Release',
-                'RelWithDebInfo'
+              github.event_name == 'push'
+              && github.ref_type == 'tag'
+              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+              'RelWithDebInfo'
             ) }}
           target: ${{ matrix.architecture }}
           package: ${{ case(github.event_name == 'pull_request', false, true) }}
           output-name: |-
-            ${{ format('obs-studio-{0}-{1}-{2}',
-            matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-{0}-{1}-{2}',
+              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Upload Application
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
           case(
-            github.event_name == 'pull_request' &&
-            contains(github.event.labels.*.name, 'Seeking Testers'), true,
+            github.event_name == 'pull_request'
+            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
             contains(fromJSON('["push", "schedule"]'), github.event_name), true,
             false
           )
         with:
           name: |-
-            ${{ format('obs-studio-{0}-{1}-{2}',
-            matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-{0}-{1}-{2}',
+              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           path: |-
-            ${{ format('{0}/obs-studio-{1}-{2}-{3}.*',
-            runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-{1}-{2}-{3}.deb*',
+              runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Upload Debug Symbol Artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
-          github.event_name == 'push' &&
-          github.ref_name == 'tag' &&
-          fromJSON(steps.semver.is-valid-semver)
+          github.event_name == 'push'
+          && github.ref_type == 'tag'
+          && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
           name: |-
-            ${{ format('obs-studio-{0}-{1}-{2}-debug-symbols',
-            matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-{0}-{1}-{2}-debug-symbols',
+              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           path: |-
-            ${{ format('{0}/obs-studio-{1}-{2}-{3}-dbgsym.ddeb',
-            runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-{1}-{2}-{3}-dbgsym.ddeb*',
+              runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Upload Source Tarball
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
           github.event_name == 'push' &&
-          github.ref_name == 'tag' &&
-          fromJSON(steps.semver.is-valid-semver)
+          github.ref_type == 'tag' &&
+          fromJSON(steps.semver.outputs.is-valid-semver)
         with:
-          archive: false
           name: |-
-            ${{ format('obs-studio-{0}-{1}-{2}-sources',
-            matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-{0}-{1}-{2}-sources',
+              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           path: |-
-            ${{ format('{0}/obs-studio-{1}-{2}-{3}-sources.*',
-            runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-{1}-{2}-{3}-sources.*',
+              runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
         with:
           path: ${{ format('{0}/.ccache', runner.temp) }}
           key: |-
-           ${{ format(
-            '{0}-{1}-ccache-{2}-{3}',
-            runner.os,
-            matrix.runner-os,
-            matrix.architecture,
-            case(
-              (github.event_name == 'push') &&
-              (github.ref_name == 'tag') &&
-              fromJSON(steps.semver.outputs.is-valid-semver),
-              'Release',
-              'RelWithDebInfo'
-            )
+            ${{ format(
+              '{0}-{1}-ccache-{2}-{3}',
+              runner.os,
+              matrix.runner-os,
+              matrix.architecture,
+              case(
+                (github.event_name == 'push') &&
+                (github.ref_type == 'tag') &&
+                fromJSON(steps.semver.outputs.is-valid-semver),
+                'Release',
+                'RelWithDebInfo'
+              )
             ) }}
 
   flatpak-build:
@@ -428,34 +430,37 @@ jobs:
         - /usr/local/lib/android:/to_clean/android
         - /usr/share/dotnet:/to_clean/dotnet
         - /usr/share/swift:/to_clean/swift
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
     steps:
-      - name: Prepare build space
+      - name: Prepare Container Image
+        env:
+          REMOVE_LIST: 'Android CodeQL GHCup Python Swift dotNET'
         run: |
-          : Prepare build space
+          : Prepare Container Image
           if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-          local -a to_remove=(Android CodeQL GHCup Python Swift dotNET)
-
-          echo ::group::Available Storage Before Cleanup
-          df -h
-          echo ::endgroup::
-
-          for removal in "${to_remove[@]}"; do
-            echo "::group::Remove ${removal} files"
-            rm -rf "/to_clean/${removal,,*}"/*
-            echo '::endgroup::'
+          declare -a removals
+          read -r -a removals <<< "${REMOVE_LIST}"
+          for removal in "${removals[@]}"; do
+            echo "Removing ${removal} files from runner."
+            rm -rf /to_clean/"${removal,,*}"/*
           done
 
-          echo ::group::Available Storage After Cleanup
-          df -h
-          echo ::endgroup::
-
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
           submodules: recursive
           fetch-depth: 0
-          set-safe-directory: ${{ env.GITHUB_WORKSPACE }}
+
+      - name: Add Workspace As Safe Directory
+        run: |
+          : Add Workspace As Safe Directory
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
       - name: Generate Semver From Tag
         id: semver
@@ -465,27 +470,28 @@ jobs:
 
       - name: Generate Short GitHub SHA
         id: short-sha
-        run: |
-          : Generate Short GitHub SHA
-          {
-            github_output="$(git rev-parse --short "${GITHUB_SHA}")"
-            echo "sha=${github_output}"
-          } >> "${GITHUB_OUTPUT}"
+        uses: ./.github/actions/generate-short-sha
 
-      - name: Set Up Environment
-        id: setup
+      - name: Check Flatpak Builder Cache
+        id: cache
         env:
           GH_TOKEN: ${{ github.token }}
-          MANIFEST_HASH: ${{ hashFiles('build-aux/com.obsproject.Studio.json') }}
         run: |
-          : Set Up Environment
+          : Check Flatpak Builder Cache
           if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
-          local cache_key
+          declare manifest_hash
+          manifest_hash="$(shasum \
+            --algorithm 256 "${PWD}/build-aux/com.obsproject.Studio.json" \
+            | cut -d ' ' -f 1)"
+
+          # When provided a cache key, Flatpak-builder automatically adds the
+          # build architecture to the key in case multiple architectures are built.
+          # Otherwise it generates a cache-key based on the pattern:
+          # 'flatpak-builder-<architecture>-<first 20 characters of manifest-hash>
           cache_key="$(gh cache list \
             --ref "refs/heads/master" \
-            --key "flatpak-builder-${MANIFEST_HASH}-x86_64" \
+            --key "flatpak-builder-x86_64-${manifest_hash:0:20}" \
             --limit 1 --json key --jq '.[0].key')"
 
           {
@@ -494,12 +500,10 @@ jobs:
             else
               echo "cache-hit=false"
             fi
-
-            echo "cache-key=${cache_key}"
           }  >> "${GITHUB_OUTPUT}"
 
       - name: Validate Flatpak manifest
-        uses: ./.github/actions/flatpak-builder-lint
+        uses: ./.github/actions/lint-obs/lint-flatpak-manifest
         with:
           artifact: manifest
           path: build-aux/com.obsproject.Studio.json
@@ -509,25 +513,22 @@ jobs:
         with:
           build-bundle: |-
             ${{ case(
-              github.event_name == 'pull_request' &&
-              contains(github.event.labels.*.name, 'Seeking Testers'), true,
-              contains(
-                fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name
-              ), true,
+              github.event_name == 'pull_request'
+              && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+              contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
               false
             ) }}
           bundle: ${{ format('obs-studio-flatpak-{0}.flatpak', steps.short-sha.outputs.sha) }}
-          cache-key: ${{ steps.setup.outputs.cache-key }}
           cache: |-
-            ${{ fromJSON(steps.setup.outputs.cache-hit) ||
-              (github.event_name == 'push' && github.ref_name == 'master')
+            ${{ fromJSON(steps.cache.outputs.cache-hit)
+              || (github.event_name == 'push' && github.ref_name == 'master')
             }}
           manifest-path: ${{ format('{0}/build-aux/com.obsproject.Studio.json', github.workspace) }}
           mirror-screenshots-url: https://dl.flathub.org/media
-          restore-cache: ${{ fromJSON(steps.setup.outputs.cache-hit) }}
+          restore-cache: ${{ fromJSON(steps.cache.outputs.cache-hit) }}
 
       - name: Validate AppStream
-        uses: ./.github/actions/flatpak-builder-lint
+        uses: ./.github/actions/lint-obs/lint-flatpak-manifest
         with:
           artifact: appstream
           path: ${{ format('{0}/metainfo/com.obsproject.Studio.metainfo.xml', env.FLATPAK_BUILD_SHARE_PATH) }}
@@ -549,13 +550,13 @@ jobs:
           fi
 
       - name: Validate build directory
-        uses: ./.github/actions/flatpak-builder-lint
+        uses: ./.github/actions/lint-obs/lint-flatpak-manifest
         with:
           artifact: builddir
           path: flatpak_app
 
       - name: Validate repository
-        uses: ./.github/actions/flatpak-builder-lint
+        uses: ./.github/actions/lint-obs/lint-flatpak-manifest
         with:
           artifact: repo
           path: repo
@@ -584,12 +585,7 @@ jobs:
 
       - name: Generate Short GitHub SHA
         id: short-sha
-        run: |
-          : Generate Short GitHub SHA
-          {
-            github_output="$(git rev-parse --short "${GITHUB_SHA}")"
-            echo "sha=${github_output}"
-          } >> "${GITHUB_OUTPUT}"
+        uses: ./.github/actions/generate-short-sha
 
       - name: Build OBS Studio
         uses: ./.github/actions/build-obs
@@ -606,10 +602,10 @@ jobs:
         with:
           config: |-
             ${{ case(
-                github.event_name == 'push' &&
-                github.ref_name == 'tag' &&
-                fromJSON(steps.semver.is-valid-semver), 'Release',
-                'RelWithDebInfo'
+              github.event_name == 'push'
+              && github.ref_type == 'tag'
+              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+              'RelWithDebInfo'
             ) }}
           target: ${{ matrix.architecture }}
 
@@ -617,33 +613,33 @@ jobs:
         uses: ./.github/actions/package-obs
         if: |-
           case(
-            github.event_name == 'pull_request' &&
-            contains(github.event.labels.*.name, 'Seeking Testers'), true,
-            contains(
-              fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name
-            ), true,
+            github.event_name == 'pull_request'
+            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+            contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
             false
           )
         with:
           config: |-
             ${{ case(
-                github.event_name == 'push' &&
-                github.ref_name == 'tag' &&
-                fromJSON(steps.semver.is-valid-semver), 'Release',
-                'RelWithDebInfo'
+              github.event_name == 'push'
+              && github.ref_type == 'tag'
+              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+              'RelWithDebInfo'
             ) }}
           target: ${{ matrix.architecture }}
           package: ${{ case(github.event_name == 'pull_request', false, true) }}
           output-name: |-
-            ${{ format('obs-studio-windows-{0}-{1}',
-            matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-windows-{0}-{1}',
+              matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Upload Application
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
           case(
-            github.event_name == 'pull_request' &&
-            contains(github.event.labels.*.name, 'Seeking Testers'), true,
+            github.event_name == 'pull_request'
+            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
             contains(fromJSON('["push", "schedule"]'), github.event_name), true,
             false
           )
@@ -651,20 +647,26 @@ jobs:
           archive: false
           name: ${{ format('obs-studio-windows-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
           path: |-
-            ${{ format('{0}/obs-studio-windows-{1}-{2}.zip',
-            runner.temp, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-windows-{1}-{2}.zip',
+              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
 
       - name: Upload Developer Library
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
-          github.event_name == 'push' &&
-          github.ref_name == 'tag' &&
-          fromJSON(steps.semver.is-valid-semver)
+          github.event_name == 'push'
+          && github.ref_type == 'tag'
+          && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
           archive: false
           name: |-
-            ${{ format('obs-studio-windows-{0}-{1}-plugin-dev',
-            matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              'obs-studio-windows-{0}-{1}-plugin-dev',
+              matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           path: |-
-            ${{ format('{0}/obs-studio-windows-{1}-{2}-plugin-dev.zip',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha) }}
+            ${{ format(
+              '{0}/obs-studio-windows-{1}-{2}-plugin-dev.zip',
+              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}

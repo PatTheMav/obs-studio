@@ -22,7 +22,6 @@ setup-notarization() {
     local profile_path="${RUNNER_TEMP}/build_profile.provisionprofile"
     base64 --decode --output=${profile_path} <<< "${PROVISIONING_PROFILE}"
 
-    print '::group::Provisioning Profile Setup'
     mkdir -p "${HOME}/Library/MobileDevice/Provisioning Profiles"
     security cms \
       -D \
@@ -47,9 +46,10 @@ setup-notarization() {
       print 'have-provisioning-profile=true'
       print "profile-uuid=${uuid}"
     }  >> ${GITHUB_OUTPUT}
-    print '::endgroup::'
+    print 'Provisioning profile found and installed on runner.'
   } else {
     print 'have-provisioning-profile=false' >> ${GITHUB_OUTPUT}
+    print 'No provisioning profile provided.'
   }
 }
 

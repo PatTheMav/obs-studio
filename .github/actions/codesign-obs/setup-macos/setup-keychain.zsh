@@ -64,8 +64,10 @@ setup-keychain() {
       print "keychain-password=${keychain_password}"
       print "codesign-team=${team_id}"
     } >> ${GITHUB_OUTPUT}
+    print 'Code signing Apple Developer certificate set up on runner.'
   } else {
     print 'have-codesign-ident=false' >> ${GITHUB_OUTPUT}
+    print 'No code signing identity provided. No certificate was set up.'
   }
 }
 

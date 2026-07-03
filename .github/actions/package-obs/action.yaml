@@ -3,45 +3,36 @@ description: Packages obs-studio for specified architecture and build config
 inputs:
   config:
     description: Build configuration
-    required: false
     default: Release
   target:
     description: Build target for dependencies
     required: true
   package:
     description: Create platform-specific packages instead of archives
-    required: false
     default: 'false'
   output-name:
     description: Custom output name for generated packages
-    required: false
+    default: ''
   codesign:
     description: Enable codesigning (macOS only)
-    required: false
     default: 'false'
   codesign-ident:
     description: Developer ID for application codesigning (macOS only)
-    required: false
     default: '-'
   codesign-user:
     description: Apple ID username for notarization (macOS only)
-    required: false
     default: ''
   codesign-pass:
     description: Apple ID password for notarization (macOS only)
-    required: false
     default: ''
   notarize:
     description: Enable notarization (macOS only)
-    required: false
     default: 'false'
   path:
     description: Source for intermediary build artifacts and destination of packages.
-    required: false
     default: ${{ runner.temp }}
   working-directory:
     description: Working directory for packaging
-    required: false
     default: ${{ github.workspace }}
 runs:
   using: composite

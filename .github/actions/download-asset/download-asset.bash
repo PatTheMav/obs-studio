@@ -2,11 +2,9 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-if [[ -n "${RUNNER_DEBUG}" ]]; then
-  set -x
-fi
 
 : "${CI:?}"
+if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
 download-release-asset() {
   download_pattern="${release_patterns["${platform_tuple}"]}"

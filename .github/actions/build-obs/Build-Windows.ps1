@@ -4,13 +4,9 @@
 param()
 
 begin {
-  if ($null -ne $env:RUNNER_DEBUG) {
-    Set-PSDebug -Trace 1
-  }
+  if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
 
-  if ($null -eq $env:CI) {
-    throw
-  }
+  if ($null -eq $env:CI) { throw }
   $ErrorActionPreference = 'Stop'
 
   $Checkout = Get-Location | Get-Item

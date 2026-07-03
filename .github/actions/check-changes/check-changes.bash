@@ -17,15 +17,16 @@ select-git-ref() {
   local empty_tree_hash
   empty_tree_hash="$(git hash-object -t tree /dev/null)"
 
+  echo '::group::Checking for compatible git ref'
   # If base ref is provided, check if it represents a valid object in the source tree. If enabled,
   # use 'HEAD~1' (the commit before the current one) to compare against.
   if [[ -n "${GIT_BASE_REF:-}" ]]; then
     if ! git cat-file -e "${GIT_BASE_REF}" &> /dev/null; then
       if [[ "${USE_FALLBACK:-false}" == 'true' ]]; then
-        echo "::warning::Provided base reference ${GIT_BASE_REF} is invalid. Using 'HEAD~1'. instead."
+        echo "::warning::Provided base reference '${GIT_BASE_REF}' is invalid. Using 'HEAD~1' instead."
         GIT_BASE_REF='HEAD~1'
       else
-        echo "::error::Provided base reference ${GIT_BASE_REF} is invalid."
+        echo "::error::Provided base reference '${GIT_BASE_REF}' is invalid."
         return 1
       fi
     fi
@@ -34,6 +35,7 @@ select-git-ref() {
     # push is a valid object. Use the fallback "empty tree" hash otherwise. This will effectively list
     # all changes since the beginning of the repository.
     if ! git cat-file -e "${GITHUB_REF_BEFORE:-}" &> /dev/null; then
+      echo "::warning::No base ref provided and ref before current one invalid. Using empty tree hash instead."
       GITHUB_REF_BEFORE="${empty_tree_hash}"
     fi
 
@@ -42,18 +44,21 @@ select-git-ref() {
     case "${GITHUB_EVENT_NAME:-}" in
       pull_request)
         # Use the target branch of the pull request to compare against.
+        echo "Using pull request target branch '${GITHUB_BASE_REF}'."
         GIT_BASE_REF="origin/${GITHUB_BASE_REF}"
         ;;
       push)
         # Use the SHA of the most recent commit on ref before the current
         # push to compare against.
         if [[ "${GITHUB_EVENT_FORCED:-false}" != 'true' ]]; then
+          echo "Force push detected. Using ref before current one '${GITHUB_REF_BEFORE}'."
           GIT_BASE_REF="${GITHUB_REF_BEFORE}"
         fi
         ;;
       *) ;;
     esac
   fi
+  echo '::endgroup::'
 }
 
 check-changes() {

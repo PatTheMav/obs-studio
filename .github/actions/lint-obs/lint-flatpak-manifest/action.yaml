@@ -9,7 +9,6 @@ inputs:
     required: true
   working-directory:
     description: Working directory to clone flatpak-builder-lint
-    required: false
     default: ${{ github.workspace }}
 runs:
   using: composite
@@ -29,7 +28,7 @@ runs:
         ARTIFACT_TYPE: ${{ inputs.artifact }}
       run: |
         : Check artifact input
-        if [[ -n "${RUNNER_DEBUG}" ]]; then set -x; fi
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
         shopt -s extglob
 
@@ -43,15 +42,14 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         ARTIFACT_TYPE: ${{ inputs.artifact }}
-        INPUT_PATH: ${{ inputs.inputPath }}
+        INPUT_PATH: ${{ inputs.path }}
       run: |
         : Run flatpak-builder-lint
-        if [[ -n "${RUNNER_DEBUG}" ]]; then set -x; fi
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
         flatpak-builder-lint \
           --exceptions \
-          --user-exceptions \
+          --user-exceptions "${GITHUB_ACTION_PATH}/exceptions.json" \
           --gha-format \
-          "${GITHUB_ACTION_PATH}/exceptions.json" \
           "${ARTIFACT_TYPE}" \
           "${INPUT_PATH}"

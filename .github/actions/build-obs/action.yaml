@@ -3,34 +3,27 @@ description: Builds obs-studio for specified architecture and build config
 inputs:
   config:
     description: Build configuration
-    required: false
     default: RelWithDebInfo
   target:
     description: Build target for obs-studio
     required: true
   codesign:
     description: Enable codesigning (macOS only)
-    required: false
     default: 'false'
   codesign-ident:
     description: Developer ID for application codesigning (macOS only)
-    required: false
     default: '-'
   codesign-team:
     description: Team ID for application codesigning (macOS only)
-    required: false
     default: ''
   provisioning-profile-id:
     description: UUID of provisioning profile (macOS only)
-    required: false
     default: ''
   analyze:
     description: Run build as static analzer build
-    required: false
     default: 'false'
   path:
     description: Destination of generated builds.
-    required: false
     default: ${{ runner.temp }}
   xcode-version:
     description: A version string for a specific Xcode version available on the runner.
@@ -40,7 +33,6 @@ inputs:
     default: ''
   working-directory:
     description: Working directory for packaging
-    required: false
     default: ${{ github.workspace }}
 outputs:
   macos-sarif-path:

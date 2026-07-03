@@ -15,13 +15,6 @@ defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
-  lint-project:
-    name: Format
-    uses: ./.github/workflows/lint-project.yaml
-    permissions:
-      contents: read    # Necessary to keep workflow-level permission
-      checks: write     # Necessary to produce annotations
-
   build-project:
     name: Build
     uses: ./.github/workflows/build-project.yaml
@@ -44,7 +37,7 @@ jobs:
 
   update-documentation:
     name: Update Documentation
-    if: fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE)
+    if: fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
     runs-on: ubuntu-26.04
     outputs:
       artifact-name: ${{ steps.generate.outputs.artifact-name }}
@@ -70,7 +63,9 @@ jobs:
 
   deploy-documentation:
     name: Deploy Documentation To Cloudflare
-    if: fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE)
+    if: |-
+      fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
+      && vars.CF_PAGES_PROJECT != ''
     runs-on: ubuntu-26.04
     needs: update-documentation
     environment:
@@ -107,17 +102,16 @@ jobs:
   sign-windows-build:
     name: Windows Signing
     uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@ac19ea663375cd02997be92b7d8ff6dd89a511ad
-    if: |-
-      github.repository_owner == 'obsproject' &&
-      fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING)
+    # if: |-
+    #   github.repository_owner == 'obsproject' &&
+    #   fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false')
     needs: build-project
     permissions:
       contents: read        # Necessary to keep workflow base permissions.
-      id-token: write       # Necessary fetch an OpenID Connect (OIDC) token.
       attestations: write   # Necessary to generate an attestation for the code signed build.
     secrets:
-      GCP_IDENTITY_POOL: ${{ secrets.GCP_IDENTITY_POOL }}
-      GCP_SERVICE_ACCOUNT_NAME: ${{ secrets.GCP_SERVICE_ACCOUNT_NAME }}
+      gcp-identity-pool: ${{ secrets.GCP_IDENTITY_POOL }}
+      gcp-service-account-name: ${{ secrets.GCP_SERVICE_ACCOUNT_NAME }}
 
   # create-release:
   #   name: Create Release

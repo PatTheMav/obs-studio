@@ -12,12 +12,10 @@ inputs:
     required: true
   channel:
     description: Update channel
-    required: false
     default: 'stable'
   bouf-path:
     description: Path to bouf installation on GitHub Actions runner.
-    required: false
-    default: ${{ runner.temp }}/bouf
+    default: ${{ format('{0}/bouf', runner.temp) }}
 outputs:
   path:
     description: Path to code signed Windows build
@@ -25,8 +23,16 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Windows'
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      run: |
+        : Check Runner Operating System
+        echo '::notice::setup-macos-codesigning action requires a Windows-based runner.'
+        exit 1
+
     - name: Download Versions
-      shell: pwsh -command ". '{0}'"
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         ARCHITECTURE: ${{ inputs.architecture }}
         CHANNEL: ${{ inputs.channel }}
@@ -34,10 +40,9 @@ runs:
         RCLONE_TRANSFERS: 100
         RCLONE_FAST_LIST: true
       run: |
-        # Download Versions
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
-        & rclone copy --quiet ":gcs:obs-latest/${env:ARCHITECTURE}/${env:CHANNEL}" "${env:RUNNER_TEMP}/previous"
+        : Download Versions
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+        rclone copy --quiet ":gcs:obs-latest/${ARCHITECTURE}/${CHANNEL}" "${RUNNER_TEMP}/previous"
 
     - name: Sign Game Capture with RSA cert
       shell: pwsh -command ". '{0}'"
@@ -55,7 +60,7 @@ runs:
       run: |
         # Run BOUF
         if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
+        $ErrorActionPreference = 'Stop'
 
         $BoufArgs = @(
           '--config',       "${env:GITHUB_ACTION_PATH}/config_${env:ARCHITECTURE}.toml",
@@ -72,40 +77,24 @@ runs:
         "bouf-output-path=${env:RUNNER_TEMP}/output" >> $env:GITHUB_OUTPUT
 
     - name: Sync Latest Build
-      shell: pwsh -command ". '{0}'"
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         RCLONE_TRANSFERS: 100
-        RCLONE_INCLUDE: '**/${{ inputs.version }}/**'
+        RCLONE_INCLUDE: ${{ format('**/{0}/**', inputs.version) }}
         RCLONE_GCS_ENV_AUTH: 'true'
         RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
       run: |
-        # Sync Latest Build
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
-
-        $RcloneArguments = @(
-          '--delete-excluded'
-          "${env:RUNNER_TEMP}/previous"
-          ":gcs:obs-latest/${env:ARCHITECTURE}/${env:CHANNEL}"
-        )
-
-        & rclone sync @RCloneArguments
+        : Sync Latest Build
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+        rclone sync --delete-excluded "${RUNNER_TEMP}/previous" ":gcs:obs-latest/${ARCHITECTURE}/${CHANNEL}"
 
     - name: Upload Build To Archive
-      shell: pwsh -command ". '{0}'"
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         RCLONE_TRANSFERS: 100
         RCLONE_GCS_ENV_AUTH: 'true'
         RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
       run: |
-        # Sync Latest Build
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
-
-        $RcloneArguments = @(
-          '--transfers 100'
-          "${env:RUNNER_TEMP}/previous"
-          ":gcs:obs-builds/${env:ARCHITECTURE}"
-        )
-
-        & rclone copy @RcloneArguments
+        : Upload Build To Archive
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+        rclone copy "${RUNNER_TEMP}/previous" ":gcs:obs-builds/${ARCHITECTURE}"

@@ -3,11 +3,9 @@ description: Updates Sphinx-based documentation
 inputs:
   disable-link-extensions:
     description: Disable Sphinx link extensions
-    required: false
     default: 'false'
   working-directory:
     description: Path to repository checkout
-    required: false
     default: ${{ github.workspace }}
 outputs:
   artifact-name:

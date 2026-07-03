@@ -52,8 +52,8 @@ runs:
       if: fromJSON(inputs.run-service-checks)
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: ${{ runner.temp }}/timestamps
-        key: service-check-${{ github.run_id }}
+        path: ${{ format('{0}/timestamps', runner.temp) }}
+        key: ${{ format('service-check-{0}', github.run_id) }}
         restore-keys: service-check-
 
     - name: Install and Configure Python
@@ -68,7 +68,7 @@ runs:
       env:
         API_KEY: ${{ inputs.api-token }}
         API_SERVERS: ${{ inputs.api-servers }}
-        CACHE_DIR: ${{ runner.temp }}/timestamps
+        CACHE_DIR: ${{ format('{0}/timestamps', runner.temp) }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
         REPOSITORY: ${{ github.repository }}
         WORKFLOW_RUN_ID: ${{ github.run_id }}
@@ -84,11 +84,14 @@ runs:
       if: fromJSON(inputs.run-service-checks)
       with:
         name: timestamps
-        path: ${{ runner.temp }}/timestamps/*
+        path: ${{ format('{0}/timestamps/*', runner.temp) }}
 
     - name: Create Pull Request
       uses: ./.github/actions/create-pull-request
-      if: fromJSON(inputs.create-pull-request) && fromJSON(inputs.run-service-checks) && steps.services-check.outputs.failures > 0
+      if: |-
+        fromJSON(inputs.create-pull-request)
+        && fromJSON(inputs.run-service-checks)
+        && steps.services-check.outputs.failures > 0
       with:
         author: 'Service Checker <commits@obsproject.com>'
         branch: 'automated/clean-services'

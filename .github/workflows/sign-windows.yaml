@@ -1,0 +1,141 @@
+name: Sign Windows Project
+on:
+  workflow_call:
+    secrets:
+      gcp-identity-pool:
+        required: true
+      gcp-service-account-name:
+        required: true
+permissions:
+  contents: read    # Necessary for repository checkouts.
+defaults:
+  run:
+    shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+jobs:
+  create-windows-update:
+    name: Create Signed Windows Update
+    strategy:
+      matrix:
+        architecture: [x64, arm64]
+    runs-on: windows-2025-vs2026
+    environment:
+      name: bouf
+      deployment: false
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          path: pinned
+          fetch-depth: 0
+          ref: ${{ job.workflow_sha }}
+
+      - name: Generate Semver From Tag
+        id: semver
+        uses: ./pinned/.github/actions/check-version-tag
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set Up Environment
+        id: setup
+        working-directory: ${{ format('{0}/pinned', github.workspace) }}
+        env:
+          HAS_SEMVER: ${{ fromJSON(steps.semver.outputs.is-valid-semver) }}
+        run: |
+          : Set Up Environment
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+          if [[ "${HAS_SEMVER:-false}" != 'true' ]]; then
+            echo '::error::Current git ref name is not a valid semantic version.'
+            return 1
+          fi
+
+          jq -r '.configurePresets[]
+            | select(.name == "dependencies")
+            | .vendor["obsproject.com/obs-studio"].tools.bouf
+            | to_entries
+            | map("\(.key)=\(.value|tostring)")
+            | .[]' "${PWD}/CMakePresets.json" >> "${GITHUB_OUTPUT}"
+
+      - name: Setup BOUF
+        id: setup-bouf
+        uses: ./pinned/.github/actions/publish-obs/setup-bouf
+        with:
+          version: ${{ steps.setup.outputs.version }}
+          checksum: ${{ steps.setup.outputs.hash }}
+          nsis-checksum: ${{ steps.setup.outputs.nsis-hash }}
+          url: ${{ steps.setup.outputs.baseUrl }}
+
+      - name: Install Dependencies
+        shell: pwsh -command ". '{0}'"
+        run: |
+          # Install NSIS
+          if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+          $ErrorActionPreference = 'Stop'
+
+          $WingetInstallArguments = @(
+            '--silent'
+            '--accept-package-agreements'
+            '--accept-source-agreements'
+            '--disable-interactivity'
+            '--version', '1.69.3'
+            '--exact'
+          )
+          winget install @WingetInstallArguments --id Rclone.Rclone
+
+      - name: Set Up Windows Code Signing
+        uses: ./pinned/.github/actions/codesign-obs/setup-windows
+        with:
+          gcp-identity-provider: ${{ secrets.gcp-identity-pool }}
+          gcp-service-account-name: ${{ secrets.gcp-service-account-name }}
+
+      - name: Download Asset
+        id: download
+        uses: ./pinned/.github/actions/download-asset
+        with:
+          platform: Windows
+          architecture: ${{ matrix.architecture }}
+          path: ${{ github.workspace }}
+
+      - name: Extract Asset
+        shell: pwsh -command ". '{0}'"
+        env:
+          RELEASE_ASSET: ${{ steps.download.outputs.path }}
+        run: |
+          # Extract Asset
+          if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+          Expand-Archive -Path $env:RELEASE_ASSET -DestinationPath "${env:RUNNER_TEMP}/release-build"
+
+      - name: Sign Windows Build
+        id: code-sign
+        uses: ./pinned/.github/actions/codesign-obs/codesign-windows
+        with:
+          path: ${{ format('{0}/release-build', runner.temp) }}
+          version: ${{ github.ref_name }}
+          channel: ${{ steps.setup.outputs.obs-update-channel }}
+          architecture: ${{ matrix.architecture }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-path: ${{ format('{0}/*-{1}.zip', steps.code-sign.outputs.path, matrix.architecture)}}
+
+      - name: Upload Signed Build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ format('obs-studio-windows-{0}-{1}-signed', matrix.architecture, github.ref_name) }}
+          compression-level: 0
+          path: ${{ format('{0}/*-{1}.zip', steps.code-sign.outputs.path, matrix.architecture) }}
+
+      - name: Upload PDBs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ format('obs-studio-windows-{0}-{1}-debug-symbols', matrix.architecture, github.ref_name) }}
+          compression-level: 0
+          path: ${{ format('{0}/*-pbds.zip', steps.code-sign.outputs.path) }}
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.architecture == 'x64'
+        with:
+          name: ${{ format('obs-studio-windows-{0}-{1}-installer', matrix.architecture, github.ref_name) }}
+          compression-level: 0
+          path: ${{ format('{0}/*.exe', steps.code-sign.outputs.path) }}

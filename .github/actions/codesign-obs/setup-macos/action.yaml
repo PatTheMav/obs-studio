@@ -12,12 +12,13 @@ inputs:
     required: true
   provisioning-profile:
     description: Provisioning profile in base64 format
-    required: false
+    default: ''
   apple-id:
     description: Apple ID to use for notarization
-    required: false
+    default: ''
   apple-secret:
     description: Application password for notarization
+    default: ''
 outputs:
   can-codesign:
     description: True if necessary code signing credentials were found
@@ -36,7 +37,12 @@ outputs:
     value: ${{ steps.provisioning.outputs.profile-uuid }}
   can-notarize:
     description: True if necessary notarization credentials were found
-    value: ${{ case(inputs.apple-id != '' && inputs.apple-secret != '', true, false) }}
+    value: |-
+      ${{ case(
+        inputs.apple-id != ''
+        && inputs.apple-secret != '', true,
+        false
+      ) }}
 runs:
   using: composite
   steps:

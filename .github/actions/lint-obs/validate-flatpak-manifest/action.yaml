@@ -3,15 +3,12 @@ description: Checks order of Flatpak modules in manifest file
 inputs:
   path:
     description: Path to Flatpak manifest file
-    default: ${{ github.workspace }}/build-aux/com.obsproject.Studio.json
-    required: false
+    default: ${{ format('{0}/build-aux/com.obsproject.Studio.json', github.workspace) }}
   fail-on:
     description: A string value to set the failure behavior.
-    required: false
     default: never
   working-directory:
     description: Working directory for checks
-    required: false
     default: ${{ github.workspace }}
 runs:
   using: composite

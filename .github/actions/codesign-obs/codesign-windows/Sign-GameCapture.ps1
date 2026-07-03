@@ -6,7 +6,6 @@ param()
 begin {
   if ($null -eq $env:CI) { throw }
   if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-
   $ErrorActionPreference = 'Stop'
 
   $SignToolBinary = "C:/Program Files (x86)/Windows Kits/10/App Certification Kit/signtool.exe"

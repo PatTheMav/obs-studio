@@ -4,29 +4,14 @@
 param()
 
 begin {
-  $RequiredVars = @(
-    $ENV:GITHUB_ACTION_PATH
-    $env:ACTION_WORKSPACE
-    $env:CI
-    $env:CNG_VERSION
-    $env:GITHUB_ENV
-    $env:GH_TOKEN
-    $env:RUNNER_TEMP
-    $env:GITHUB_OUTPUT
-  )
-
+  if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+  if ($null -eq $env:CI) { throw }
   $ErrorActionPreference = 'Stop'
-  if ( $null -ne $env:RUNNER_DEBUG ) { Set-PSDebug -Trace 1 }
-
-  if ( ($RequiredVars | Where-Object { $null -eq $_ } ).Count -gt 0 ) {
-    throw
-  }
-
 
   $Destination = "${env:ACTION_WORKSPACE}/google-cng"
   $GoogleRepository = "GoogleCloudPlatform/kms-integrations"
 
-  if ( ! ( Test-Location $env:ACTION_WORKSPACE ) ) {
+  if (!(Test-Location $env:ACTION_WORKSPACE)) {
     throw "Action workspace does not exist. Ensure Setup-Action is run first."
   }
 }

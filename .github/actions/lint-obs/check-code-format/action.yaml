@@ -9,11 +9,9 @@ inputs:
     required: true
   fail-on:
     description: A string value to set the failure behavior.
-    required: false
     default: never
   working-directory:
     description: Working directory to run linter from.
-    required: false
     default: ${{ github.workspace }}
 runs:
   using: composite

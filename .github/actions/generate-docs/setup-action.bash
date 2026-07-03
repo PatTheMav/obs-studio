@@ -28,6 +28,8 @@ fixup-documentation() {
   local patch
   read -r _ major _ minor _ patch _ <<< "${version_lines}"
 
+  echo "Detected 'libobs' API version: ${major}.${minor}.${patch}."
+
   local current_year
   current_year="$(date +"%Y")"
 
@@ -61,7 +63,6 @@ setup-action() {
   local docs_dir="${checkout}/docs/sphinx"
 
   echo '::group::Python Setup'
-
   if [[ "${RUNNER_OS}" == 'Linux' ]]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv || true)"
     echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> "${GITHUB_PATH}"

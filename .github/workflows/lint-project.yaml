@@ -14,7 +14,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -39,7 +44,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -64,7 +74,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -89,14 +104,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
         uses: ./.github/actions/check-changes
         id: checks
         with:
-          pathspec: '.github/*.yaml .github/*.yml'
+          pathspec: '.github/**/*.yaml .github/**/*.yml'
           filter: 'ACM'
 
       - name: Run zizmor
@@ -114,7 +134,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -137,7 +162,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -165,7 +195,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -197,7 +232,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0
+          fetch-depth: |-
+            ${{ case(
+              github.event_name == 'pull_request', github.event.commits,
+              github.event_name == 'push', 0,
+              1
+            ) }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -207,7 +247,8 @@ jobs:
           base: |-
             ${{ case(
               github.ref_name == 'master', github.event.before,
-              github.base_ref == 'master', 'HEAD', 'HEAD'
+              github.base_ref == 'master', 'HEAD',
+              'HEAD'
             ) }}
           pathspec: 'plugins/rtmp-services/data/*.json'
 
