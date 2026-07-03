@@ -28,7 +28,7 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
-        echo '::notice::setup-macos-codesigning action requires a Windows-based runner.'
+        echo '::error::codesign-windows action requires a Windows-based runner.'
         exit 1
 
     - name: Download Versions
@@ -59,7 +59,7 @@ runs:
         VERSION: ${{ inputs.version }}
       run: |
         # Run BOUF
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 2 }
         $ErrorActionPreference = 'Stop'
 
         $BoufArgs = @(

@@ -67,7 +67,7 @@ jobs:
       - name: Install Dependencies
         shell: pwsh -command ". '{0}'"
         run: |
-          # Install NSIS
+          # Install Dependencies
           if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
           $ErrorActionPreference = 'Stop'
 
@@ -76,16 +76,18 @@ jobs:
             '--accept-package-agreements'
             '--accept-source-agreements'
             '--disable-interactivity'
-            '--version', '1.69.3'
             '--exact'
           )
-          winget install @WingetInstallArguments --id Rclone.Rclone
+
+          winget install @WingetInstallArguments --version 3.12 --id NSIS.NSIS
+          winget install @WingetInstallArguments --version 1.74.4 --id Rclone.Rclone
+          winget install @WingetInstallArguments --version 3.9.0.2 --id JohnMacFarlane.Pandoc
 
       - name: Set Up Windows Code Signing
         uses: ./pinned/.github/actions/codesign-obs/setup-windows
         with:
           gcp-identity-provider: ${{ secrets.gcp-identity-pool }}
-          gcp-service-account-name: ${{ secrets.gcp-service-account-name }}
+          gcp-account-name: ${{ secrets.gcp-service-account-name }}
 
       - name: Download Asset
         id: download

@@ -13,12 +13,20 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Windows'
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      run: |
+        : Check Runner Operating System
+        echo '::error::setup-windows action requires a Windows-based runner.'
+        exit 1
+
     - name: Setup Google CNG Provider
       id: setup-gcp
       shell: pwsh -command ". '{0}'"
       env:
-        CNG_VERSION: 'cng-v1.1'
-        GH_TOKEN: ${{ inputs.github_token }}
+        CNG_VERSION: 'cng-v1.4'
+        GH_TOKEN: ${{ inputs.github-token }}
       run: . ${env:GITHUB_ACTION_PATH}/Setup-GCP.ps1
 
     - name: 'Authenticate to Google Cloud'

@@ -101,10 +101,10 @@ jobs:
 
   sign-windows-build:
     name: Windows Signing
-    uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@ac19ea663375cd02997be92b7d8ff6dd89a511ad
-    # if: |-
-    #   github.repository_owner == 'obsproject' &&
-    #   fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false')
+    uses: patthemav/obs-studio/.github/workflows/sign-windows.yaml@ac19ea663375cd02997be92b7d8ff6dd89a511ad
+    if: |-
+      github.repository_owner == 'obsproject' &&
+      fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false')
     needs: build-project
     permissions:
       contents: read        # Necessary to keep workflow base permissions.
