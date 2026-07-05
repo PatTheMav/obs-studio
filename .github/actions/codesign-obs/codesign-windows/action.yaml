@@ -1,0 +1,111 @@
+name: Sign Windows Builds
+description: Generates signed OBS install files
+inputs:
+  path:
+    description: Location of OBS Studio build to sign
+    required: true
+  version:
+    description: Version string (e.g., 30.0.0-rc1)
+    required: true
+  architecture:
+    description: OBS build architecture
+    required: true
+  channel:
+    description: Update channel
+    required: false
+    default: 'stable'
+  bouf-path:
+    description: Path to bouf installation on GitHub Actions runner.
+    required: false
+    default: ${{ runner.temp }}/bouf
+outputs:
+  path:
+    description: Path to code signed Windows build
+    value: ${{ steps.run-bouf.outputs.bouf-output-path }}
+runs:
+  using: composite
+  steps:
+    - name: Download Versions
+      shell: pwsh -command ". '{0}'"
+      env:
+        ARCHITECTURE: ${{ inputs.architecture }}
+        CHANNEL: ${{ inputs.channel }}
+        RCLONE_GCS_ENV_AUTH: 'true'
+        RCLONE_TRANSFERS: 100
+        RCLONE_FAST_LIST: true
+      run: |
+        # Download Versions
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+        ErrorActionPreference = 'Stop'
+        & rclone copy --quiet ":gcs:obs-latest/${env:ARCHITECTURE}/${env:CHANNEL}" "${env:RUNNER_TEMP}/previous"
+
+    - name: Sign Game Capture with RSA cert
+      shell: pwsh -command ". '{0}'"
+      env:
+        ARTIFACT_PATH: ${{ inputs.path }}
+      run: ${{ github.action_path }}/Sign-GameCapture.ps1
+
+    - name: Run BOUF
+      id: run-bouf
+      shell: pwsh -command ". '{0}'"
+      env:
+        BOUF_PATH: ${{ inputs.bouf-path }}
+        UPDATE_CHANNEL: ${{ inputs.channel }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        # Run BOUF
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+        ErrorActionPreference = 'Stop'
+
+        $BoufArgs = @(
+          '--config',       "${env:GITHUB_ACTION_PATH}/config_${env:ARCHITECTURE}.toml",
+          '--version',      $env:VERSION
+          '--branch',       $env:UPDATE_CHANNEL
+          '--input',        "${env:RUNNER_TEMP}/current"
+          '--previous",     "${env:RUNNER_TEMP}/previous"
+          '--output',       "${env:RUNNER_TEMP}/output"
+          '--packaging-only'
+        )
+
+        & $env:BOUF_PATH @BoufArgs
+
+        "bouf-output-path=${env:RUNNER_TEMP}/output" >> $env:GITHUB_OUTPUT
+
+    - name: Sync Latest Build
+      shell: pwsh -command ". '{0}'"
+      env:
+        RCLONE_TRANSFERS: 100
+        RCLONE_INCLUDE: '**/${{ inputs.version }}/**'
+        RCLONE_GCS_ENV_AUTH: 'true'
+        RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
+      run: |
+        # Sync Latest Build
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+        ErrorActionPreference = 'Stop'
+
+        $RcloneArguments = @(
+          '--delete-excluded'
+          "${env:RUNNER_TEMP}/previous"
+          ":gcs:obs-latest/${env:ARCHITECTURE}/${env:CHANNEL}"
+        )
+
+        & rclone sync @RCloneArguments
+
+    - name: Upload Build To Archive
+      shell: pwsh -command ". '{0}'"
+      env:
+        RCLONE_TRANSFERS: 100
+        RCLONE_GCS_ENV_AUTH: 'true'
+        RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
+      run: |
+        # Sync Latest Build
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+        ErrorActionPreference = 'Stop'
+
+        $RcloneArguments = @(
+          '--transfers 100'
+          "${env:RUNNER_TEMP}/previous"
+          ":gcs:obs-builds/${env:ARCHITECTURE}"
+        )
+
+        & rclone copy @RcloneArguments

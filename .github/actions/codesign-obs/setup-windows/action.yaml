@@ -1,0 +1,25 @@
+name: Setup Windows Code Signing
+description: Sets up code siging for Windows
+inputs:
+  gcp-identity-provider:
+    description: GCP Identity Provider Pool ID
+    required: true
+  gcp-account-name:
+    description: Google service account name
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Setup Google CNG Provider
+      id: setup-gcp
+      shell: pwsh -command ". '{0}'"
+      env:
+        CNG_VERSION: 'cng-v1.1'
+        GH_TOKEN: ${{ github.token }}
+      run: ${{ github.action_path }}/Setup-GCP.ps1
+
+    - name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093' # v3.0.0
+      with:
+        workload_identity_provider: ${{ inputs.gcp-identity-provider }}
+        service_account: ${{ inputs.gcp-account-name }}
