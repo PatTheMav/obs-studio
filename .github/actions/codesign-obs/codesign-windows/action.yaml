@@ -1,0 +1,59 @@
+name: Sign Windows Builds
+description: Code signs an existing OBS Studio Windows build provided as a '.zip' archive.
+inputs:
+  path:
+    description: A path to an OBS Studio build archive in '.zip' format present on the runner.
+    required: true
+outputs:
+  path:
+    description: The path to a new archive in '.zip' format with the code signed OBS Studio build.
+    value: ${{ steps.compress.outputs.path }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Windows'
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      run: |
+        : Check Runner Operating System
+        echo '::error::codesign-obs/codesign-windows action requires a Windows runner.'
+        exit 1
+
+    - name: Extract Asset
+      id: extract
+      env:
+        RELEASE_ASSET: ${{ inputs.path }}
+      shell: pwsh -command ". '{0}'"
+      run: |
+        # Extract Asset
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+
+        New-Item -Type Directory -Path "${env:RUNNER_TEMP}/signed-build"
+        Expand-Archive -Path ${env:RELEASE_ASSET} -DestinationPath "${env:RUNNER_TEMP}/signed-build"
+        "base-name=$(("${env:RELEASE_ASSET}" | Get-Item).BaseName)" >> $env:GITHUB_OUTPUT
+        Remove-Item ${env:RELEASE_ASSET}
+
+    - name: Sign Game Capture with RSA cert
+      shell: pwsh -command ". '{0}'"
+      env:
+        ARTIFACT_PATH: ${{ format('{0}/signed-build', runner.temp) }}
+      run: . ${env:GITHUB_ACTION_PATH}/Sign-GameCapture.ps1
+
+    - name: Sign OBS Studio package
+      shell: pwsh -command ". '{0}'"
+      env:
+        ARTIFACT_PATH: ${{ format('{0}/signed-build', runner.temp) }}
+      run: . ${env:GITHUB_ACTION_PATH}/Sign-Package.ps1
+
+    - name: Compress Asset
+      id: compress
+      shell: pwsh -command ". '{0}'"
+      working-directory: ${{ format('{0}/release-build', runner.temp) }}
+      env:
+        OUTPUT_PATH: ${{ format('{0}/{1}-signed.zip', runner.temp, steps.extract.outputs.base-name) }}
+      run: |
+        # Compress Asset
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+
+        Compress-Archive -Path . -DestinationPath ${env:OUTPUT_PATH} -CompressionLevel Fastest
+        "path=${env:OUTPUT_PATH}" >> $env:GITHUB_OUTPUT
