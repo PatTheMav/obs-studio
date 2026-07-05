@@ -1,0 +1,246 @@
+name: Run Code And Format Linters
+on:
+  workflow_call:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash --errexit --noprofile --norc -eo pipefail -eo nounset {0}
+jobs:
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Changed Files
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          filter: 'ACM'
+          pathspec: "'*.c' '*.h' '*.cpp' '*.hpp' '*.m' '*.mm'"
+
+      - name: Run clang-format
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/lint-obs/check-code-format
+        with:
+          linter: clang-format
+          files: ${{ steps.checks.outputs.changed-files }}
+          fail-on: error
+
+  swift-format:
+    name: swift-format
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Changed Files
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          filter: 'ACM'
+          pathspec: "'*.swift'"
+
+      - name: Run swift-format
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/lint-obs/check-code-format
+        with:
+          linter: swift-format
+          files: ${{ steps.checks.outputs.changed-files }}
+          fail-on: error
+
+  gersemi:
+    name: gersemi
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Changed Files
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          pathspec: "'*.cmake' '*CMakeLists.txt'"
+          filter: 'ACM'
+
+      - name: Run gersemi
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/lint-obs/check-code-format
+        with:
+          linter: gersemi
+          files: ${{ steps.checks.outputs.changed-files }}
+          fail-on: error
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Changed Files
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          pathspec: "'.github/**/*.yaml' '.github/**/*.yml'"
+          filter: 'ACM'
+
+      - name: Run zizmor
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/lint-obs/check-code-format
+        with:
+          linter: zizmor
+          files: ${{ steps.checks.outputs.changed-files }}
+          fail-on: error
+
+  flatpak-validator:
+    name: flatpak-validator
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Changed Files
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          pathspec: "'build-aux/com.obsproject.Studio.json'"
+          filter: 'ACM'
+
+      - name: Validate Flatpak Manifest
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/flatpak-manifest-validator
+        with:
+          failCondition: error
+
+  qt-xml-validator:
+    name: qt-xml-validator
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Changed Files
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          pathspec: 'frontend/forms/**/*.ui'
+
+      - name: Run xmllint
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/lint-obs/check-code-format
+        with:
+          linter: xmllint
+          files: ${{ steps.checks.outputs.changed-files }}
+          fail-on: error
+
+  compatibility-validator:
+    name: Validate Compatibility
+    if: github.base_ref == 'master' || github.ref_name == 'master'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read    # Necessary to keep workflow-level permission
+      checks: write     # Necessary to annotate schema validation errors
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select Base Ref
+        id: ref-select
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_BEFORE: ${{ github.event.before }}
+        run: |
+          : Select Base Ref
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+          if [[ "${REF_NAME:-}" == 'master' ]]; then
+            echo "ref=${REF_BEFORE:-}" >> "${GITHUB_OUTPUT}"
+          elif [[ "${BASE_REF:-}" == 'master' ]]; then
+            echo "ref=HEAD" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check for Changed Files
+        if: github.base_ref == 'master'
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          base: ${{ steps.ref-select.outputs.ref }}
+          pathspec: 'plugins/win-capture/data/*.json'
+
+      - name: Run JSON Validation
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/lint-obs/validate-json-schema
+        with:
+          path: ${{ steps.checks.outputs.changed-files }}
+          github-token: ${{ github.token }}
+
+  services-validator:
+    name: Validate Services
+    if: github.base_ref == 'master' || github.ref_name == 'master'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read    # Necessary to keep workflow-level permission
+      checks: write     # Necessary to annotate schema validation errors
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select Base Ref
+        id: ref-select
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_BEFORE: ${{ github.event.before }}
+        run: |
+          : Select Base Ref
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+          if [[ "${REF_NAME:-}" == 'master' ]]; then
+            echo "ref=${REF_BEFORE:-}" >> "${GITHUB_OUTPUT}"
+          elif [[ "${BASE_REF:-}" == 'master' ]]; then
+            echo "ref=HEAD" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check for Changed Files
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          base: ${{ steps.ref-select.outputs.ref }}
+          pathspec: 'plugins/rtmp-services/data/*.json'
+
+      - name: Run Services Validation
+        if: fromJSON(steps.checks.outputs.has-changed-files)
+        uses: ./.github/actions/services-validator
+        with:
+          path: ${{ steps.checks.outputs.changed-files }}
+          token: ${{ github.token }}
+          run-schema-checks: true
+          run-service-hecks: false
