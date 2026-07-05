@@ -1,0 +1,33 @@
+name: Flatpak Manifest Validator
+description: Checks order of Flatpak modules in manifest file
+inputs:
+  path:
+    description: Path to Flatpak manifest file
+    default: ${{ github.workspace }}/build-aux/com.obsproject.Studio.json
+    required: false
+  fail-on:
+    description: A string value to set the failure behavior.
+    required: false
+    default: never
+  working-directory:
+    description: Working directory for checks
+    required: false
+    default: ${{ github.workspace }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Linux'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      run: |
+        : Check Runner Operating System
+        echo '::notice::flatpak-manifest-validator action requires a Linux-based runner.'
+        exit 1
+
+    - name: Validate Flatpak Manifest
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        MANIFEST_FILE: ${{ inputs.path }}
+        FAIL_MODE: ${{ inputs.fail-on }}
+      run: ${GITHUB_ACTION_PATH}/run-validator.bash
