@@ -1,0 +1,42 @@
+name: Validate JSON Schema
+description: Checks specified JSON files for schema validations
+inputs:
+  path:
+    description: A string representing either a JSON array of file names, a glob expression, or file path.
+    required: true
+  github-token:
+    description: The GitHub token used to make authenticated API requests.
+    default: ${{ github.token }}
+  working-directory:
+    description: Working directory to run checks from.
+    default: ${{ github.workspace }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os == 'Windows'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      run: |
+        : Check Runner Operating System
+        echo '::notice::compatibility-validator action requires a macOS-based or Linux-based runner.'
+        exit 1
+
+    - name: Install and Configure Python
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      run: ${GITHUB_ACTION_PATH}/setup-action.bash
+
+    - name: Validate Compatibility Files JSON Schema
+      id: validate
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        JSON_FILES: ${{ inputs.path }}
+      run: ${GITHUB_ACTION_PATH}/run-validator.bash
+
+    - name: Annotate Schema Validation Errors
+      uses: yuzutech/annotations-action@00b2d488bcba3bd01014dc073d276ef4a45d5c6c # v0.6.0
+      if: failure()
+      with:
+        title: Compatibility JSON Errors
+        input: ${{ runner.temp }}/validation_errors.json
+        repo-token: ${{ inputs.github-token }}
