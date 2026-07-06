@@ -1,0 +1,62 @@
+name: Check Code Format
+description: Runs the specified linter on the provided list of files
+inputs:
+  linter:
+    description: Linter command to run.
+    required: true
+  files:
+    description: A JSON string representing an array of relative file names relative to working directory.
+    required: true
+  fail-on:
+    description: A string value to set the failure behavior.
+    required: false
+    default: never
+  working-directory:
+    description: Working directory to run linter from.
+    required: false
+    default: ${{ github.workspace }}
+runs:
+  using: composite
+  steps:
+    - name: Setup Ubuntu
+      if: runner.os == 'Linux'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      env:
+        LINTER_COMMAND: ${{ inputs.linter }}
+      run: ${GITHUB_ACTION_PATH}/setup-ubuntu.bash
+
+    - name: Setup macOS
+      if: runner.os == 'macOS'
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      env:
+        LINTER_COMMAND: ${{ inputs.linter }}
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/setup-macos.zsh
+
+    - name: Setup Windows
+      if: runner.os == 'Windows'
+      shell: pwsh -command ". '{0}'"
+      env:
+        LINTER_COMMAND: ${{ inputs.linter }}
+      run: ${GITHUB_ACTION_PATH}/Setup-Windows.ps1
+
+    - name: Linter
+      if: runner.os != 'Windows'
+      id: result
+      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        LINTER_COMMAND: ${{ inputs.linter }}
+        CHANGED_FILES: ${{ inputs.files }}
+        FAIL_MODE: ${{ inputs.fail-on }}
+      run: ${GITHUB_ACTION_PATH}/formatter-launcher.bash
+
+    - name: Linter
+      if: runner.os == 'Windows'
+      id: result
+      shell: pwsh -command ". '{0}'"
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        LINTER_COMMAND: ${{ inputs.linter }}
+        CHANGED_FILES: ${{ inputs.files }}
+        FAIL_MODE: ${{ inputs.fail-on }}
+      run: ${GITHUB_ACTION_PATH}/Formatter-Launcher.ps1
