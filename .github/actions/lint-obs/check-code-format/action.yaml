@@ -20,14 +20,14 @@ runs:
   steps:
     - name: Setup Ubuntu
       if: runner.os == 'Linux'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         LINTER_COMMAND: ${{ inputs.linter }}
       run: ${GITHUB_ACTION_PATH}/setup-ubuntu.bash
 
     - name: Setup macOS
       if: runner.os == 'macOS'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         LINTER_COMMAND: ${{ inputs.linter }}
       run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/setup-macos.zsh
@@ -41,8 +41,7 @@ runs:
 
     - name: Linter
       if: runner.os != 'Windows'
-      id: result
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         LINTER_COMMAND: ${{ inputs.linter }}
@@ -52,7 +51,6 @@ runs:
 
     - name: Linter
       if: runner.os == 'Windows'
-      id: result
       shell: pwsh -command ". '{0}'"
       working-directory: ${{ inputs.working-directory }}
       env:

@@ -32,21 +32,36 @@ inputs:
     description: Destination of generated builds.
     required: false
     default: ${{ runner.temp }}
+  xcode-version:
+    description: A version string for a specific Xcode version available on the runner.
+    default: ''
+  xcode-cas-path:
+    description: Location to use for Xcode's compilation cache.
+    default: ''
   working-directory:
     description: Working directory for packaging
     required: false
     default: ${{ github.workspace }}
 outputs:
-  analyzer-output-path:
+  macos-sarif-path:
     description: Path to generated clang-analyze output files
-    value: ${{ steps.build.outputs.analyzer-output-path }}
+    value: ${{ steps.build-macos.outputs.analyzer-output-path }}
 runs:
   using: composite
   steps:
-    - name: Run macOS Build
-      id: build
+    - name: Set Up Xcode
+      id: setup-macos
       if: runner.os == 'macOS'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      env:
+        XCODE_VERSION: ${{ inputs.xcode-version }}
+        XCODE_CAS_PATH: ${{ inputs.xcode-cas-path }}
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/setup-macos.zsh
+
+    - name: Run macOS Build
+      id: build-macos
+      if: runner.os == 'macOS'
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         BUILD_CONFIG: ${{ inputs.config }}
@@ -57,21 +72,22 @@ runs:
         PROVISIONING_PROFILE: ${{ inputs.provisioning-profile-id }}
         OUTPUT_PATH: ${{ inputs.path }}
         ANALYZE: ${{ inputs.analyze }}
+        XCODE_CAS_PATH: ${{ steps.setup-macos.outputs.xcode-cas-path }}
       run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/build-macos.zsh
 
     - name: Install Ubuntu Build Dependencies
-      id: ubuntu-setup
+      id: setup-ubuntu
       if: runner.os == 'Linux'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         BUILD_TARGET: ${{ inputs.target }}
         OUTPUT_PATH: ${{ inputs.path }}
       run: ${GITHUB_ACTION_PATH}/setup-ubuntu.bash
 
     - name: Run Ubuntu Build
-      id: build
+      id: build-ubuntu
       if: runner.os == 'Linux'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         BUILD_CONFIG: ${{ inputs.config }}
         BUILD_TARGET: ${{ inputs.target }}
@@ -80,7 +96,7 @@ runs:
       run: ${GITHUB_ACTION_PATH}/build-ubuntu.bash
 
     - name: Run Windows Build
-      id: build
+      id: build-windows
       if: runner.os == 'Windows'
       shell: pwsh -command ". '{0}'"
       env:
@@ -88,4 +104,4 @@ runs:
         BUILD_TARGET: ${{ inputs.target }}
         OUTPUT_PATH: ${{ inputs.path }}
       working-directory: ${{ inputs.working-directory }}
-      run: ${GITHUB_ACTION_PATH}/Build-Windows.ps1
+      run: . ${env:GITHUB_ACTION_PATH}/Build-Windows.ps1

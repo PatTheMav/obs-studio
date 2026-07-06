@@ -59,6 +59,9 @@ select-git-ref() {
 check-changes() {
   select-git-ref
 
+  local -a path_spec
+  read -a path_spec -r <<< "${PATH_SPEC:-.}"
+
   local diff_content
   diff_content="$(git diff \
     --name-only \
@@ -66,13 +69,10 @@ check-changes() {
     "${GIT_BASE_REF}" \
     "${GIT_REF}" \
     -- \
-    "${PATH_SPEC:-.}")"
+    "${path_spec[@]}" | tr -s '\n' '|')"
 
-  local change
   local -a changes
-  while read -r change; do
-    changes+=("${change}")
-  done <<< "${diff_content}"
+  { IFS='|' read -a changes -r; } <<< "${diff_content}"
 
   {
     if (( ${#changes[@]} )); then

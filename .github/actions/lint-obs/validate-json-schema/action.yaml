@@ -15,19 +15,19 @@ runs:
   steps:
     - name: Check Runner Operating System
       if: runner.os == 'Windows'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
         echo '::notice::compatibility-validator action requires a macOS-based or Linux-based runner.'
         exit 1
 
     - name: Install and Configure Python
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: ${GITHUB_ACTION_PATH}/setup-action.bash
 
     - name: Validate Compatibility Files JSON Schema
       id: validate
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         JSON_FILES: ${{ inputs.path }}
@@ -37,6 +37,6 @@ runs:
       uses: yuzutech/annotations-action@00b2d488bcba3bd01014dc073d276ef4a45d5c6c # v0.6.0
       if: failure()
       with:
-        title: Compatibility JSON Errors
+        title: JSON Schema Validation Errors
         input: ${{ runner.temp }}/validation_errors.json
         repo-token: ${{ inputs.github-token }}

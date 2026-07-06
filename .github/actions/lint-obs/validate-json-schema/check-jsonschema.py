@@ -73,18 +73,20 @@ def validate_json_files(
             error_path = "/".join(
                 str(path_element) for path_element in violation.absolute_path
             )
-            error_entry = source_map["/{}".format(error_path)]
+            error_entry = source_map[f"/{error_path}"]
+        else:
+            error_entry = source_map['']
 
-            violation_data = {
-                "file": json_file_name,
-                "title": "Validation Error",
-                "message": violation.message,
-                "annotation_level": "failure",
-                "start_line": error_entry.value_start.line + 1,
-                "end_line": error_entry.value_end.line + 1,
-            }
+        violation_data = {
+            "file": json_file_name,
+            "title": "Validation Error",
+            "message": violation.message,
+            "annotation_level": "failure",
+            "start_line": error_entry.value_start.line + 1,
+            "end_line": error_entry.value_end.line + 1,
+        }
 
-            violations.append(violation_data)
+        violations.append(violation_data)
 
     return violations
 
@@ -127,7 +129,7 @@ def main() -> int:
             (schema_file, schema_data) = discover_schema_file(json_file)
         except OSError as e:
             logger.error(f"Failed to discover schema for file '{json_file}': {e}")
-            return 2
+            return 1
 
         if schema_file and schema_file not in schema_mappings.keys():
             schema_mappings.update(
@@ -145,7 +147,7 @@ def main() -> int:
                 logger.error(
                     f"Failed to create JSON source map for file '{json_file}': {e}"
                 )
-                return 2
+                return 1
 
             [validation_errors.append(error) for error in new_errors]
 
@@ -155,7 +157,7 @@ def main() -> int:
                 json.dump(validation_errors, results_file)
         except OSError as e:
             logger.error(f"Failed to write validation results file: {e}")
-            return 2
+            return 1
 
         return 1
 

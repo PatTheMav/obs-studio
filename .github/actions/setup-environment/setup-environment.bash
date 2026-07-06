@@ -85,6 +85,7 @@ setup-environment() {
     fi
 
     echo "commit-hash=${GITHUB_SHA:0:9}"
+    echo "output-name=obs-studio-${PLATFORM}-${TARGET}-${GITHUB_SHA:0:9}"
   }  >> "${GITHUB_OUTPUT}"
 }
 

@@ -8,6 +8,8 @@ set -o pipefail
 : "${CI:?}"
 if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
+shopt -s extglob
+
 create-deb-package() {
   echo '::group::Create deb package'
   local -a cmake_args=(
@@ -23,7 +25,6 @@ create-deb-package() {
   /usr/bin/cmake "${cmake_args[@]}"
 
   pushd "${build_dir}" > /dev/null
-  shopt -s extglob
   files=(obs-studio-*-Linux*.@(ddeb|deb|ddeb.sha256|deb.sha256))
   for file in "${files[@]}"; do
     mv "${file}" "${OUTPUT_PATH}/${file//obs-studio-*-Linux/"${OUTPUT_NAME}"}"
@@ -50,7 +51,6 @@ create-archive() {
 
   echo '::group::Create archive'
   pushd "${install_dir}" > /dev/null
-  shopt -s extglob
   XZ_OPT=-T0 tar --create --verbose --xz --file \
     "${OUTPUT_PATH}/${OUTPUT_NAME}.tar.xz" @(bin|lib|share)
   popd > /dev/null
@@ -81,11 +81,10 @@ create-developer-archive() {
   local OUTPUT_NAME="${OUTPUT_NAME}-plugin-dev"
 
   pushd "${install_dir}" > /dev/null
-  shopt -s extglob
   XZ_OPT=-T0 tar --create --verbose --xz --file \
     "${build_dir}/${OUTPUT_NAME}".tar.xz @(include|lib|share)
   popd > /dev/null
-  print '::endgroup::'
+  echo '::endgroup::'
 }
 
 package-ubuntu() {
@@ -94,8 +93,6 @@ package-ubuntu() {
     echo '::error::Action needs to be run from an obs-studio checkout root directory'
     return 1
   fi
-
-  git fetch origin --no-tags --no-recurse-submodules --quiet
 
   local build_dir
   {
@@ -115,7 +112,6 @@ package-ubuntu() {
 
     local version_regex='^([0-9]+\.[0-9]+\.[0-9]+(-(rc|beta).+)?)-([0-9]+)-([[:alnum:]]+)$'
 
-    local BASH_REMATCH
     if [[ "${git_description}" =~ ${version_regex} ]]; then
       commit_info=(
         [version]="${BASH_REMATCH[1]}"

@@ -5,6 +5,10 @@ inputs:
     description: Build target
     required: false
     default: ''
+  platform:
+    description: Custom platform name to be used instead of runner operating system name.
+    required: false
+    default: ${{ runner.os }}
   xcode-version:
     description: Xcode version to use for workflow (macOS)
     required: false
@@ -30,63 +34,68 @@ outputs:
     description: Build configuration to use for builds.
     value: ${{ steps.setup.outputs.config }}
   cpu-name:
-    description: Canonical architecture name used for builds.
-    value: ${{ steps.setup-platform.outputs.cpu-name }}
+    description: Canonical Apple architecture name used for builds.
+    value: ${{ steps.setup-macos.outputs.cpu-name }}
   xcode-cas-path:
     description: Path to Xcode CAS compilation cache
-    value: ${{ steps.setup-platform.outputs.xcode-cas-path }}
+    value: ${{ steps.setup-macos.outputs.xcode-cas-path }}
   sparkle-version:
     description: Sparkle version to use for update generation
-    value: ${{ steps.setup-platform.outputs.sparkle-version}}
+    value: ${{ steps.setup-macos.outputs.sparkle-version}}
   sparkle-url:
     description: Download URL for Sparkle
-    value: ${{ steps.setup-platform.outputs.sparkle-url}}
+    value: ${{ steps.setup-macos.outputs.sparkle-url}}
   sparkle-checksum:
     description: Checksum for Sparkle download
-    value: ${{ steps.setup-platform.outputs.sparkle-checksum}}
+    value: ${{ steps.setup-macos.outputs.sparkle-checksum}}
   obs-update-channel:
     description: Update channel to generate Appcasts and Windows update files for
     value: ${{ steps.setup.outputs.obs-update-channel}}
   flatpak-matrix:
     description: A JSON string representing an array of Flatpak release channels.
-    value: ${{ steps.setup-platform.outputs.flatpak-matrix }}
+    value: ${{ steps.setup-ubuntu.outputs.flatpak-matrix }}
   pvs-studio-versipn:
     description: PVS-Studio version for static code analysis on Windows
-    value: ${{ steps.setup-platform.outputs.pvs-studio-version}}
+    value: ${{ steps.setup-windows.outputs.pvs-studio-version}}
   pvs-studio-url:
     description: Download URL for PVS-Studio
-    value: ${{ steps.setup-platform.outputs.pvs-studio-url}}
+    value: ${{ steps.setup-windows.outputs.pvs-studio-url}}
   pvs-studio-checksum:
     description: Checksum for PVS-Studio download
-    value: ${{ steps.setup-platform.outputs.pvs-studio-checksum}}
+    value: ${{ steps.setup-windows.outputs.pvs-studio-checksum}}
   valid-version-tag:
     description: Flag for current tag passing release version requirement checks.
     value: ${{ steps.setup.outputs.valid-version-tag }}
+  output-name:
+    description: A prefix string usable for the names and file patterns of generated build artifacts
+    value: ${{ steps.setup.outputs.output-name }}
 runs:
   using: composite
   steps:
     - name: Setup Environment
       id: setup
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
+        PLATFORM: ${{ inputs.platform }}
+        TARGET: ${{ inputs.target }}
         GITHUB_EVENT_NUMBER: ${{ github.event.number }}
         GH_TOKEN: ${{ github.token }}
       run: ${GITHUB_ACTION_PATH}/setup-environment.bash
 
     - name: Setup Windows
-      id: setup-platform
+      id: setup-windows
       if: runner.os == 'Windows'
       shell: pwsh -command ". '{0}'"
       working-directory: ${{ inputs.working-directory }}
       env:
         TARGET: ${{ inputs.target }}
-      run: ${GITHUB_ACTION_PATH}/Setup-Windows.ps1
+      run: . ${env:GITHUB_ACTION_PATH}/Setup-Windows.ps1
 
     - name: Setup macOS
-      id: setup-platform
+      id: setup-macos
       if: runner.os == 'macOS'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         TARGET: ${{ inputs.target }}
@@ -94,8 +103,10 @@ runs:
       run: zsh --errexit --no-rcs ${GITHUB_ACTION_PATH}/setup-macos.zsh
 
     - name: Setup Ubuntu
-      id: setup-platform
+      id: setup-ubuntu
       if: runner.os == 'Linux'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       run: ${GITHUB_ACTION_PATH}/setup-ubuntu.bash
+      env:
+        TARGET: ${{ inputs.target }}

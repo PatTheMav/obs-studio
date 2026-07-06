@@ -43,7 +43,7 @@ runs:
       shell: pwsh -command ". '{0}'"
       env:
         ARTIFACT_PATH: ${{ inputs.path }}
-      run: ${{ github.action_path }}/Sign-GameCapture.ps1
+      run: . $env:GITHUB_ACTION_PATH/Sign-GameCapture.ps1
 
     - name: Run BOUF
       id: run-bouf

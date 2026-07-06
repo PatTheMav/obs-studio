@@ -28,13 +28,10 @@ build-macos() {
   local checkout="${PWD}"
 
   if ! [[ -d ${checkout}/.git && -r ${checkout}/CMakePresets.json ]] {
-    print '::error::Action needs to be run from an obs-studio checkout root directory'
+    print '::error::Action needs to be run from the root directory of an obs-studio checkout.'
     return 1
   }
 
-  git fetch origin --no-tags --no-recurse-submodules --quiet
-
-  print '::group::Set Up Environment'
   typeset -gx CODESIGN_IDENT
   typeset -gx CODESIGN_TEAM
 
@@ -53,7 +50,6 @@ build-macos() {
     CODESIGN_TEAM="${${CODESIGN_IDENT##*\(}%%\)*}"
     print "::addmask::${CODESIGN_TEAM}"
   }
-  print '::endgroup::'
 
   print '::group::Configure obs-studio'
   local -a cmake_args=(
@@ -62,7 +58,7 @@ build-macos() {
     "-DCMAKE_OSX_ARCHITECTURES:STRING=${BUILD_TARGET}"
   )
 
-  if (( ${+RUNNER_DEBUG })) {
+  if (( ${+RUNNER_DEBUG} )) {
     cmake_args+=(
       --debug-output
       -DCMAKE_XCODE_ATTRIBUTE_COMPILATION_CACHE_ENABLE_DIAGNOSTIC_REMARKS:STRING=YES

@@ -64,9 +64,7 @@ create-disk-image() {
 }
 
 codesign-disk-image() {
-  print '::group::Codesign Disk Image'
   codesign --sign ${CODESIGN_IDENT:--} ${disk_image}
-  print '::endgroup::'
 }
 
 notarize-disk-image() {
@@ -153,10 +151,10 @@ package-macos() {
     preset_build_dir="$(jq --raw-output '
       .configurePresets[] | select(.name == "macos") | .binaryDir
     ' ${checkout}/CMakePresets.json)"
-    typeset -g build_dir="${preset_build_dir//\$\{source_dir\}/${OUTPUT_PATH}}"
+    typeset -g build_dir="${preset_build_dir//\$\{sourceDir\}/${OUTPUT_PATH}}"
   }
 
-  if [[ -d ${OUTPUT_PATH}/OBS.app ]] {
+  if [[ ! -d ${OUTPUT_PATH}/OBS.app ]] {
     print '::error::No OBS application bundle found.'
     return 1
   }
@@ -169,6 +167,8 @@ package-macos() {
     local version_regex='^([0-9]+\.[0-9]+\.[0-9]+(-(rc|beta).+)?)-([0-9]+)-([[:alnum:]]+)$'
 
     local match
+    local mbegin
+    local mend
     if [[ ${git_description} =~ ${version_regex} ]] {
       typeset -g commit_info=(
         [version]=${match[1]}
@@ -182,9 +182,14 @@ package-macos() {
   }
 
   : ${OUTPUT_NAME:="obs-studio-macos-${BUILD_TARGET}-${commit_info[hash]}"}
+
+  local -A arch_names=(
+    [x86_64]=Intel
+    [arm64]=Apple
+  )
   local volume_name
-  if (( commit_distance > 0 )) {
-    volume_name="OBS Studio ${commit_info[version]}-${commmit_info[hash]} (${arch_names[${BUILD_TARGET}]})"
+  if (( ${commit_info[distance]} > 0 )) {
+    volume_name="OBS Studio ${commit_info[version]}-${commit_info[hash]} (${arch_names[${BUILD_TARGET}]})"
   } else {
     volume_name="OBS Studio ${commit_info[version]} (${arch_names[${BUILD_TARGET}]})"
   }
@@ -205,3 +210,5 @@ package-macos() {
     create-developer-archive
   }
 }
+
+package-macos

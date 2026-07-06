@@ -10,7 +10,7 @@ if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
 shopt -s extglob
 
-setup-ubuntu() {
+setup-flatpak-matrix() {
   if [[ "${GITHUB_EVENT_NAME}" == 'release' ]]; then
       case "${GITHUB_REF_NAME}" in
         +([0-9]).+([0-9]).+([0-9]) )
@@ -53,6 +53,10 @@ setup-ubuntu() {
           ;;
       esac
   fi
+}
+
+setup-ubuntu() {
+  setup-flatpak-matrix
 }
 
 setup-ubuntu

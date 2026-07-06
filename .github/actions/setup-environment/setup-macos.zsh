@@ -17,7 +17,6 @@ setopt WARN_NESTED_VAR
 if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
 switch-xcode-version() {
-  print '::group::Switch Xcode version'
   if [[ -n ${XCODE_VERSION:-} ]] {
     if [[ ${XCODE_VERSION} == <->##.<-> ]] {
       if [[ -d /Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer ]] {
@@ -33,7 +32,6 @@ switch-xcode-version() {
   } else {
     sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
   }
-  print '::endgroup::'
 }
 
 setup-metadata() {
@@ -70,7 +68,8 @@ setup-metadata() {
 
 setup-macos() {
   switch-xcode-version
-  function() {
+
+  {
     if [[ -n ${TARGET} ]] {
       local -A arch_names=(
         [arm64]=Apple

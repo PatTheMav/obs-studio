@@ -12,16 +12,15 @@ setopt NO_PUSHD_IGNORE_DUPS
 setopt NO_GLOB_SUBST
 setopt WARN_CREATE_GLOBAL
 setopt WARN_NESTED_VAR
-if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
 : ${CI:?}
+if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
 setup-keychain() {
   if [[ -n "${SIGNING_IDENTITY}" && \
         -n "${SIGNING_CERT}" && \
         -n "${SIGNING_CERT_PASSWORD}" ]] \
   {
-    print 'have-codesign-ident=true' >> ${GITHUB_OUTPUT}
 
     local certificate_path="${RUNNER_TEMP}/build_certificate.p12"
     local keychain_path="${RUNNER_TEMP}/app-signing.keychain-db"
@@ -29,7 +28,8 @@ setup-keychain() {
     base64 --decode --output=${certificate_path} <<< "${SIGNING_CERT}"
 
     print '::group::Keychain setup'
-    local keychain_password="$(print ${RANDOM} | shasum | head --bytes=32)"
+    local keychain_password
+    keychain_password="$(print ${RANDOM} | shasum | head --bytes=32)"
     print "::addmask::${keychain_password}"
 
     security create-keychain -p ${keychain_password} ${keychain_path}
@@ -55,17 +55,17 @@ setup-keychain() {
       login-keychain
     print '::endgroup::'
 
-    local team_id="${${SIGNING_IDENTITY##* }//(\(|\))/}"
+    local team_id="${${CODESIGN_IDENT##*\(}%%\)*}"
     print "::addmask::${team_id}"
 
-    print "codesign-ident=${SIGNING_IDENTITY}" >> ${GITHUB_OUTPUT}
-    print "keychain-password=${keychain_password}" >> ${GITHUB_OUTPUT}
-    print "codesign-team=${team_id}" >> ${GITHUB_OUTPUT}
+    {
+      print 'have-codesign-ident=true'
+      print "codesign-ident=${SIGNING_IDENTITY}"
+      print "keychain-password=${keychain_password}"
+      print "codesign-team=${team_id}"
+    } >> ${GITHUB_OUTPUT}
   } else {
-    print 'haveCodesign-ident=false' >> ${GITHUB_OUTPUT}
-    print "codesign-ident=null" >> ${GITHUB_OUTPUT}
-    print "keychain-password=null" >> ${GITHUB_OUTPUT}
-    print "codesign-team=null" >> ${GITHUB_OUTPUT}
+    print 'have-codesign-ident=false' >> ${GITHUB_OUTPUT}
   }
 }
 

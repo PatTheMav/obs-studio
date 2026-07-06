@@ -48,7 +48,7 @@ runs:
   steps:
     - name: Create macOS Package
       if: runner.os == 'macOS'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         BUILD_CONFIG: ${{ inputs.config }}
@@ -65,7 +65,7 @@ runs:
 
     - name: Create Ubuntu Package
       if: runner.os == 'Linux'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         BUILD_CONFIG: ${{ inputs.config }}
@@ -85,4 +85,4 @@ runs:
         BUILD_PACKAGE: ${{ inputs.package }}
         OUTPUT_NAME: ${{ inputs.output-name }}
         OUTPUT_PATH: ${{ inputs.path }}
-      run: ${GITHUB_ACTION_PATH}/Package-Windows.ps1
+      run: . ${env:GITHUB_ACTION_PATH}/Package-Windows.ps1

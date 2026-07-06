@@ -211,7 +211,8 @@ invoke_linter() {
       lint_arguments=(--no-online-audits --persona=auditor --format=github --no-progress --quiet)
       ;;
     xmllint)
-      regexp='^([^:]+):([0-9]+):[[:space:]]+.+:[[:space:]](.+)[[:space:]]+:[[:space:]]+(.+)$'
+      regexp='^([^:]+):([0-9]+):[[:space:]]+.+:[[:space:]](.+):[[:space:]](.+)$'
+      # regexp='^([^:]+):([0-9]+):[[:space:]]+.+:[[:space:]](.+)[[:space:]]+:[[:space:]]+(.+)$'
       indices=(1 2 error 3 4)
       lint_arguments=(--schema "${project_root}/frontend/forms/XML-Schema-Qt5.15.xsd" --noout)
       ;;
@@ -235,6 +236,7 @@ invoke_linter() {
       local ordered_output=''
       if [[ "${linter}" == 'zizmor' ]] && (( github_style )); then
         echo "${line}"
+        num_failures+=1
         continue
       fi
 
@@ -269,10 +271,13 @@ invoke_linter() {
 }
 
 main() {
-  local _red
-  _red="$(tput setaf 1)"
-  local _reset
-  _reset="$(tput sgr0)"
+  local _red=''
+  local _reset=''
+
+  if [[ -z "${CI:-}" ]]; then
+    _red="$(tput setaf 1)"
+    _reset="$(tput sgr0)"
+  fi
 
   if (( BASH_VERSINFO[0] < 4 )); then
     echo "  ${_red}✖${_reset}  ${0} requires Bash 4.0 or later (detected version: ${BASH_VERSION})."

@@ -10,8 +10,9 @@ if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
 setup-system-packages() {
   echo '::group::Install System Packages'
+  sudo apt-get update
   sudo apt-get install --yes --no-install-recommends \
-    ccache build-essential libglib2.0-dev \
+    cmake ccache build-essential libglib2.0-dev \
     extra-cmake-modules lsb-release dh-cmake \
     libcurl4-openssl-dev \
     libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev \
@@ -45,8 +46,8 @@ setup-system-packages() {
 
 setup-prebuilt-packages() {
   local checkout="${PWD}"
-  if ! [[ -d "${checkout}/.git" && -d "${checkout}/CMakeLists.txt" ]]; then
-    echo "::error::Action needs to be run from an obs-studio checkout's root directory"
+  if ! [[ -d "${checkout}/.git" && -r "${checkout}/CMakePresets.json" ]]; then
+    echo "::error::Action needs to be run from the root directory of an obs-studio checkout."
     return 1
   fi
 
@@ -69,7 +70,7 @@ setup-prebuilt-packages() {
   local deps_hash
 
   local jq_result
-  jq_result="$(jq --raw-output --arg target "${BUILD_TARGET:?}" '
+  jq_result="$(jq --raw-output --arg target "ubuntu-${BUILD_TARGET}" '
     .configurePresets[]
     | select(.name == "dependencies")
     | .vendor["obsproject.com/obs-studio"].dependencies["cef"]
@@ -89,7 +90,7 @@ setup-prebuilt-packages() {
   local filename="cef_binary_${deps_version}_linux_${BUILD_TARGET}${deps_revision:+"_v${deps_revision}"}.tar.xz"
   local url="${deps_baseurl}/${filename}"
   local target="cef_binary_${deps_version}_linux_${BUILD_TARGET}"
-  echo "CEF_VERSION=${deps_version}" >> "${GITHUB_ENV:?}"
+  echo "CEF_VERSION=${deps_version}" >> "${GITHUB_ENV}"
 
   curl --show-error --silent --location --remote-name "${url}"
   local shasum_output
@@ -116,7 +117,6 @@ setup-ubuntu() {
 
   if { command -v ccache >/dev/null; } 2>&1 ; then
     echo '::group::Setting up CCache'
-    ccache --set-config=run_second_cpp=true
     ccache --set-config=direct_mode=true
     ccache --set-config=inode_cache=true
     ccache --set-config=compiler_check=content
@@ -125,6 +125,13 @@ setup-ubuntu() {
     ccache --set-config=cache_dir="${RUNNER_TEMP}/.ccache"
     ccache --set-config=max_size="${CCACHE_SIZE:-1G}"
     ccache -z > /dev/null
+
+    local runner_os_version
+    runner_os_version="$(lsb_release -r -s)"
+    if (( "${runner_os_version%%.*}" == 24 )); then
+      ccache --set-config=run_second_cpp=true
+    fi
+
     echo '::endgroup::'
   fi
 }

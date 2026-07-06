@@ -204,7 +204,7 @@ invoke_linter() {
       lint_arguments=(--no-online-audits --persona=auditor --format=github --no-progress --quiet)
       ;;
     xmllint)
-      regexp='^([^:]+):([0-9]+):[[:space:]]+.+:[[:space:]](.+)[[:space:]]+:[[:space:]]+(.+)$'
+      regexp='^([^:]+):([0-9]+):[[:space:]]+.+:[[:space:]](.+):[[:space:]](.+)$'
       indices=(1 2 error 3 4)
       lint_arguments=(--schema ${project_root}/frontend/forms/XML-Schema-Qt5.15.xsd --noout)
       ;;
@@ -234,6 +234,7 @@ invoke_linter() {
     while read -r line; do
       if [[ ${linter} == 'zizmor' ]] && (( github_style )) {
         print -- ${line}
+        num_failures+=1
         continue
       }
 

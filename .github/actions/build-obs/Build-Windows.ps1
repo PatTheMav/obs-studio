@@ -15,23 +15,21 @@ begin {
 
   $Checkout = Get-Location | Get-Item
 
-  if (!((Test-Path "${Checkout}/.git") -and (Test-Path "${Checkout}/CMakePresets.json"))) {
-    Write-Output '::error:Action needs to be run from an obs-studio checkout root directory'
+  if (!((Test-Path -Path "${Checkout}/.git") -and (Test-Path -Path "${Checkout}/CMakePresets.json"))) {
+    Write-Output '::error::Action needs to be run from the root directory of an obs-studio checkout.'
     throw
   }
 
-  & git fetch origin --no-tags --no-recurse-submodules --quiet 2>&1
-
-  Write-Output '::group::Set Up Environment'
-  New-Item -Type Directory ${env:OUTPUT_PATH} > $null
+  if (!(Test-Path -Path $env:OUTPUT_PATH)) {
+    New-Item -Type Directory -Path ${env:OUTPUT_PATH} > $null
+  }
   $BuildLocation = $(
-    $PresetJson = Get-Content "${CheckoutDir}/CMakePresets.json"
+    $PresetJson = Get-Content "${Checkout}/CMakePresets.json"
     $PresetBuildLocation = ((($PresetJson | ConvertFrom-JSON).configurePresets) | Where-Object {
       $_.name -eq "windows-${env:BUILD_TARGET}"
     }).binaryDir
     $PresetBuildLocation -replace '\$\{sourceDir\}',"${env:OUTPUT_PATH}"
   )
-  Write-Output '::endgroup::'
 }
 
 process {

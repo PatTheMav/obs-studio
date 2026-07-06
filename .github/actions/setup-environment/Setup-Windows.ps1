@@ -19,22 +19,14 @@ process {
     $PVSStudioInfo = $ToolsInfo.'pvs-studio'
     $BoufInfo = $ToolsInfo.bouf
 
-    "pvs-studio-version=$($PVSStudioInfo.version)" >> $env:GITHUB_OUTPUT
-    "pvs-studio-checksum=$($PVSStudioInfo.hash)" >> $env:GITHUB_OUTPUT
-    "pvs-studio-url=$($PVSStudioInfo.baseUrl)" >> $env:GITHUB_OUTPUT
-
-    "bouf-version=$($BoufInfo.version)"
-    "bouf-checksum=$($BoufInfo.hash)"
-    "bouf-nsis-checksum=$($BoufInfo.'nsis-hash')"
-    "bouf-url=$($BoufInfo.baseUrl)"
-  } else {
-    "pvs-studio-version=null" >> $env:GITHUB_OUTPUT
-    "pvs-studio-checksum=null" >> $env:GITHUB_OUTPUT
-    "pvs-studio-url=null" >> $env:GITHUB_OUTPUT
-
-    "bouf-version=null"
-    "bouf-checksum=null"
-    "bouf-nsis-checksum=null"
-    "bouf-url=null"
+    $(
+      "pvs-studio-version=$($PVSStudioInfo.version)"
+      "pvs-studio-checksum=$($PVSStudioInfo.hash)"
+      "pvs-studio-url=$($PVSStudioInfo.baseUrl)"
+      "bouf-version=$($BoufInfo.version)"
+      "bouf-checksum=$($BoufInfo.hash)"
+      "bouf-nsis-checksum=$($BoufInfo.'nsis-hash')"
+      "bouf-url=$($BoufInfo.baseUrl)"
+    )  >> $env:GITHUB_OUTPUT
   }
 }

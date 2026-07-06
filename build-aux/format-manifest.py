@@ -78,7 +78,7 @@ def main() -> int:
             if arguments.check:
                 if new_manifest_string != manifest_string:
                     logger.error(f"Manifest file is not correctly formatted")
-                    return 2
+                    return 1
                 else:
                     logger.info(f"Module list passed order validation")
                     return 0

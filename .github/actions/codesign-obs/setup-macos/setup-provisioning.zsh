@@ -12,15 +12,14 @@ setopt NO_PUSHD_IGNORE_DUPS
 setopt NO_GLOB_SUBST
 setopt WARN_CREATE_GLOBAL
 setopt WARN_NESTED_VAR
-if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
 : ${CI:?}
+if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
 setup-notarization() {
   if [[ -n "${PROVISIONING_PROFILE}" ]] {
-    print 'have-provisioning-profile=true' >> ${GITHUB_OUTPUT}
 
-    local -r profile_path="${RUNNER_TEMP}/build_profile.provisionprofile"
+    local profile_path="${RUNNER_TEMP}/build_profile.provisionprofile"
     base64 --decode --output=${profile_path} <<< "${PROVISIONING_PROFILE}"
 
     print '::group::Provisioning Profile Setup'
@@ -30,21 +29,26 @@ setup-notarization() {
       -i ${profile_path} \
       -o ${RUNNER_TEMP}/build_profile.plist
 
-    local uuid="$(plutil -extract UUID raw ${RUNNNER_TEMP}/build_profile.plist)"
+    local uuid
+    uuid="$(plutil -extract UUID raw ${RUNNNER_TEMP}/build_profile.plist)"
     print "::addmask::${uuid}"
 
-    local team_id="$(plutil -extract TeamIdentifier.0 raw -expect string ${RUNNER_TEMP}/build_profile.plist)"
+    local team_id
+    team_id="$(plutil -extract TeamIdentifier.0 raw -expect string ${RUNNER_TEMP}/build_profile.plist)"
     print "::addmask::${team_id}"
 
-    if [[ ${team_id} != ${CODESIGN_TEAM:-} ]] {
+    if [[ ${team_id} != "${CODESIGN_TEAM:-}" ]] {
       print '::notice::Code Signing team in provisioning profile does not match certificate.'
     }
 
     cp ${profile_path} "${HOME}/Library/MobileDevice/Provisioning Profiles/${uuid}.provisionprofile"
-    print "profile-uuid=${uuid}" >> ${GITHUB_OUTPUT}
+
+    {
+      print 'have-provisioning-profile=true'
+      print "profile-uuid=${uuid}"
+    }  >> ${GITHUB_OUTPUT}
     print '::endgroup::'
   } else {
-    print "profile-uuid=null" >> ${GITHUB_OUTPUT}
     print 'have-provisioning-profile=false' >> ${GITHUB_OUTPUT}
   }
 }

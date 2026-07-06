@@ -1,0 +1,41 @@
+name: Check Version Tag
+description: Checks a provided git reference for a valid semantic version tag
+inputs:
+  ref:
+    description: Git reference to check with.
+    required: true
+  working-directory:
+    description: Working directory to run git checks from.
+    default: ${{ github.workspace }}
+outputs:
+  version:
+    description: A string representing the full version identifier.
+    value: ${{ steps.semver.outputs.version }}
+  major:
+    description: A string representing the full major identifier.
+    value: ${{ steps.semver.outputs.major }}
+  minor:
+    description: A string representing the full minor identifier.
+    value: ${{ steps.semver.outputs.minor }}
+  patch:
+    description: A string representing the full patch identifier.
+    value: ${{ steps.semver.outputs.patch }}
+  pre-release:
+    description: A string representing the full pre-release identifier.
+    value: ${{ steps.semver.outputs.pre-release }}
+  number:
+    description: A string representing the full number identifier.
+    value: ${{ steps.semver.outputs.number }}
+  is-valid-semver:
+    description: A string representing the full is-valid-semver identifier.
+    value: ${{ steps.semver.outputs.is-valid-semver }}
+runs:
+  using: composite
+  steps:
+    - name: Check Git Ref
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      working-directory: ${{ inputs.working-directory }}
+      id: semver
+      env:
+        GIT_REF: ${{ inputs.ref }}
+      run: ${GITHUB_ACTION_PATH}/check-version-tag.bash

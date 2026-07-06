@@ -18,14 +18,14 @@ runs:
   steps:
     - name: Check Runner Operating System
       if: runner.os != 'Linux'
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
         echo '::notice::flatpak-manifest-validator action requires a Linux-based runner.'
         exit 1
 
     - name: Validate Flatpak Manifest
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         MANIFEST_FILE: ${{ inputs.path }}

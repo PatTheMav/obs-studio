@@ -36,13 +36,13 @@ outputs:
     value: ${{ steps.provisioning.outputs.profile-uuid }}
   can-notarize:
     description: True if necessary notarization credentials were found
-    value: ${{ steps.notarization.outputs.have-notarization-user }}
+    value: ${{ case(inputs.apple-id != '' && inputs.apple-secret != '', true, false) }}
 runs:
   using: composite
   steps:
     - name: Check Runner Operating System
       if: runner.os != 'macOS'
-      shell: bash --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
         echo '::notice::setup-macos-codesigning action requires a macOS-based runner.'
@@ -50,33 +50,17 @@ runs:
 
     - name: Set Up Keychain
       id: codesign
-      shell: zsh --no-rcs --errexit --pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         SIGNING_IDENTITY: ${{ inputs.identity }}
         SIGNING_CERT: ${{ inputs.cert }}
         SIGNING_CERT_PASSWORD: ${{ inputs.cert-password }}
-      run: ${{ github.action_path }}/setup-keychain.zsh
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/setup-keychain.zsh
 
     - name: Set Up Provisioning Profile
       id: provisioning
-      shell: zsh --no-rcs --errexit --pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
           CODESIGN_TEAM: ${{ steps.codesign.outputs.codesign-team }}
           PROVISIONING_PROFILE: ${{ inputs.provisioning-profile }}
-      run: ${{ github.action_path }}/setup-provisioning.zsh
-
-    - name: Set Up Notarization
-      id: notarization
-      shell: zsh --no-rcs --errexit --pipefail {0}
-      env:
-          APPLE_ID: ${{ inputs.apple-id }}
-          APPLE_SECRET: ${{ inputs.apple-secret }}
-      run: |
-        : Notarization
-        if (( ${+RUNNER_DEBUG} )) setopt XTRACE
-
-        if [[ -n "${APPLE_ID}" && -n "${APPLE_SECRET}" ]] {
-          print 'haveNotarizationUser=true' >> ${GITHUB_OUTPUT}
-        } else {
-          print 'haveNotarizationUser=false' >> ${GITHUB_OUTPUT}
-        }
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/setup-provisioning.zsh

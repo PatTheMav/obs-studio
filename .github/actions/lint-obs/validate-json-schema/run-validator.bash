@@ -31,8 +31,7 @@ run-validator() {
   source "${RUNNER_TEMP}/compatibility-validator-venv/bin/activate"
   pushd "${RUNNER_TEMP}" > /dev/null
   declare -x PYTHONUNBUFFERED=1
-  python3 -u \
-    "${GITHUB_ACTION_PATH}/check-jsonschema.py" \
+  python3 "${GITHUB_ACTION_PATH}/check-jsonschema.py" \
     --loglevel INFO \
     "${json_files[@]}"
   popd > /dev/null

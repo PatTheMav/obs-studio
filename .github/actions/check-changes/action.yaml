@@ -3,25 +3,21 @@ description: Checks for changed files compared to specific git reference and glo
 inputs:
   ref:
     description: Git reference to check with.
-    required: false
     default: HEAD
   base:
     description: Base reference to check against.
-    required: false
+    default: ''
   filter:
     description: Diff filter string to use (check git documentation for possible values).
-    required: false
     default: ''
   pathspec:
     description: Git pathspec string to limit check to specific files or directories.
-    required: false
+    default: ''
   use-fallback:
     description: Optional boolean to use fallback base reference if provided base reference is invalid
-    required: false
     default: 'true'
   working-directory:
     description: Working directory to run git checks from.
-    required: false
     default: ${{ github.workspace }}
 outputs:
   has-changed-files:
@@ -34,14 +30,14 @@ runs:
   using: composite
   steps:
     - name: Check For Changed Files
-      shell: bash --errexit --noprofile --norc -eo pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       id: checks
       env:
         GIT_REF: ${{ inputs.ref }}
         GIT_BASE_REF: ${{ inputs.base }}
         DIFF_FILTER: ${{ inputs.filter }}
-        PATH_SPEC: ${{ inputs.path-spec }}
+        PATH_SPEC: ${{ inputs.pathspec }}
         USE_FALLBACK: ${{ inputs.use-fallback }}
         GITHUB_EVENT_FORCED: ${{ github.event.forced }}
         GITHUB_REF_BEFORE: ${{ github.event.before }}

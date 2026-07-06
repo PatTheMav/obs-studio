@@ -2,10 +2,10 @@ name: Run Code And Format Linters
 on:
   workflow_call:
 permissions:
-  contents: read
+  contents: read    # Necessary for repository checkouts.
 defaults:
   run:
-    shell: bash --errexit --noprofile --norc -eo pipefail -eo nounset {0}
+    shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
   clang-format:
     name: clang-format
@@ -22,7 +22,7 @@ jobs:
         id: checks
         with:
           filter: 'ACM'
-          pathspec: "'*.c' '*.h' '*.cpp' '*.hpp' '*.m' '*.mm'"
+          pathspec: '*.c *.h *.cpp *.hpp *.m *.mm'
 
       - name: Run clang-format
         if: fromJSON(steps.checks.outputs.has-changed-files)
@@ -34,7 +34,7 @@ jobs:
 
   swift-format:
     name: swift-format
-    runs-on: macos-26
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -47,7 +47,7 @@ jobs:
         id: checks
         with:
           filter: 'ACM'
-          pathspec: "'*.swift'"
+          pathspec: '*.swift'
 
       - name: Run swift-format
         if: fromJSON(steps.checks.outputs.has-changed-files)
@@ -71,7 +71,7 @@ jobs:
         uses: ./.github/actions/check-changes
         id: checks
         with:
-          pathspec: "'*.cmake' '*CMakeLists.txt'"
+          pathspec: '*.cmake *CMakeLists.txt'
           filter: 'ACM'
 
       - name: Run gersemi
@@ -96,7 +96,7 @@ jobs:
         uses: ./.github/actions/check-changes
         id: checks
         with:
-          pathspec: "'.github/**/*.yaml' '.github/**/*.yml'"
+          pathspec: '.github/*.yaml .github/*.yml'
           filter: 'ACM'
 
       - name: Run zizmor
@@ -121,7 +121,7 @@ jobs:
         uses: ./.github/actions/check-changes
         id: checks
         with:
-          pathspec: "'build-aux/com.obsproject.Studio.json'"
+          pathspec: 'build-aux/com.obsproject.Studio.json'
           filter: 'ACM'
 
       - name: Validate Flatpak Manifest
@@ -144,7 +144,7 @@ jobs:
         uses: ./.github/actions/check-changes
         id: checks
         with:
-          pathspec: 'frontend/forms/**/*.ui'
+          pathspec: 'frontend/forms/*.ui'
 
       - name: Run xmllint
         if: fromJSON(steps.checks.outputs.has-changed-files)
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-26.04
     permissions:
       contents: read    # Necessary to keep workflow-level permission
-      checks: write     # Necessary to annotate schema validation errors
+      checks: write     # Necessary to produce annotations
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -168,28 +168,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Select Base Ref
-        id: ref-select
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          REF_NAME: ${{ github.ref_name }}
-          REF_BEFORE: ${{ github.event.before }}
-        run: |
-          : Select Base Ref
-          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
-
-          if [[ "${REF_NAME:-}" == 'master' ]]; then
-            echo "ref=${REF_BEFORE:-}" >> "${GITHUB_OUTPUT}"
-          elif [[ "${BASE_REF:-}" == 'master' ]]; then
-            echo "ref=HEAD" >> "${GITHUB_OUTPUT}"
-          fi
-
       - name: Check for Changed Files
-        if: github.base_ref == 'master'
         uses: ./.github/actions/check-changes
         id: checks
         with:
-          base: ${{ steps.ref-select.outputs.ref }}
+          base: |-
+            ${{ case(
+              github.ref_name == 'master', github.event.before,
+              github.base_ref == 'master', 'HEAD', 'HEAD'
+            ) }}
           pathspec: 'plugins/win-capture/data/*.json'
 
       - name: Run JSON Validation
@@ -205,7 +192,7 @@ jobs:
     runs-on: ubuntu-26.04
     permissions:
       contents: read    # Necessary to keep workflow-level permission
-      checks: write     # Necessary to annotate schema validation errors
+      checks: write     # Necessary to produce annotations
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -213,27 +200,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Select Base Ref
-        id: ref-select
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          REF_NAME: ${{ github.ref_name }}
-          REF_BEFORE: ${{ github.event.before }}
-        run: |
-          : Select Base Ref
-          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
-
-          if [[ "${REF_NAME:-}" == 'master' ]]; then
-            echo "ref=${REF_BEFORE:-}" >> "${GITHUB_OUTPUT}"
-          elif [[ "${BASE_REF:-}" == 'master' ]]; then
-            echo "ref=HEAD" >> "${GITHUB_OUTPUT}"
-          fi
-
       - name: Check for Changed Files
         uses: ./.github/actions/check-changes
         id: checks
         with:
-          base: ${{ steps.ref-select.outputs.ref }}
+          base: |-
+            ${{ case(
+              github.ref_name == 'master', github.event.before,
+              github.base_ref == 'master', 'HEAD', 'HEAD'
+            ) }}
           pathspec: 'plugins/rtmp-services/data/*.json'
 
       - name: Run Services Validation
@@ -241,6 +216,6 @@ jobs:
         uses: ./.github/actions/lint-obs/validate-services-data
         with:
           path: ${{ steps.checks.outputs.changed-files }}
-          token: ${{ github.token }}
+          github-token: ${{ github.token }}
           run-schema-checks: true
-          run-service-hecks: false
+          run-service-checks: false

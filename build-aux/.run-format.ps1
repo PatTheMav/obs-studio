@@ -364,6 +364,7 @@ begin {
                 Invoke-External $LinterCommand.Source @LinterArguments @FilesToFormat | ForEach-Object {
                     if (($Linter -eq 'zizmor') -and ($script:GitHubStyle)) {
                         Write-Output $_
+                        $NumFailures += 1
                         continue
                     }
 

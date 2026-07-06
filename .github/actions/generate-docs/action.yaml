@@ -9,12 +9,16 @@ inputs:
     description: Path to repository checkout
     required: false
     default: ${{ github.workspace }}
+outputs:
+  artifact-name:
+    description: Name of generated workflow artifact with generated documentation.
+    value: ${{ steps.setup.outputs.artifact-name }}
 runs:
   using: composite
   steps:
     - name: Setup Action
       id: setup
-      shell: bash --errexit --noprofile --norc -eo pipefail -eo nounset {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         DISABLE_LINK_EXTENSIONS: ${{ inputs.disable-link-extensions }}
@@ -22,13 +26,13 @@ runs:
 
     - name: Generate Documentation
       id: generate
-      shell: bash --errexit --noprofile --norc -eo pipefail -eo nounset {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       run: ${GITHUB_ACTION_PATH}/generate-docs.bash
 
     - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ${{ steps.setup.outputs.artifactName }} ${{ steps.setup.outputs.commitHash }}
+        name: ${{ steps.setup.outputs.artifact-name }}
         path: |
           ${{ runner.temp }}/sphinx_build
           !${{ runner.temp }}/sphinx_build/.doctrees

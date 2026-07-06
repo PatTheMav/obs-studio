@@ -6,7 +6,7 @@ set -o nounset
 set -o pipefail
 
 : "${CI:?}"
-if [[ -n "${RUNNER_DEBUG}" ]]; then set -x; fi
+if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
 generate-documentation() {
   local checkout="${PWD}"
@@ -22,11 +22,11 @@ generate-documentation() {
 
   local -a build_arguments=(
     "${docs_dir}"
-    "${destination}/sphinx_build"
+    "${RUNNER_TEMP}/sphinx_build"
     --jobs auto
   )
 
-  if [[ -n "${RUNNER_DEBUG}" ]]; then
+  if [[ -n "${RUNNER_DEBUG:-}" ]]; then
     build_arguments+=(--verbose)
   fi
 

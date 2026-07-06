@@ -6,7 +6,7 @@ set -o nounset
 set -o pipefail
 
 : "${CI:?}"
-if [[ -n "${RUNNER_DEBUG}" ]]; then set -x; fi
+if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
 fixup-documentation() {
   # This expression will first try to match all the LIBOBS_API_[...]_VER
@@ -45,9 +45,9 @@ fixup-documentation() {
   if [[ "${DISABLE_LINK_EXTENSIONS:-false}" == 'true' ]]; then
     sed -i -e "s/html_link_suffix = None/html_link_suffix = ''/g" \
      "${checkout}/docs/sphinx/conf.py"
-    echo "artifactName=OBS Studio Docs (No Extensions)" >> "${GITHUB_OUTPUT}"
+    echo "artifact-name=obs-studio-documentation-without-extensions-${GITHUB_SHA:0:9}" >> "${GITHUB_OUTPUT}"
   else
-    echo "artifactName=OBS Studio Docs" >> "${GITHUB_OUTPUT}"
+    echo "artifact-name=obs-studio-documentation-with-extensions-${GITHUB_SHA:0:9}" >> "${GITHUB_OUTPUT}"
   fi
 }
 
@@ -78,8 +78,6 @@ setup-action() {
 
   python3 -m pip install --requirement "${docs_dir}/requirements.txt"
   echo '::endgroup::'
-
-  echo "commitHash=${GITHUB_SHA:0:9}" >> "${GITHUB_OUTPUT}"
 
   fixup-documentation
 

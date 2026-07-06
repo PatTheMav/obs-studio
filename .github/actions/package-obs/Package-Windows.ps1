@@ -20,9 +20,6 @@ begin {
     throw
   }
 
-  & git fetch origin --no-tags --no-recurse-submodules --quiet 2>&1
-
-  Write-Output '::group::Set Up Environment'
   $BuildLocation = $(
     $PresetJson = Get-Content "${Checkout}/CMakePresets.json"
     $PresetBuildLocation = ((($PresetJson | ConvertFrom-Json).configurePresets) | Where-Object {
@@ -42,7 +39,6 @@ begin {
       Hash     = $Matches.Item(3)
     }
   )
-  Write-Output '::endgroup::'
 }
 
 process {
@@ -62,7 +58,7 @@ process {
     $( if ($null -ne $env:RUNNER_DEBUG) {'--verbose'} )
   )
 
-  Invoke-Executable cpack @CpackArgs
+  & cpack @CpackArgs
 
   $Package = Get-ChildItem -filter "obs-studio-*-windows-${env:BUILD_TARGET}.zip" -File
   Move-Item -Path $Package -Destination "${env:OUTPUT_PATH}/${OutputName}.zip"
@@ -80,7 +76,7 @@ process {
       '--config', 'Release'
       '--prefix', ${InstallDestination}
       )
-    Invoke-Executable cmake @CmakeArgs
+    & cmake @CmakeArgs
 
     $LibraryOutputName = "${OutputName}-plugin-dev.zip"
 

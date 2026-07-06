@@ -8,17 +8,13 @@ set -o pipefail
 : "${CI:?}"
 if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-
 build-ubuntu() {
   local checkout="${PWD}"
-  if ! [[ -d "${checkout}/.git" && -r "${checkout}/CMakeLists.txt" ]]; then
-    echo '::error::Action needs to be run from an obs-studio checkout root directory'
+  if ! [[ -d "${checkout}/.git" && -r "${checkout}/CMakePresets.json" ]]; then
+    echo '::error::Action needs to be run from the root directory of an obs-studio checkout.'
     return 1
   fi
 
-  git fetch origin --no-tags --no-recurse-submodules --quiet
-
-  print '::group::Set Up Environment'
   mkdir -p "${OUTPUT_PATH}"
 
   local build_dir
@@ -31,7 +27,6 @@ build-ubuntu() {
   }
 
   declare -x CLICOLOR_FORCE=1
-  print '::endgroup::'
 
   echo '::group::Configure obs-studio'
   local -a cmake_args=(

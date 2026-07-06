@@ -22,7 +22,12 @@ formatter-launcher() {
     changes+=("${change}")
   done <<< "${jq_output}"
 
-  launcher="${checkout}/build-aux/.run-format.bash"
+  local launcher
+  if [[ "${RUNNER_OS}" == 'Linux' ]]; then
+    launcher="${checkout}/build-aux/.run-format.bash"
+  else
+    launcher="${checkout}/build-aux/.run-format.zsh"
+  fi
 
   ${launcher} \
     --linter "${LINTER_COMMAND}" \
