@@ -100,141 +100,67 @@ jobs:
             --commit-hash=${{ github.sha }}
 
   sign-windows-build:
+    runs-on: ubuntu-26.04
     name: Windows Signing
-    uses: patthemav/obs-studio/.github/workflows/sign-windows.yaml@ac19ea663375cd02997be92b7d8ff6dd89a511ad
-    if: |-
-      github.repository_owner == 'obsproject' &&
-      fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false')
-    needs: build-project
-    permissions:
-      contents: read        # Necessary to keep workflow base permissions.
-      attestations: write   # Necessary to generate an attestation for the code signed build.
-    secrets:
-      gcp-identity-pool: ${{ secrets.GCP_IDENTITY_POOL }}
-      gcp-service-account-name: ${{ secrets.GCP_SERVICE_ACCOUNT_NAME }}
+    steps:
+      - run: echo "Hello"
 
-  # create-release:
-  #   name: Create Release
-  #   if: github.ref_type == 'tag'
-  #   runs-on: ubuntu-26.04
-  #   needs: [build-project, sign-windows-build]
+  # sign-windows-build:
+  #   name: Windows Signing
+  #   uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@a4a11c3dcdd7f479c8c4d1eb6ed8991fbc54dc6d
+  #   if: |-
+  #     github.repository_owner == 'obsproject' &&
+  #     fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false')
+  #   needs: build-project
   #   permissions:
-  #     contents: read
-  #   steps:
-  #     - name: Check Release Tag
-  #       id: check
-  #       run: |
-  #         : Check Release Tag
-  #         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
-  #         shopt -s extglob
+  #     contents: read        # Necessary to keep workflow base permissions.
+  #     attestations: write   # Necessary to generate an attestation for the code signed build.
+  #   secrets:
+  #     gcp-identity-pool: ${{ secrets.GCP_IDENTITY_POOL }}
+  #     gcp-service-account-name: ${{ secrets.GCP_SERVICE_ACCOUNT_NAME }}
 
-  #         case "${GITHUB_REF_NAME}" in
-  #           +([0-9]).+([0-9]).+([0-9]) )
-  #             echo 'validTag=true' >> "${GITHUB_OUTPUT}"
-  #             echo 'prerelease=false' >> "${GITHUB_OUTPUT}"
-  #             echo "version=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
-  #             ;;
-  #           +([0-9]).+([0-9]).+([0-9])-@(beta|rc)*([0-9]) )
-  #             echo 'validTag=true' >> "${GITHUB_OUTPUT}"
-  #             echo 'prerelease=true' >> "${GITHUB_OUTPUT}"
-  #             echo "version=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
-  #             ;;
-  #           *)
-  #             echo 'validTag=false' >> "${GITHUB_OUTPUT}"
-  #             ;;
-  #         esac
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-26.04
+    needs: [build-project, sign-windows-build]
+    permissions:
+      contents: read
+    steps:
+      - name: Generate Semver From Tag
+        id: semver
+        uses: ./.github/actions/check-version-tag
+        with:
+          ref: ${{ github.ref_name }}
 
-  #     - name: Download Build Artifacts
-  #       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-  #       if: ${{ fromJSON(steps.check.outputs.validTag) }}
+      - name: Generate Short GitHub SHA
+        id: short-sha
+        uses: ./.github/actions/generate-short-sha
 
-  #     - name: Rename Files
-  #       if: fromJSON(steps.check.outputs.validTag)
-  #       env:
-  #         RELEASE_VERSION: ${{ steps.check.outputs.version }}
-  #       run: |
-  #         : Rename Files
-  #         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+      - name: Set Up Environment
+        id: setup
+        env:
+          HAS_SEMVER: ${{ fromJSON(steps.semver.outputs.is-valid-semver) }}
+        run: |
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+          if [[ "${HAS_SEMVER:-false}" != 'true' ]]; then
+            echo '::error::Current git ref name is not a valid semantic version.'
+            return 1
+          fi
 
-  #         shopt -s extglob
+      - name: Prepare Release Assets
+        id: prepare
+        uses: ./.github/publish-obs/prepare-release-assets
+        with:
+          artifact-name: ${{ format('obs-studio-*-{1}', steps.short-sha.outputs.sha) }}
+          version: ${{ steps.semver.outputs.version }}
+          download-artifacts: true
 
-  #         local commit_hash="${GITHUB_SHA:0:9}"
-  #         local -A platform_names=(
-  #           [macos-arm64]=macOS-Apple.dmg
-  #           [macos-arm64-debug-symbols]=macOS-Apple-dSYMs.tar.xz
-  #           [macos-arm64-dev]=macOS-Apple-Libraries.tar.xz
-  #           [macos-x86_64]=macOS-Intel.dmg
-  #           [macos-x86_64-debug-symbols]=macOS-Intel-dSYMs.tar.xz
-  #           [macos-x86_64-dev]=macOS-Intel-Libraries.tar.xz
-  #           [ubuntu-24.04-x86_64]=Ubuntu-24.04-x86_64.deb
-  #           [ubuntu-24.04-x86_64-debug-symbols]=Ubuntu-24.04-x86_64-dbsym.ddeb
-  #           [ubuntu-24.04-x86_64-sources]=Ubuntu-24.04-x86_64-Sources.tar.gz
-  #           [ubuntu-26.04-x86_64]=Ubuntu-26.04-x86_64.deb
-  #           [ubuntu-26.04-x86_64-debug-symbols]=Ubuntu-26.04-x86_64-dbsym.ddeb
-  #           [windows-x64]=Windows-x64.zip
-  #           [windows-x64-installer]=Windows-x64-Installer.exe
-  #           [windows-x64-debug-symbols]=Windows-x64-PDBs.zip
-  #           [windows-arm64]=Windows-ARM64.zip
-  #           [windows-arm64-debug-symbols]=Windows-ARM64-PDBs.zip
-  #         )
-
-  #         local platform_glob="@(macos|windows|ubuntu-*)-@(arm64|x86_64|x64)"
-  #         local extension_glob="@(dmg|tar.xz|zip|exe|deb|ddeb)"
-  #         local glob_expression="obs-studio-${platform_glob}-${commit_hash}*.${extension_glob}"
-  #         local -a downloaded_files=("${GITHUB_WORKSPACE}"/${glob_expression})
-
-  #         local platform
-  #         local output_name
-  #         local -a release_files=()
-  #         for file in "${downloaded_files[@]}"; do
-  #           platform="${file//obs-studio-}"
-  #           platform="${platform//"-${commit_hash}"}"
-
-  #           output_name="OBS-Studio-${RELEASE_VERSION}-${platform_names["${platform}"]}"
-
-  #           release_files+=("${output_name}")
-
-  #           mv "${GITHUB_WORKSPACE}/${file}" "${GITHUB_WORKSPACE}/${output_name}"
-  #         done
-
-  #     - name: Generate Release List And Checksums
-  #       if: fromJSON(steps.check.outputs.validTag)
-  #       id: checksums
-  #       run: |
-  #         : Generate Release List And Checksums
-  #         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
-  #         shopt -s extglob
-
-  #         local -a release_files=()
-  #         local shasum_output
-  #         local checksum
-
-  #         echo "### Checksums" > "${GITHUB_WORKSPACE}/CHECKSUMS.txt"
-  #         for file in "${GITHUB_WORKSPACE}/"@(*.deb|*.ddeb|*.dmg|*.tar.xz|*.tar.gz|*.exe|*.zip); do
-  #           shasum_output="$(shasum --algorithm=256 "${file}")"
-  #           read -r checksum _ <<< "${shasum_output}"
-  #           echo "    ${file##*/}: ${checksum}" >> "${GITHUB_WORKSPACE}/CHECKSUMS.txt"
-
-  #           release_files+=("${file}")
-  #         done
-
-  #         local file_list="$(printf '%s\n' "${release_files[@]}")"
-
-  #         {
-  #           echo "checksumFile=${GITHUB_WORKSPACE}/CHECKSUMS.txt"
-  #           echo 'releaseFiles<<EOF'
-  #           echo "${file_list}"
-  #           echo EOF
-  #         } >> "${GITHUB_OUTPUT}"
-
-  #     - name: Create Release
-  #       if: fromJSON(steps.check.outputs.validTag)
-  #       id: create_release
-  #       uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
-  #       with:
-  #         draft: true
-  #         prerelease: ${{ fromJSON(steps.check.outputs.prerelease) }}
-  #         tag_name: ${{ steps.check.outputs.version }}
-  #         name: OBS Studio ${{ steps.check.outputs.version }}
-  #         body_path: ${{ github.workspace }}/CHECKSUMS.txt
-  #         files: ${{ steps.checksums.outputs.releaseFiles }}
+      # - name: Create Release
+      #   uses: ./.github/publish-obs/create-github-release
+      #   with:
+      #     draft: true
+      #     is-prerelease: ${{ steps.semver.outputs.pre-release != null }}
+      #     tag: ${{ steps.semver.outputs.version }}
+      #     name: ${{ format('OBS Studio {0}', steps.semver.outputs.version) }}
+      #     release-note-file: ${{ steps.prepare.outputs.checksum-file }}
+      #     files: ${{ steps.prepare.outputs.release-files }}
