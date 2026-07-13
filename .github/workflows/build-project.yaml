@@ -208,7 +208,7 @@ jobs:
             ) }}
           path: |-
             ${{ format(
-              '{0}/obs-studio-macos-{1}-{2}-dSYMs.tar.xz',
+              '{0}/obs-studio-macos-{1}-{2}-debug-symbols.tar.xz',
               runner.temp, matrix.architecture, steps.short-sha.outputs.sha
             ) }}
 

@@ -126,6 +126,12 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
       - name: Generate Semver From Tag
         id: semver
         uses: ./.github/actions/check-version-tag
@@ -149,18 +155,18 @@ jobs:
 
       - name: Prepare Release Assets
         id: prepare
-        uses: ./.github/publish-obs/prepare-release-assets
+        uses: ./.github/actions/publish-obs/prepare-release-assets
         with:
-          artifact-name: ${{ format('obs-studio-*-{1}', steps.short-sha.outputs.sha) }}
+          artifact-name: ${{ format('obs-studio-*-{0}', steps.short-sha.outputs.sha) }}
           version: ${{ steps.semver.outputs.version }}
           download-artifacts: true
 
-      # - name: Create Release
-      #   uses: ./.github/publish-obs/create-github-release
-      #   with:
-      #     draft: true
-      #     is-prerelease: ${{ steps.semver.outputs.pre-release != null }}
-      #     tag: ${{ steps.semver.outputs.version }}
-      #     name: ${{ format('OBS Studio {0}', steps.semver.outputs.version) }}
-      #     release-note-file: ${{ steps.prepare.outputs.checksum-file }}
-      #     files: ${{ steps.prepare.outputs.release-files }}
+      - name: Create Release
+        uses: ./.github/publish-obs/create-github-release
+        with:
+          draft: true
+          is-prerelease: ${{ steps.semver.outputs.pre-release != null }}
+          tag: ${{ steps.semver.outputs.version }}
+          name: ${{ format('OBS Studio {0}', steps.semver.outputs.version) }}
+          release-note-file: ${{ steps.prepare.outputs.checksum-file }}
+          files: ${{ steps.prepare.outputs.release-files }}
