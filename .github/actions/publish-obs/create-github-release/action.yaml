@@ -1,0 +1,68 @@
+name: Create GitHub Release
+description: Creates a GitHub release based on the provided git tag and provided release notes and release files
+inputs:
+  name:
+    description: The name of the release.
+    default: ''
+  tag:
+    description: The git tag used to base the release on.
+    default: ''
+  release-notes:
+    description: A multi-line string representing the release notes in markdown format.
+    default: ''
+  release-note-file:
+    description: A path to a file on the current runner with the release notes in markdown format.
+    default: ''
+  generate-release-notes:
+    description: If enabled, let GitHub automatically generate release notes for the release.
+    default: 'false'
+  draft:
+    description: If enabled, the GitHub release is created as a draft and not published automatically.
+    default: 'true'
+  is-prerelease:
+    description: If enabled, the GitHub release is created as a "pre-release" of the release name.
+    default: 'false'
+  previous-tag:
+    description: Git tag to base change set on.
+    default: ''
+  files:
+    description: A JSON string representing an array of files to attach to the release or a glob pattern.
+    default: ''
+  github-token:
+    description: The GitHub token used to make authenticated API requests.
+    default: ${{ github.token }}
+  working-directory:
+    description: Working directory to run git checks from.
+    default: ${{ github.workspace }}
+outputs:
+  release-id:
+    description: GitHub ID of created release.
+    value: ${{ steps.create.outputs.release-id }}
+  release-url:
+    description: GitHub URL of created release.
+    value: ${{ steps.create.outputs.release-url }}
+  release-upload-url:
+    description: Asset upload URL for release.
+    value: ${{ steps.create.outputs.release-upload-url }}
+  release-assets:
+    description: A JSON string representing an array of URLs for assets uploaded to the release.
+    value: ${{ steps.create.outputs.release-asset-urls }}
+runs:
+  using: composite
+  steps:
+    - name: Create Release
+      shell: bash --noprofile --norc -eo pipefail {0}
+      working-directory: ${{ inputs.working-directory }}
+      id: create
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        RELEASE_NAME: ${{ inputs.name }}
+        RELEASE_TAG: ${{ inputs.tag }}
+        RELEASE_NOTES: ${{ inputs.release-notes }}
+        RELEASE_NOTE_FILE: ${{ inputs.release-note-file }}
+        GENERATE_RELEASE_NOTES: ${{ inputs.generate-release-notes }}
+        FILES: ${{ inputs.files }}
+        PREVIOUS_TAG: ${{ inputs.previous-tag }}
+        CREATE_DRAFT: ${{ inputs.draft }}
+        IS_PRERELEASE: ${{ inputs.is-prerelease }}
+      run: ${GITHUB_ACTION_PATH}/create-release.bash
