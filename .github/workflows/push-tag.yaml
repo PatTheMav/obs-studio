@@ -157,7 +157,7 @@ jobs:
         id: prepare
         uses: ./.github/actions/publish-obs/prepare-release-assets
         with:
-          artifact-name: ${{ format('obs-studio-*-{0}', steps.short-sha.outputs.sha) }}
+          artifact-name: ${{ format('obs-studio-*-{0}*', steps.short-sha.outputs.sha) }}
           version: ${{ steps.semver.outputs.version }}
           download-artifacts: true
 

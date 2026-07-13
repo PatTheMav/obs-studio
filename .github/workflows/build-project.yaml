@@ -53,13 +53,35 @@ defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
-  macos-build:
-    name: macOS
-    runs-on: macos-26
+  build-obs:
+    name: Build OBS Studio
     strategy:
       fail-fast: false
       matrix:
-        architecture: [arm64, x86_64]
+        os: [macos-26, ubuntu-26.04, ubuntu-24.04, windows-2025-vs2026]
+        architecture: [x86_64, arm64]
+        include:
+          - os: macos-26
+            name: macos
+            cache-dir: CompilationCache.noindex
+          - os: windows-2025-vs2026
+            name: windows
+            architecture: x64
+          - os: ubuntu-26.04
+            name: ubuntu-26.04
+            cache-dir: .ccache
+          - os: ubuntu-24.04
+            name: ubuntu-24.04
+            cache-dir: .ccache
+        exclude:
+          - os: windows-2025-vs2026
+            architecture: x86_64
+          - os: ubuntu-26.04
+            architecture: arm64
+          - os: ubuntu-24.04
+            architecture: arm64
+
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -78,30 +100,33 @@ jobs:
         id: short-sha
         uses: ./.github/actions/generate-short-sha
 
-      - name: Restore Xcode Compilation Cache
-        id: xcode-cache
+      - name: Restore Compilation Cache
+        id: compilation-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: matrix.name != 'windows'
         with:
-          path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
+          path: ${{ format('{0}/{1}', runner.temp, matrix.cache-dir) }}
           key: |-
             ${{ format(
-                '{0}-xcode-{1}-{2}', runner.os, matrix.architecture,
-                case(
-                  github.event_name == 'push'
-                  && github.ref_type == 'tag'
-                  && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
-                  'RelWithDebInfo'
-                )
-              ) }}
+              '{0}-compilation-{1}-{2}',
+              matrix.name, matrix.architecture,
+              case(
+                github.event_name == 'push'
+                && github.ref_type == 'tag'
+                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+                'RelWithDebInfo'
+              )
+            ) }}
           restore-keys: |
-            ${{ format('{0}-xcode-{1}-', runner.os, matrix.architecture) }}
+            ${{ format('{0}-compilation-{1}-', matrix.name, matrix.architecture) }}
 
       - name: Set Up Code Signing
         id: codesign
         uses: ./.github/actions/codesign-obs/setup-macos
         if: |-
-          fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false') &&
-          contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+          matrix.name == 'macos'
+          && fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
+          && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
         with:
           identity: ${{ secrets.macos-signing-identity }}
           cert: ${{ secrets.macos-signing-certificate }}
@@ -131,15 +156,16 @@ jobs:
             ) }}
           target: ${{ matrix.architecture }}
           codesign: |-
-            ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
-                && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
-                && fromJSON(steps.codesign.outputs.can-codesign)
+            ${{ matrix.name == 'macos'
+              && fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
+              && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+              && fromJSON(steps.codesign.outputs.can-codesign)
             }}
-          codesign-ident: ${{ steps.codesign.outputs.identity }}
-          codesign-team: ${{ steps.codesign.outputs.team }}
-          provisioning-profile-id: ${{ steps.codesign.outputs.profile-uuid }}
+          codesign-ident: ${{ steps.codesign.outputs.identity || '' }}
+          codesign-team: ${{ steps.codesign.outputs.team  || '' }}
+          provisioning-profile-id: ${{ steps.codesign.outputs.profile-uuid  || '' }}
           xcode-version: '26.5'
-          xcode-cas-path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
+          xcode-cas-path: ${{ format('{0}/{1}', runner.temp, matrix.cache-dir) }}
 
       - name: Package OBS Studio
         id: package
@@ -160,19 +186,25 @@ jobs:
               ) }}
           target: ${{ matrix.architecture }}
           package: ${{ case(github.event_name == 'pull_request', false, true) }}
-          output-name: ${{ format('obs-studio-macos-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
+          output-name: |-
+            ${{ format(
+              'obs-studio-{0}-{1}-{2}',
+              matrix.name, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           codesign: |-
-            ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
-                && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
-                && fromJSON(steps.codesign.outputs.can-codesign)
+            ${{ matrix.name == 'macos'
+              && fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
+              && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+              && fromJSON(steps.codesign.outputs.can-codesign)
             }}
-          codesign-ident: ${{ steps.codesign.outputs.identity }}
-          codesign-user: ${{ secrets.macos-notarization-user }}
-          codesign-pass: ${{ secrets.macos-notarization-password }}
+          codesign-ident: ${{ steps.codesign.outputs.identity || '' }}
+          codesign-user: ${{ secrets.macos-notarization-user  || '' }}
+          codesign-pass: ${{ secrets.macos-notarization-password  || '' }}
           notarize: |-
-            ${{ fromJSON(vars.ENABLE_MACOS_NOTARIZATION || 'false')
-                && github.event_name == 'push'
-                && fromJSON(steps.codesign.outputs.can-notarize)
+            ${{ matrix.name == 'macos'
+              && fromJSON(vars.ENABLE_MACOS_NOTARIZATION || 'false')
+              && github.event_name == 'push'
+              && fromJSON(steps.codesign.outputs.can-notarize)
             }}
 
       - name: Upload Application
@@ -185,235 +217,461 @@ jobs:
             false
           )
         with:
-          archive: false
-          name: ${{ format('obs-studio-macos-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
+          archive: ${{ !contains(fromJSON('["macos", "windows"]'), matrix.name) }}
+          name: |-
+            ${{ format(
+              'obs-studio-{0}-{1}-{2}',
+              matrix.name, matrix.architecture, steps.short-sha.outputs.sha
+            ) }}
           path: |-
             ${{ format(
-              '{0}/obs-studio-macos-{1}-{2}.*',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+              '{0}/obs-studio-{1}-{2}-{3}.*',
+              runner.temp, matrix.name, matrix.architecture, steps.short-sha.outputs.sha
             ) }}
 
       - name: Upload Debug Symbols
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
-          github.event_name == 'push'
+          matrix.name != 'windows'
+          && github.event_name == 'push'
           && github.ref_type == 'tag'
           && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
-          archive: false
+          archive: ${{ matrix.name != 'macos' }}
           name: |-
             ${{ format(
-              'obs-studio-macos-{0}-{1}-debug-symbols',
+              'obs-studio-{0}-{1}-{2}-debug-symbols',
+              matrix.name,
               matrix.architecture, steps.short-sha.outputs.sha
             ) }}
           path: |-
             ${{ format(
-              '{0}/obs-studio-macos-{1}-{2}-debug-symbols.tar.xz',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+              '{0}/obs-studio-{1}-{2}-{3}-debug-symbols.*',
+              runner.temp, matrix.name, matrix.architecture, steps.short-sha.outputs.sha
             ) }}
 
       - name: Upload Developer Library
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
-          github.event_name == 'push'
+          contains(fromJSON('["macos", "windows"]'), matrix.name)
+          && github.event_name == 'push'
           && github.ref_type == 'tag'
           && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
           archive: false
           name: |-
             ${{ format(
-              'obs-studio-macos-{0}-{1}-plugin-dev',
+              'obs-studio-{0}-{1}-{2}-plugin-dev',
+              matrix.name,
               matrix.architecture, steps.short-sha.outputs.sha
             ) }}
           path: |-
             ${{ format(
-              '{0}/obs-studio-macos-{1}-{2}-plugin-dev.tar.xz',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
-
-      - name: Save Xcode Compilation Cache
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: |-
-          github.event_name != 'pull_request'
-          && steps.xcode-cache.outputs.cache-hit != 'true'
-        with:
-          path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
-          key: |-
-            ${{ format(
-              '{0}-xcode-{1}-{2}', runner.os, matrix.architecture,
-              case(
-                github.event_name == 'push'
-                && github.ref_type == 'tag'
-                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
-                'RelWithDebInfo'
-              )
-            ) }}
-
-  ubuntu-build:
-    name: Ubuntu
-    strategy:
-      matrix:
-        runner-os: [ubuntu-24.04, ubuntu-26.04]
-        architecture: [x86_64]
-    runs-on: ${{ matrix.runner-os }}
-    outputs:
-      output-name: ${{ steps.setup.outputs.output-name }}
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Generate Semver From Tag
-        id: semver
-        uses: ./.github/actions/check-version-tag
-        with:
-          ref: ${{ github.ref_name }}
-
-      - name: Generate Short GitHub SHA
-        id: short-sha
-        uses: ./.github/actions/generate-short-sha
-
-      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        id: ccache-cache
-        with:
-          path: ${{ format('{0}/.ccache', runner.temp) }}
-          key: |-
-            ${{ format(
-              '{0}-{1}-ccache-{2}-{3}',
-              runner.os, matrix.runner-os, matrix.architecture,
-              case(
-                github.event_name == 'push'
-                && github.ref_type == 'tag'
-                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
-                'RelWithDebInfo'
-              )
-            ) }}
-          restore-keys: |
-            ${{ format('{0}-{1}-ccache-{2}-', runner.os, matrix.runner-os, matrix.architecture) }}
-
-      - name: Build OBS Studio
-        uses: ./.github/actions/build-obs
-        env:
-          RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
-          RESTREAM_HASH: ${{ secrets.restream-hash }}
-          TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
-          TWITCH_HASH: ${{ secrets.twitch-hash }}
-          YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
-          YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
-        with:
-          config: |-
-            ${{ case(
-              github.event_name == 'push'
-              && github.ref_type == 'tag'
-              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
-              'RelWithDebInfo'
-            ) }}
-          target: ${{ matrix.architecture }}
-
-      - name: Package OBS Studio
-        uses: ./.github/actions/package-obs
-        if: |-
-          case(
-            github.event_name == 'pull_request'
-            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
-            contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
-            false
-          )
-        with:
-          config: |-
-            ${{ case(
-              github.event_name == 'push'
-              && github.ref_type == 'tag'
-              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
-              'RelWithDebInfo'
-            ) }}
-          target: ${{ matrix.architecture }}
-          package: ${{ case(github.event_name == 'pull_request', false, true) }}
-          output-name: |-
-            ${{ format(
-              'obs-studio-{0}-{1}-{2}',
-              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
-
-      - name: Upload Application
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: |-
-          case(
-            github.event_name == 'pull_request'
-            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
-            contains(fromJSON('["push", "schedule"]'), github.event_name), true,
-            false
-          )
-        with:
-          name: |-
-            ${{ format(
-              'obs-studio-{0}-{1}-{2}',
-              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
-          path: |-
-            ${{ format(
-              '{0}/obs-studio-{1}-{2}-{3}.deb*',
-              runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
-
-      - name: Upload Debug Symbol Artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: |-
-          github.event_name == 'push'
-          && github.ref_type == 'tag'
-          && fromJSON(steps.semver.outputs.is-valid-semver)
-        with:
-          name: |-
-            ${{ format(
-              'obs-studio-{0}-{1}-{2}-debug-symbols',
-              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
-          path: |-
-            ${{ format(
-              '{0}/obs-studio-{1}-{2}-{3}-dbgsym.ddeb*',
-              runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+              '{0}/obs-studio-{1}-{2}-{3}-plugin-dev.*',
+              runner.temp, matrix.name, matrix.architecture, steps.short-sha.outputs.sha
             ) }}
 
       - name: Upload Source Tarball
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: |-
-          github.event_name == 'push' &&
-          github.ref_type == 'tag' &&
-          fromJSON(steps.semver.outputs.is-valid-semver)
+          matrix.name == 'ubuntu-26.04'
+          && github.event_name == 'push'
+          && github.ref_type == 'tag'
+          && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
+          archive: false
           name: |-
             ${{ format(
               'obs-studio-{0}-{1}-{2}-sources',
-              matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+              matrix.name, matrix.architecture, steps.short-sha.outputs.sha
             ) }}
           path: |-
             ${{ format(
               '{0}/obs-studio-{1}-{2}-{3}-sources.*',
-              runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+              runner.temp, matrix.name, matrix.architecture, steps.short-sha.outputs.sha
             ) }}
 
-      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
+      - name: Save Compilation Cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: |-
+          matrix.name != 'windows'
+          && github.event_name != 'pull_request'
+          && steps.compilation-cache.outputs.cache-hit != 'true'
         with:
-          path: ${{ format('{0}/.ccache', runner.temp) }}
+          path: ${{ format('{0}/{1}', runner.temp, matrix.cache-dir) }}
           key: |-
             ${{ format(
-              '{0}-{1}-ccache-{2}-{3}',
-              runner.os,
-              matrix.runner-os,
-              matrix.architecture,
+              '{0}-compilation-{1}-{2}',
+              matrix.name, matrix.architecture,
               case(
-                (github.event_name == 'push') &&
-                (github.ref_type == 'tag') &&
-                fromJSON(steps.semver.outputs.is-valid-semver),
-                'Release',
+                github.event_name == 'push'
+                && github.ref_type == 'tag'
+                && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
                 'RelWithDebInfo'
               )
             ) }}
+
+  # macos-build:
+  #   name: macOS
+  #   runs-on: macos-26
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       architecture: [arm64, x86_64]
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+  #       with:
+  #         persist-credentials: false
+  #         submodules: recursive
+  #         fetch-depth: 0
+
+  #     - name: Generate Semver From Tag
+  #       id: semver
+  #       uses: ./.github/actions/check-version-tag
+  #       with:
+  #         ref: ${{ github.ref_name }}
+
+  #     - name: Generate Short GitHub SHA
+  #       id: short-sha
+  #       uses: ./.github/actions/generate-short-sha
+
+  #     - name: Restore Xcode Compilation Cache
+  #       id: xcode-cache
+  #       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+  #       with:
+  #         path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
+  #         key: |-
+  #           ${{ format(
+  #               '{0}-xcode-{1}-{2}', runner.os, matrix.architecture,
+  #               case(
+  #                 github.event_name == 'push'
+  #                 && github.ref_type == 'tag'
+  #                 && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #                 'RelWithDebInfo'
+  #               )
+  #             ) }}
+  #         restore-keys: |
+  #           ${{ format('{0}-xcode-{1}-', runner.os, matrix.architecture) }}
+
+  #     - name: Set Up Code Signing
+  #       id: codesign
+  #       uses: ./.github/actions/codesign-obs/setup-macos
+  #       if: |-
+  #         fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false') &&
+  #         contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+  #       with:
+  #         identity: ${{ secrets.macos-signing-identity }}
+  #         cert: ${{ secrets.macos-signing-certificate }}
+  #         cert-password: ${{ secrets.macos-signing-password }}
+  #         provisioning-profile: ${{ secrets.macos-provisioning-profile }}
+  #         apple-id: ${{ secrets.macos-notarization-user }}
+  #         apple-secret: ${{ secrets.macos-notarization-password }}
+
+  #     - name: Build OBS Studio
+  #       id: build
+  #       uses: ./.github/actions/build-obs
+  #       env:
+  #         RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
+  #         RESTREAM_HASH: ${{ secrets.restream-hash }}
+  #         TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
+  #         TWITCH_HASH: ${{ secrets.twitch-hash }}
+  #         YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
+  #         YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
+  #         YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
+  #         YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
+  #       with:
+  #         config: |-
+  #           ${{ case(
+  #               github.event_name == 'push' && github.ref_type == 'tag'
+  #               && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #               'RelWithDebInfo'
+  #           ) }}
+  #         target: ${{ matrix.architecture }}
+  #         codesign: |-
+  #           ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
+  #               && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+  #               && fromJSON(steps.codesign.outputs.can-codesign)
+  #           }}
+  #         codesign-ident: ${{ steps.codesign.outputs.identity }}
+  #         codesign-team: ${{ steps.codesign.outputs.team }}
+  #         provisioning-profile-id: ${{ steps.codesign.outputs.profile-uuid }}
+  #         xcode-version: '26.5'
+  #         xcode-cas-path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
+
+  #     - name: Package OBS Studio
+  #       id: package
+  #       uses: ./.github/actions/package-obs
+  #       if: |-
+  #         case(
+  #           github.event_name == 'pull_request'
+  #           && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+  #           contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
+  #           false
+  #         )
+  #       with:
+  #         config: |-
+  #           ${{ case(
+  #               github.event_name == 'push' && github.ref_type == 'tag'
+  #               && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #               'RelWithDebInfo'
+  #             ) }}
+  #         target: ${{ matrix.architecture }}
+  #         package: ${{ case(github.event_name == 'pull_request', false, true) }}
+  #         output-name: ${{ format('obs-studio-macos-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
+  #         codesign: |-
+  #           ${{ fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
+  #               && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
+  #               && fromJSON(steps.codesign.outputs.can-codesign)
+  #           }}
+  #         codesign-ident: ${{ steps.codesign.outputs.identity }}
+  #         codesign-user: ${{ secrets.macos-notarization-user }}
+  #         codesign-pass: ${{ secrets.macos-notarization-password }}
+  #         notarize: |-
+  #           ${{ fromJSON(vars.ENABLE_MACOS_NOTARIZATION || 'false')
+  #               && github.event_name == 'push'
+  #               && fromJSON(steps.codesign.outputs.can-notarize)
+  #           }}
+
+  #     - name: Upload Application
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         case(
+  #           github.event_name == 'pull_request'
+  #           && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+  #           contains(fromJSON('["push", "schedule"]'), github.event_name), true,
+  #           false
+  #         )
+  #       with:
+  #         archive: false
+  #         name: ${{ format('obs-studio-macos-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-macos-{1}-{2}.*',
+  #             runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+
+  #     - name: Upload Debug Symbols
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         github.event_name == 'push'
+  #         && github.ref_type == 'tag'
+  #         && fromJSON(steps.semver.outputs.is-valid-semver)
+  #       with:
+  #         archive: false
+  #         name: |-
+  #           ${{ format(
+  #             'obs-studio-macos-{0}-{1}-debug-symbols',
+  #             matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-macos-{1}-{2}-debug-symbols.tar.xz',
+  #             runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+
+  #     - name: Upload Developer Library
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         github.event_name == 'push'
+  #         && github.ref_type == 'tag'
+  #         && fromJSON(steps.semver.outputs.is-valid-semver)
+  #       with:
+  #         archive: false
+  #         name: |-
+  #           ${{ format(
+  #             'obs-studio-macos-{0}-{1}-plugin-dev',
+  #             matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-macos-{1}-{2}-plugin-dev.tar.xz',
+  #             runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+
+  #     - name: Save Xcode Compilation Cache
+  #       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+  #       if: |-
+  #         github.event_name != 'pull_request'
+  #         && steps.xcode-cache.outputs.cache-hit != 'true'
+  #       with:
+  #         path: ${{ format('{0}/CompilationCache.noindex', runner.temp) }}
+  #         key: |-
+  #           ${{ format(
+  #             '{0}-xcode-{1}-{2}', runner.os, matrix.architecture,
+  #             case(
+  #               github.event_name == 'push'
+  #               && github.ref_type == 'tag'
+  #               && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #               'RelWithDebInfo'
+  #             )
+  #           ) }}
+
+  # ubuntu-build:
+  #   name: Ubuntu
+  #   strategy:
+  #     matrix:
+  #       runner-os: [ubuntu-24.04, ubuntu-26.04]
+  #       architecture: [x86_64]
+  #   runs-on: ${{ matrix.runner-os }}
+  #   outputs:
+  #     output-name: ${{ steps.setup.outputs.output-name }}
+  #   steps:
+  #     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+  #       with:
+  #         persist-credentials: false
+  #         submodules: recursive
+  #         fetch-depth: 0
+
+  #     - name: Generate Semver From Tag
+  #       id: semver
+  #       uses: ./.github/actions/check-version-tag
+  #       with:
+  #         ref: ${{ github.ref_name }}
+
+  #     - name: Generate Short GitHub SHA
+  #       id: short-sha
+  #       uses: ./.github/actions/generate-short-sha
+
+  #     - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+  #       id: ccache-cache
+  #       with:
+  #         path: ${{ format('{0}/.ccache', runner.temp) }}
+  #         key: |-
+  #           ${{ format(
+  #             '{0}-{1}-ccache-{2}-{3}',
+  #             runner.os, matrix.runner-os, matrix.architecture,
+  #             case(
+  #               github.event_name == 'push'
+  #               && github.ref_type == 'tag'
+  #               && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #               'RelWithDebInfo'
+  #             )
+  #           ) }}
+  #         restore-keys: |
+  #           ${{ format('{0}-{1}-ccache-{2}-', runner.os, matrix.runner-os, matrix.architecture) }}
+
+  #     - name: Build OBS Studio
+  #       uses: ./.github/actions/build-obs
+  #       env:
+  #         RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
+  #         RESTREAM_HASH: ${{ secrets.restream-hash }}
+  #         TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
+  #         TWITCH_HASH: ${{ secrets.twitch-hash }}
+  #         YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
+  #         YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
+  #         YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
+  #         YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
+  #       with:
+  #         config: |-
+  #           ${{ case(
+  #             github.event_name == 'push'
+  #             && github.ref_type == 'tag'
+  #             && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #             'RelWithDebInfo'
+  #           ) }}
+  #         target: ${{ matrix.architecture }}
+
+  #     - name: Package OBS Studio
+  #       uses: ./.github/actions/package-obs
+  #       if: |-
+  #         case(
+  #           github.event_name == 'pull_request'
+  #           && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+  #           contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
+  #           false
+  #         )
+  #       with:
+  #         config: |-
+  #           ${{ case(
+  #             github.event_name == 'push'
+  #             && github.ref_type == 'tag'
+  #             && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #             'RelWithDebInfo'
+  #           ) }}
+  #         target: ${{ matrix.architecture }}
+  #         package: ${{ case(github.event_name == 'pull_request', false, true) }}
+  #         output-name: |-
+  #           ${{ format(
+  #             'obs-studio-{0}-{1}-{2}',
+  #             matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+
+  #     - name: Upload Application
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         case(
+  #           github.event_name == 'pull_request'
+  #           && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+  #           contains(fromJSON('["push", "schedule"]'), github.event_name), true,
+  #           false
+  #         )
+  #       with:
+  #         name: |-
+  #           ${{ format(
+  #             'obs-studio-{0}-{1}-{2}',
+  #             matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-{1}-{2}-{3}.deb*',
+  #             runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+
+  #     - name: Upload Debug Symbol Artifacts
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         github.event_name == 'push'
+  #         && github.ref_type == 'tag'
+  #         && fromJSON(steps.semver.outputs.is-valid-semver)
+  #       with:
+  #         name: |-
+  #           ${{ format(
+  #             'obs-studio-{0}-{1}-{2}-debug-symbols',
+  #             matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-{1}-{2}-{3}-dbgsym.ddeb*',
+  #             runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+
+  #     - name: Upload Source Tarball
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         github.event_name == 'push' &&
+  #         github.ref_type == 'tag' &&
+  #         fromJSON(steps.semver.outputs.is-valid-semver)
+  #       with:
+  #         name: |-
+  #           ${{ format(
+  #             'obs-studio-{0}-{1}-{2}-sources',
+  #             matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-{1}-{2}-{3}-sources.*',
+  #             runner.temp, matrix.runner-os, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+
+  #     - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+  #       if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
+  #       with:
+  #         path: ${{ format('{0}/.ccache', runner.temp) }}
+  #         key: |-
+  #           ${{ format(
+  #             '{0}-{1}-ccache-{2}-{3}',
+  #             runner.os,
+  #             matrix.runner-os,
+  #             matrix.architecture,
+  #             case(
+  #               (github.event_name == 'push') &&
+  #               (github.ref_type == 'tag') &&
+  #               fromJSON(steps.semver.outputs.is-valid-semver),
+  #               'Release',
+  #               'RelWithDebInfo'
+  #             )
+  #           ) }}
 
   flatpak-build:
     name: Flatpak
@@ -561,112 +819,112 @@ jobs:
           artifact: repo
           path: repo
 
-  windows-build:
-    name: Windows
-    strategy:
-      matrix:
-        architecture: [x64, arm64]
-    runs-on: windows-2025-vs2026
-    outputs:
-      output-name: ${{ steps.setup.outputs.output-name }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-          submodules: recursive
-          fetch-depth: 0
+  # windows-build:
+  #   name: Windows
+  #   strategy:
+  #     matrix:
+  #       architecture: [x64, arm64]
+  #   runs-on: windows-2025-vs2026
+  #   outputs:
+  #     output-name: ${{ steps.setup.outputs.output-name }}
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+  #       with:
+  #         persist-credentials: false
+  #         submodules: recursive
+  #         fetch-depth: 0
 
-      - name: Generate Semver From Tag
-        id: semver
-        uses: ./.github/actions/check-version-tag
-        with:
-          ref: ${{ github.ref_name }}
+  #     - name: Generate Semver From Tag
+  #       id: semver
+  #       uses: ./.github/actions/check-version-tag
+  #       with:
+  #         ref: ${{ github.ref_name }}
 
-      - name: Generate Short GitHub SHA
-        id: short-sha
-        uses: ./.github/actions/generate-short-sha
+  #     - name: Generate Short GitHub SHA
+  #       id: short-sha
+  #       uses: ./.github/actions/generate-short-sha
 
-      - name: Build OBS Studio
-        uses: ./.github/actions/build-obs
-        env:
-          RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
-          RESTREAM_HASH: ${{ secrets.restream-hash }}
-          TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
-          TWITCH_HASH: ${{ secrets.twitch-hash }}
-          YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
-          YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
-          GPU_PRIORITY_VAL: ${{ secrets.gpu-priority-val }}
-        with:
-          config: |-
-            ${{ case(
-              github.event_name == 'push'
-              && github.ref_type == 'tag'
-              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
-              'RelWithDebInfo'
-            ) }}
-          target: ${{ matrix.architecture }}
+  #     - name: Build OBS Studio
+  #       uses: ./.github/actions/build-obs
+  #       env:
+  #         RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
+  #         RESTREAM_HASH: ${{ secrets.restream-hash }}
+  #         TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
+  #         TWITCH_HASH: ${{ secrets.twitch-hash }}
+  #         YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
+  #         YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
+  #         YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
+  #         YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
+  #         GPU_PRIORITY_VAL: ${{ secrets.gpu-priority-val }}
+  #       with:
+  #         config: |-
+  #           ${{ case(
+  #             github.event_name == 'push'
+  #             && github.ref_type == 'tag'
+  #             && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #             'RelWithDebInfo'
+  #           ) }}
+  #         target: ${{ matrix.architecture }}
 
-      - name: Package OBS Studio
-        uses: ./.github/actions/package-obs
-        if: |-
-          case(
-            github.event_name == 'pull_request'
-            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
-            contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
-            false
-          )
-        with:
-          config: |-
-            ${{ case(
-              github.event_name == 'push'
-              && github.ref_type == 'tag'
-              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
-              'RelWithDebInfo'
-            ) }}
-          target: ${{ matrix.architecture }}
-          package: ${{ case(github.event_name == 'pull_request', false, true) }}
-          output-name: |-
-            ${{ format(
-              'obs-studio-windows-{0}-{1}',
-              matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
+  #     - name: Package OBS Studio
+  #       uses: ./.github/actions/package-obs
+  #       if: |-
+  #         case(
+  #           github.event_name == 'pull_request'
+  #           && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+  #           contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
+  #           false
+  #         )
+  #       with:
+  #         config: |-
+  #           ${{ case(
+  #             github.event_name == 'push'
+  #             && github.ref_type == 'tag'
+  #             && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
+  #             'RelWithDebInfo'
+  #           ) }}
+  #         target: ${{ matrix.architecture }}
+  #         package: ${{ case(github.event_name == 'pull_request', false, true) }}
+  #         output-name: |-
+  #           ${{ format(
+  #             'obs-studio-windows-{0}-{1}',
+  #             matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
 
-      - name: Upload Application
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: |-
-          case(
-            github.event_name == 'pull_request'
-            && contains(github.event.labels.*.name, 'Seeking Testers'), true,
-            contains(fromJSON('["push", "schedule"]'), github.event_name), true,
-            false
-          )
-        with:
-          archive: false
-          name: ${{ format('obs-studio-windows-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
-          path: |-
-            ${{ format(
-              '{0}/obs-studio-windows-{1}-{2}.zip',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
+  #     - name: Upload Application
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         case(
+  #           github.event_name == 'pull_request'
+  #           && contains(github.event.labels.*.name, 'Seeking Testers'), true,
+  #           contains(fromJSON('["push", "schedule"]'), github.event_name), true,
+  #           false
+  #         )
+  #       with:
+  #         archive: false
+  #         name: ${{ format('obs-studio-windows-{0}-{1}', matrix.architecture, steps.short-sha.outputs.sha) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-windows-{1}-{2}.zip',
+  #             runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
 
-      - name: Upload Developer Library
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: |-
-          github.event_name == 'push'
-          && github.ref_type == 'tag'
-          && fromJSON(steps.semver.outputs.is-valid-semver)
-        with:
-          archive: false
-          name: |-
-            ${{ format(
-              'obs-studio-windows-{0}-{1}-plugin-dev',
-              matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
-          path: |-
-            ${{ format(
-              '{0}/obs-studio-windows-{1}-{2}-plugin-dev.zip',
-              runner.temp, matrix.architecture, steps.short-sha.outputs.sha
-            ) }}
+  #     - name: Upload Developer Library
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  #       if: |-
+  #         github.event_name == 'push'
+  #         && github.ref_type == 'tag'
+  #         && fromJSON(steps.semver.outputs.is-valid-semver)
+  #       with:
+  #         archive: false
+  #         name: |-
+  #           ${{ format(
+  #             'obs-studio-windows-{0}-{1}-plugin-dev',
+  #             matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
+  #         path: |-
+  #           ${{ format(
+  #             '{0}/obs-studio-windows-{1}-{2}-plugin-dev.zip',
+  #             runner.temp, matrix.architecture, steps.short-sha.outputs.sha
+  #           ) }}
