@@ -25,7 +25,7 @@ runs:
       shell: bash --noprofile --norc -eo pipefail {0}
       run: |
         : Check Runner Operating System
-        print '::notice::setup-pvs-studio action requires a Windows-based runner.'
+        print '::error::analyze-obs/setup-pvs-studio action requires a Windows-based runner.'
         return 1
 
     - name: Setup PVS-Studio
@@ -38,4 +38,4 @@ runs:
         PVS_STUDIO_CHECKSUM: ${{ inputs.checksum }}
         PVS_STUDIO_USERNAME: ${{ inputs.user }}
         PVS_STUDIO_LICENSE: ${{ inputs.license }}
-      run: ${{ github.action_path }}/Setup-PVSStudio.ps1
+      run: . ${env:GITHUB_ACTION_PATH}/Setup-PVSStudio.ps1

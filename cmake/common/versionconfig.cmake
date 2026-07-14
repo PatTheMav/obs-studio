@@ -29,7 +29,7 @@ else()
   if(DEFINED OBS_VERSION_OVERRIDE)
     message(FATAL_ERROR "Invalid version supplied - must be <MAJOR>.<MINOR>.<PATCH>[-(rc|beta)<NUMBER>].")
   else()
-    set(_obs_version_canonical "0.0.1")
+    set(_obs_version_canonical "0;0;1")
   endif()
 endif()
 

@@ -19,7 +19,7 @@ runs:
       shell: bash --noprofile --norc -eo pipefail {0}
       run: |
         : Check Runner Operating System
-        print '::notice::setup-pvs-studio action requires a Windows-based runner.'
+        print '::error::analyze-obs/run-pvs-studio action requires a Windows-based runner.'
         return 1
 
     - name: Build OBS Studio
@@ -47,7 +47,7 @@ runs:
         BUILD_SOLUTION: '${{ github.workspace }}/build_${{ inputs.architecture }}/obs-studio.sln?'
         BUILD_ARCHITECTURE: ${{ inputs.architecture }}
         BUILD_CONFIG: ${{ inputs.config }}
-      run: ${{ github.action_path }}/Invoke-PVSStudio.ps1
+      run: . ${env:GITHUB_ACTION_PATH}/Invoke-PVSStudio.ps1
 
     - name: Upload PVS-Studio Output
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

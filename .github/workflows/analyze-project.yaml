@@ -99,5 +99,4 @@ jobs:
           YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
         with:
           architecture: arm64
-          config: Debug
           upload-codeql: true

@@ -37,13 +37,13 @@ switch-xcode-version() {
 setup-macos() {
   switch-xcode-version
 
-  : ${XCODE_CAS_PATH:="${HOME}/Library/Developer/Xcode/DerivedData/CompilationCache.noindex"}
+  local cache_path="${XCODE_CAS_PATH:-"${HOME}/Library/Developer/Xcode/DerivedData/CompilationCache.noindex"}"
 
-  if [[ ! -d ${XCODE_CAS_PATH} ]] {
-    mkdir -p ${XCODE_CAS_PATH}
+  if [[ ! -d ${cache_path} ]] {
+    mkdir -p ${cache_path}
   }
 
-  print "xcode-cas-path=${XCODE_CAS_PATH}" >> ${GITHUB_OUTPUT}
+  print "xcode-cas-path=${cache_path}" >> ${GITHUB_OUTPUT}
 }
 
 setup-macos
