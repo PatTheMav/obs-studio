@@ -17,7 +17,7 @@ setopt WARN_NESTED_VAR
 if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
 gather-sarif-files() {
-  local -a analytics_files=${ANALYTICS_PATH}/StaticAnalyzer/obs-studio/**/*.plist)
+  local -a analytics_files=(${ANALYTICS_PATH}/StaticAnalyzer/obs-studio/**/*.plist)
 
   for file (${analytics_files}) {
     mv ${file} ${ANALYTICS_PATH}/${${file:t}//plist/sarif}

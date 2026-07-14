@@ -94,7 +94,7 @@ build-macos() {
 
     run_xcodebuild ${analyze_args}
 
-    print 'analyzer-output-path=${build_dir}/analytics' >> ${GITHUB_OUTPUT}
+    print "analyzer-output-path=${build_dir}/analytics" >> ${GITHUB_OUTPUT}
   } else {
     local match
     local mbegin
