@@ -20,7 +20,7 @@ inputs:
     description: UUID of provisioning profile (macOS only)
     default: ''
   analyze:
-    description: Run build as static analzer build
+    description: Run build as static analysis build
     default: 'false'
   path:
     description: Destination of generated builds.

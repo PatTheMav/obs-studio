@@ -24,6 +24,7 @@ runs:
       with:
         config: Debug
         target: ${{ inputs.architecture }}
+        analyze: true
         codesign: false
         xcode-version: ${{ env.XCODE_VERSION || '26.6' }}
 
