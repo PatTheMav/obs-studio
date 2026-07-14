@@ -43,8 +43,8 @@ process {
     '--build', "${BuildLocation}"
     '--config', "${env:BUILD_CONFIG}"
     '--parallel'
-    '--', '/consoleLoggerParameters:Summary', '/nologo'
     $( if ($null -ne $env:RUNNER_DEBUG) {'--verbose'} )
+    '--', '/consoleLoggerParameters:Summary', '/nologo'
   )
   & cmake @CmakeBuildArgs
   Write-Output '::endgroup::'

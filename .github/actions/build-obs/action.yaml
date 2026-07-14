@@ -35,9 +35,14 @@ inputs:
     description: Working directory for packaging
     default: ${{ github.workspace }}
 outputs:
-  macos-sarif-path:
-    description: Path to generated clang-analyze output files
-    value: ${{ steps.build-macos.outputs.analyzer-output-path }}
+  analyzer-output-path:
+    description: Path to generated static analysis output files
+    value: >-
+      ${{ case(
+        runner.os == 'macOS', steps.build-macos.outputs.analyzer-output-path,
+        runner.os == 'Linux', steps.build-ubuntu.outputs.analyzer-output-path,
+        null
+      ) }}
 runs:
   using: composite
   steps:
