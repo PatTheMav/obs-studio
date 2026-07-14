@@ -26,8 +26,7 @@ on:
       yotube-client-secret-hash:
         description: The hash value required to decrypt the Youtube.com client secret.
         required: false
-permissions:
-  contents: read    # Necessary for repository checkouts.
+permissions: {}
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
@@ -75,6 +74,9 @@ jobs:
   macos:
     name: macOS (clang-analyze)
     runs-on: macos-26
+    permissions:
+      contents: read          # Necessary for repository checkouts.
+      security-events: write  # Necessary to post CodeQL security scanning reports
     env:
       XCODE_VERSION: '26.6'
     steps:

@@ -16,6 +16,9 @@ jobs:
     name: Code Analysis
     uses: ./.github/workflows/analyze-project.yaml
     if: inputs.job == 'codeql'
+    permissions:
+      contents: read          # Necessary for repository checkouts.
+      security-events: write  # Necessary to post CodeQL security scanning reports
     secrets:
       restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
       restream-hash: ${{ secrets.RESTREAM_HASH }}
