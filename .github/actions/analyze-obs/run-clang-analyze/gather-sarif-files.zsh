@@ -19,6 +19,7 @@ if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 gather-sarif-files() {
   local -a analytics_files=(${ANALYTICS_PATH}/StaticAnalyzer/obs-studio/**/*.plist)
 
+  local file
   for file (${analytics_files}) {
     mv ${file} ${ANALYTICS_PATH}/${${file:t}//plist/sarif}
   }

@@ -38,7 +38,7 @@ runs:
 
     - name: Merge SARIF files
       id: merge
-      uses: ./.github/actions/static-analysis/merge-clang-sarif
+      uses: ./.github/actions/analyze-obs/merge-clang-sarif
       with:
         path: ${{ steps.build.outputs.analyzer-output-path }}
         output-name: obs-studio-${{ runner.os }}-${{ inputs.architecture }}.sarif
