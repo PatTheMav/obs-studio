@@ -1,0 +1,70 @@
+name: Analyze Project
+on:
+  workflow_call:
+permissions: {}
+jobs:
+  windows:
+    name: Windows (PVS-Studio)
+    runs-on: windows-2025-vs2026
+    if: false && github.repository_owner == 'obsproject'
+    defaults:
+      run:
+        shell: pwsh -command ". '{0}'"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set Up Environment
+        id: setup
+        uses: ./.github/actions/setup-environment
+
+      - name: Setup PVS-Studio
+        id: pvs-setup
+        uses: ./.github/analyze-obs/setup-pvs-studio
+        with:
+          version: ${{ steps.setup.outputs.pvs-studio-version }}
+          checksum: ${{ steps.setup.outputs.pvs-studio-checksum }}
+          url: ${{ steps.setup.outputs.pvs-studio-url }}
+          user: ${{ secrets.PVS_NAME }}
+          license: ${{ secrets.PVS_KEY }}
+
+      - name: Analyze OBS Studio
+        id: analyze
+        uses: ./.github/actions/analyze-obs/run-pvs-studio
+        with:
+          architecture: x64
+          config: Debug
+          upload-codeql: true
+
+  macos:
+    name: macOS (clang-analyze)
+    runs-on: macos-26
+    defaults:
+      run:
+        shell: zsh --no-rcs --errexit --pipefail {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set Up Environment
+        id: setup
+        uses: ./.github/actions/setup-environment
+        with:
+          target: arm64
+          xcodeVersion: '26.5'
+
+      - name: Analyze OBS Studio
+        id: analyze
+        uses: ./.github/actions/analyze-obs/run-clang-analyze
+        with:
+          architecture: arm64
+          config: Debug
+          upload-codeql: true
