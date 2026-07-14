@@ -1,69 +1,75 @@
 name: Analyze Project
 on:
   workflow_call:
-permissions: {}
+permissions:
+  contents: read    # Necessary for repository checkouts.
+defaults:
+  run:
+    shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  windows:
-    name: Windows (PVS-Studio)
-    runs-on: windows-2025-vs2026
-    if: false && github.repository_owner == 'obsproject'
-    defaults:
-      run:
-        shell: pwsh -command ". '{0}'"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          submodules: recursive
-          fetch-depth: 0
+  # windows:
+  #   name: Windows (PVS-Studio)
+  #   runs-on: windows-2025-vs2026
+  #   if: false && github.repository_owner == 'obsproject'
+  #   defaults:
+  #     run:
+  #       shell: pwsh -command ". '{0}'"
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  #       with:
+  #         persist-credentials: false
+  #         submodules: recursive
+  #         fetch-depth: 0
 
-      - name: Set Up Environment
-        id: setup
-        uses: ./.github/actions/setup-environment
+  #     - name: Set Up Environment
+  #       id: setup
+  #       uses: ./.github/actions/setup-environment
 
-      - name: Setup PVS-Studio
-        id: pvs-setup
-        uses: ./.github/analyze-obs/setup-pvs-studio
-        with:
-          version: ${{ steps.setup.outputs.pvs-studio-version }}
-          checksum: ${{ steps.setup.outputs.pvs-studio-checksum }}
-          url: ${{ steps.setup.outputs.pvs-studio-url }}
-          user: ${{ secrets.PVS_NAME }}
-          license: ${{ secrets.PVS_KEY }}
+  #     - name: Setup PVS-Studio
+  #       id: pvs-setup
+  #       uses: ./.github/analyze-obs/setup-pvs-studio
+  #       with:
+  #         version: ${{ steps.setup.outputs.pvs-studio-version }}
+  #         checksum: ${{ steps.setup.outputs.pvs-studio-checksum }}
+  #         url: ${{ steps.setup.outputs.pvs-studio-url }}
+  #         user: ${{ secrets.PVS_NAME }}
+  #         license: ${{ secrets.PVS_KEY }}
 
-      - name: Analyze OBS Studio
-        id: analyze
-        uses: ./.github/actions/analyze-obs/run-pvs-studio
-        with:
-          architecture: x64
-          config: Debug
-          upload-codeql: true
+  #     - name: Analyze OBS Studio
+  #       id: analyze
+  #       uses: ./.github/actions/analyze-obs/run-pvs-studio
+  #       with:
+  #         architecture: x64
+  #         config: Debug
+  #         upload-codeql: true
 
   macos:
     name: macOS (clang-analyze)
     runs-on: macos-26
-    defaults:
-      run:
-        shell: zsh --no-rcs --errexit --pipefail {0}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           submodules: recursive
-          fetch-depth: 0
-
-      - name: Set Up Environment
-        id: setup
-        uses: ./.github/actions/setup-environment
-        with:
-          target: arm64
-          xcodeVersion: '26.5'
+          fetch-depth: 1
 
       - name: Analyze OBS Studio
         id: analyze
         uses: ./.github/actions/analyze-obs/run-clang-analyze
+        env:
+          TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
+          RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
+          YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENTID }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+          YOUTUBE_SECRET: ${{ secrets.YOUTUBE_SECRET }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_SECRET_HASH }}
         with:
           architecture: arm64
           config: Debug

@@ -6,7 +6,6 @@ inputs:
     required: true
   output-name:
     description: File name for merged SARIF file.
-    required: false
     default: 'merged.sarif'
 outputs:
   path:

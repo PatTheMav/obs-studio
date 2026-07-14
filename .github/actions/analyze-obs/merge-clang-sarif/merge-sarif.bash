@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154
+
 set -o errexit
 set -o nounset
 set -o pipefail
 
 : "${CI:?}"
-if [[ -n "${RUNNER_DEBUG}" ]]; then set -x; fi
+if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
 merge-sarif() {
   if [[ ! -d "${SARIF_PATH}" ]]; then
@@ -12,7 +14,14 @@ merge-sarif() {
     return 1
   fi
 
-  local sarif_files=("${SARIF_PATH}"/*.sarif)
+  local output
+  output="$(compgen -G "${SARIF_PATH}/*.sarif")"
+
+  local -a sarif_files=()
+  while read -r file; do
+    full_path="$(realpath "${file}")"
+    sarif_files+=("${full_path}")
+  done <<< "${output}"
 
   if (( ! ${#sarif_files[@]} )); then
     echo "::error::No SARIF files found in '${SARIF_PATH}'."

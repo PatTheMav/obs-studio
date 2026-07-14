@@ -4,12 +4,8 @@ inputs:
   architecture:
     description: Build architecture used for project build
     required: true
-  config:
-    description: Build configuration for project build
-    required: true
   upload-codeql:
     description: Enable automatic upload of SARIF report to CodeQL
-    required: false
     default: 'false'
 runs:
   using: composite
@@ -19,48 +15,32 @@ runs:
       shell: bash --noprofile --norc -eo pipefail {0}
       run: |
         : Check Runner Operating System
-        print '::notice::run-clang-analyze action requires a macOS- or Ubuntu-based runner.'
+        print '::error::analyze-obs/run-clang-analyze action requires a macOS- or Ubuntu-based runner.'
         return 1
 
     - name: Build OBS Studio
       id: build
       uses: ./.github/actions/build-obs
-      env:
-        TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
-        TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
-        RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
-        RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
-        YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENTID }}
-        YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
-        YOUTUBE_SECRET: ${{ secrets.YOUTUBE_SECRET }}
-        YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_SECRET_HASH }}
       with:
-        config: ${{ inputs.config }}
+        config: Debug
         target: ${{ inputs.architecture }}
         codesign: false
-        path: ${{ github.workspace }}
+        xcode-version: '26.5'
 
     - name: Gather SARIF files
       if: runner.os == 'macOS'
-      shell: zsh --no-rcs --errexit --pipefail {0}
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       env:
         ANALYTICS_PATH: ${{ steps.build.outputs.analyzer-output-path }}
-      run: |
-        : Gather SARIF files
-        if (( ${+RUNNER_DEBUG} )) setopt XTRACE
-
-        local -a analytics_files=${ANALYTICS_PATH}/StaticAnalyzer/obs-studio/**/*.plist)
-        for file (${analytics_files}) {
-          mv ${file} ${ANALYTICS_PATH}/${${file:t}//plist/sarif}
-        }
+      run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/gather-sarif-files.zsh
 
     - name: Merge SARIF files
       id: merge
       uses: ./.github/actions/static-analysis/merge-clang-sarif
       with:
         path: ${{ steps.build.outputs.analyzer-output-path }}
-        output-name: obs-studio-${{ runner.os }}-${{ inputs.architecture }}-${{ inputs.config }}.sarif
+        output-name: obs-studio-${{ runner.os }}-${{ inputs.architecture }}.sarif
 
     - name: Upload PVS-Studio CodeQL Report
       uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5

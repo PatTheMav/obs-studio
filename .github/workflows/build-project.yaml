@@ -271,7 +271,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: >-
           matrix.name == 'ubuntu-26.04'
-          fromJSON(env.IS_TAG_PUSH)
+          && fromJSON(env.IS_TAG_PUSH)
           && fromJSON(steps.semver.outputs.is-valid-semver)
         with:
           archive: false
@@ -409,7 +409,7 @@ jobs:
       - name: Build Flatpak Manifest
         uses: flatpak/flatpak-github-actions/flatpak-builder@401fe28a8384095fc1531b9d320b292f0ee45adb # v6.7
         with:
-          build-bundle: ${{ fromJSON(env.BUILD_BUNDLE) )}}
+          build-bundle: ${{ fromJSON(env.BUILD_BUNDLE) }}
           bundle: ${{ format('obs-studio-flatpak-{0}.flatpak', steps.short-sha.outputs.sha) }}
           cache: >-
             ${{ fromJSON(steps.cache.outputs.cache-hit)
