@@ -37,7 +37,7 @@ outputs:
     value: ${{ steps.provisioning.outputs.profile-uuid }}
   can-notarize:
     description: True if necessary notarization credentials were found
-    value: |-
+    value: >-
       ${{ case(
         inputs.apple-id != ''
         && inputs.apple-secret != '', true,
@@ -51,7 +51,7 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
-        echo '::notice::setup-macos-codesigning action requires a macOS-based runner.'
+        echo '::error::codesign-obs/setup-macos action requires a macOS-based runner.'
         exit 1
 
     - name: Set Up Keychain

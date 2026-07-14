@@ -6,20 +6,22 @@ permissions:
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+env:
+  CHECKOUT_FETCH_DEPTH: >-
+    ${{ case(
+      github.event_name == 'pull_request', github.event.commits,
+      github.event_name == 'push', 0,
+      1
+    ) }}
 jobs:
   clang-format:
     name: clang-format
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -39,17 +41,12 @@ jobs:
 
   swift-format:
     name: swift-format
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -69,17 +66,12 @@ jobs:
 
   gersemi:
     name: gersemi
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -99,17 +91,12 @@ jobs:
 
   zizmor:
     name: zizmor
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -134,12 +121,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -157,17 +139,12 @@ jobs:
 
   qt-xml-validator:
     name: qt-xml-validator
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -187,7 +164,7 @@ jobs:
   compatibility-validator:
     name: Validate Compatibility
     if: github.base_ref == 'master' || github.ref_name == 'master'
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     permissions:
       contents: read    # Necessary to keep workflow-level permission
       checks: write     # Necessary to produce annotations
@@ -195,12 +172,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files
@@ -224,7 +196,7 @@ jobs:
   services-validator:
     name: Validate Services
     if: github.base_ref == 'master' || github.ref_name == 'master'
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     permissions:
       contents: read    # Necessary to keep workflow-level permission
       checks: write     # Necessary to produce annotations
@@ -232,12 +204,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: |-
-            ${{ case(
-              github.event_name == 'pull_request', github.event.commits,
-              github.event_name == 'push', 0,
-              1
-            ) }}
+          fetch-depth: ${{ env.CHECKOUT_FETCH_DEPTH }}
           persist-credentials: false
 
       - name: Check for Changed Files

@@ -18,7 +18,7 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
-        echo '::notice::compatibility-validator action requires a macOS-based or Linux-based runner.'
+        echo '::error::lint-obs/validate-json-schema action requires a macOS-based or Linux-based runner.'
         exit 1
 
     - name: Install and Configure Python

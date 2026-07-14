@@ -18,7 +18,7 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
-        echo '::notice::flatpak-manifest-validator action requires a Linux-based runner.'
+        echo '::error::lint-obs/validate-flatpak-manifest action requires a Linux-based runner.'
         exit 1
 
     - name: Validate Flatpak Manifest

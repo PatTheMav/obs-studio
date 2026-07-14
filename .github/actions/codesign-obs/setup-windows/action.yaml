@@ -18,7 +18,7 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
-        echo '::error::setup-windows action requires a Windows-based runner.'
+        echo '::error::codesign-obs/setup-windows action requires a Windows-based runner.'
         exit 1
 
     - name: Setup Google CNG Provider

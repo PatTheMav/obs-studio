@@ -37,8 +37,9 @@ jobs:
 
   update-documentation:
     name: Update Documentation
+    needs: build-project
     if: fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     outputs:
       artifact-name: ${{ steps.generate.outputs.artifact-name }}
     steps:
@@ -63,10 +64,10 @@ jobs:
 
   deploy-documentation:
     name: Deploy Documentation To Cloudflare
-    if: |-
+    if: >-
       fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
       && vars.CF_PAGES_PROJECT != ''
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     needs: update-documentation
     environment:
       name: cf-pages-deploy
@@ -94,7 +95,7 @@ jobs:
           workingDirectory: ${{ github.workspace }}/docs
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: |-
+          command: >-
             pages publish ${{ github.workspace }}/docs
             --project-name=${{ vars.CF_PAGES_PROJECT }}
             --commit-hash=${{ github.sha }}
@@ -108,9 +109,7 @@ jobs:
   # sign-windows-build:
   #   name: Windows Signing
   #   uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@a4a11c3dcdd7f479c8c4d1eb6ed8991fbc54dc6d
-  #   if: |-
-  #     github.repository_owner == 'obsproject' &&
-  #     fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false')
+  #   if: ${{ fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false') }}
   #   needs: build-project
   #   permissions:
   #     contents: read        # Necessary to keep workflow base permissions.
@@ -121,7 +120,7 @@ jobs:
 
   create-release:
     name: Create Release
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     needs: [build-project, sign-windows-build]
     permissions:
       contents: read

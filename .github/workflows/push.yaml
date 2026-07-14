@@ -12,7 +12,7 @@ permissions:
   contents: read    # Necessary for repository checkouts.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ contains(github.ref, 'release/') }}
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
@@ -49,10 +49,10 @@ jobs:
   update-documentation:
     name: Update Documentation
     needs: build-project
-    if: |-
+    if: >-
       fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
       && contains(fromJSON('["master", "main"]'), github.ref_name)
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-slim
     outputs:
       artifact-name: ${{ steps.generate.outputs.artifact-name }}
     steps:

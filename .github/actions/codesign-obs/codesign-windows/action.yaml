@@ -28,7 +28,7 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
-        echo '::error::codesign-windows action requires a Windows-based runner.'
+        echo '::error::codesign-obs/codesign-windows action requires a Windows-based runner.'
         exit 1
 
     - name: Download Versions

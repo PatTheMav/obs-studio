@@ -21,6 +21,14 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Windows'
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      run: |
+        : Check Runner Operating System
+        echo '::error::publish-obs/setup-bouf action requires a Windows-based runner.'
+        exit 1
+
     - name: Setup BOUF
       id: setup
       shell: pwsh -command ". '{0}'"

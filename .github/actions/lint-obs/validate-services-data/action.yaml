@@ -37,7 +37,7 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
         : Check Runner Operating System
-        echo '::notice::services-validation action requires a macOS-based or Linux-based runner.'
+        echo '::error::lint-obs/validate-services-data action requires a macOS-based or Linux-based runner.'
         exit 1
 
     - name: Validate Services File JSON Schema
