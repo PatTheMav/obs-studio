@@ -1,6 +1,31 @@
 name: Analyze Project
 on:
   workflow_call:
+    secrets:
+      restream-client-id:
+        description: The OAuth client-id used for Restream.io API connections.
+        required: false
+      restream-hash:
+        description: The hash value required to decrypt the Restream.io client id.
+        required: false
+      twitch-client-id:
+        description: The OAuth client-id used for Twitch.tv API connections.
+        required: false
+      twitch-hash:
+        description: The hash value required to decrypt the Twitch.tv client id.
+        required: false
+      youtube-client-id:
+        description: The OAuth client-id used for Youtube.com API connections.
+        required: false
+      youtube-client-hash:
+        description: The hash value required to decrypt the Youtube.com client id.
+        required: false
+      yotube-client-secret:
+        description: The OAuth client secret used for Youtube.com API connections.
+        required: false
+      yotube-client-secret-hash:
+        description: The hash value required to decrypt the Youtube.com client secret.
+        required: false
 permissions:
   contents: read    # Necessary for repository checkouts.
 defaults:
@@ -50,6 +75,8 @@ jobs:
   macos:
     name: macOS (clang-analyze)
     runs-on: macos-26
+    env:
+      XCODE_VERSION: '26.6'
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -62,14 +89,14 @@ jobs:
         id: analyze
         uses: ./.github/actions/analyze-obs/run-clang-analyze
         env:
-          TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
-          TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
-          RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
-          RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
-          YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENTID }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
-          YOUTUBE_SECRET: ${{ secrets.YOUTUBE_SECRET }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_SECRET_HASH }}
+          RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
+          RESTREAM_HASH: ${{ secrets.restream-hash }}
+          TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
+          TWITCH_HASH: ${{ secrets.twitch-hash }}
+          YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
+          YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
         with:
           architecture: arm64
           config: Debug

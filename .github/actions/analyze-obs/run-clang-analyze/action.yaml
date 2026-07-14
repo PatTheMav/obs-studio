@@ -25,7 +25,7 @@ runs:
         config: Debug
         target: ${{ inputs.architecture }}
         codesign: false
-        xcode-version: '26.5'
+        xcode-version: ${{ env.XCODE_VERSION || '26.6' }}
 
     - name: Gather SARIF files
       if: runner.os == 'macOS'

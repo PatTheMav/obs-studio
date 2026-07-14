@@ -1,0 +1,27 @@
+name: Dispatch
+run-name: Dispatched - ${{ inputs.job }}
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Dispatch job to run
+        required: true
+        type: choice
+        options:
+          - codeql
+permissions:
+  contents: read    # Necessary for repository checkouts.
+jobs:
+  analyze-project:
+    name: Code Analysis
+    uses: ./.github/workflows/analyze-project.yaml
+    if: inputs.job == 'codeql'
+    secrets:
+      restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
+      restream-hash: ${{ secrets.RESTREAM_HASH }}
+      twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
+      twitch-hash: ${{ secrets.TWITCH_HASH }}
+      youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
+      youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+      yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
+      yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}

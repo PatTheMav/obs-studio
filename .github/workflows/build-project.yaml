@@ -99,6 +99,7 @@ jobs:
           contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name), true,
           false
         ) }}
+      XCODE_VERSION: '26.6'
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -176,7 +177,7 @@ jobs:
           codesign-ident: ${{ steps.codesign.outputs.identity || '' }}
           codesign-team: ${{ steps.codesign.outputs.team  || '' }}
           provisioning-profile-id: ${{ steps.codesign.outputs.profile-uuid  || '' }}
-          xcode-version: '26.5'
+          xcode-version: ${{ env.XCODE_VERSION || '26.6' }}
           xcode-cas-path: ${{ format('{0}/{1}', runner.temp, matrix.cache-dir) }}
 
       - name: Package OBS Studio

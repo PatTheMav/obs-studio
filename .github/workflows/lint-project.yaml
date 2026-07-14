@@ -16,7 +16,7 @@ env:
 jobs:
   clang-format:
     name: clang-format
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -41,7 +41,7 @@ jobs:
 
   swift-format:
     name: swift-format
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -66,7 +66,7 @@ jobs:
 
   gersemi:
     name: gersemi
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -91,7 +91,7 @@ jobs:
 
   zizmor:
     name: zizmor
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -116,7 +116,7 @@ jobs:
 
   flatpak-validator:
     name: flatpak-validator
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -139,7 +139,7 @@ jobs:
 
   qt-xml-validator:
     name: qt-xml-validator
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -164,7 +164,7 @@ jobs:
   compatibility-validator:
     name: Validate Compatibility
     if: github.base_ref == 'master' || github.ref_name == 'master'
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
     permissions:
       contents: read    # Necessary to keep workflow-level permission
       checks: write     # Necessary to produce annotations
@@ -196,7 +196,7 @@ jobs:
   services-validator:
     name: Validate Services
     if: github.base_ref == 'master' || github.ref_name == 'master'
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
     permissions:
       contents: read    # Necessary to keep workflow-level permission
       checks: write     # Necessary to produce annotations
