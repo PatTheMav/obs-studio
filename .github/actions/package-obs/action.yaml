@@ -72,7 +72,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         BUILD_CONFIG: ${{ inputs.config }}
-        BUILD_TARGET: ${{ inputs.target }}
+        BUILD_TARGET: ${{ case(inputs.target == 'x86_64', 'x64', inputs.target) }}
         BUILD_PACKAGE: ${{ inputs.package }}
         OUTPUT_NAME: ${{ inputs.output-name }}
         OUTPUT_PATH: ${{ inputs.path }}

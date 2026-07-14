@@ -93,7 +93,7 @@ runs:
       shell: pwsh -command ". '{0}'"
       env:
         BUILD_CONFIG: ${{ inputs.config }}
-        BUILD_TARGET: ${{ inputs.target }}
+        BUILD_TARGET: ${{ case(inputs.target == 'x86_64', 'x64', inputs.target) }}
         OUTPUT_PATH: ${{ inputs.path }}
       working-directory: ${{ inputs.working-directory }}
       run: . ${env:GITHUB_ACTION_PATH}/Build-Windows.ps1

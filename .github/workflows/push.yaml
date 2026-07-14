@@ -27,6 +27,8 @@ jobs:
   build-project:
     name: Build
     uses: ./.github/workflows/build-project.yaml
+    needs: lint-project
+    if: always()
     secrets:
       macos-signing-identity: ${{ secrets.MACOS_SIGNING_IDENTITY }}
       macos-signing-certificate: ${{ secrets.MACOS_SIGNING_CERT }}
@@ -46,6 +48,7 @@ jobs:
 
   update-documentation:
     name: Update Documentation
+    needs: build-project
     if: |-
       fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
       && contains(fromJSON('["master", "main"]'), github.ref_name)
