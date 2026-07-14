@@ -20,4 +20,4 @@ runs:
       env:
         SARIF_PATH: ${{ inputs.path }}
         OUTPUT_NAME: ${{ inputs.output-name }}
-      run: ${GITHUB_ACTION_PATH}//merge-sarif.bash
+      run: ${GITHUB_ACTION_PATH}/merge-sarif.bash
