@@ -9,7 +9,6 @@ inputs:
     required: true
   url:
     description: PVS-Studio download URL
-    required: false
     default: 'https://files.pvs-studio.com/PVS-Studio_setup.exe'
   user:
     description: PVS-Studio license user name

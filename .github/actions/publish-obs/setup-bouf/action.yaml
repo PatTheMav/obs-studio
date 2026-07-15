@@ -38,4 +38,4 @@ runs:
         BOUF_VERSION: ${{ inputs.version }}
         BOUF_CHECKSUM: ${{ inputs.checksum }}
         BOUF_NSIS_CHECKSUM: ${{ inputs.nsis-checksum }}
-      run: ${{ github.action_path }}/Setup-Bouf.ps1
+      run: . ${env.GITHUB_ACTION_PATH}/Setup-Bouf.ps1

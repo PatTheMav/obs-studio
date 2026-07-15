@@ -5,7 +5,7 @@ param()
 
 begin {
   if ($null -eq $env:CI) { throw }
-  if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+  if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 2 }
 
   $ErrorActionPreference = 'Stop'
 
@@ -40,7 +40,7 @@ process {
 
   $Result = Invoke-WebRequest @WebRequestArguments
 
-  if ($Result.StatusCode -ne 200) {
+  if (null -ne $Result -and $Result.StatusCode -ne 200) {
     Write-Output "::error::Unable to download PVS-Studio from '${PVSStudioURL}'."
     throw
   }
@@ -66,6 +66,8 @@ process {
 
   & $OutputPath @PVSSetupArguments
   Write-Output '::endgroup::'
+
+  Write-Output '::group::Activate PVS-Studio'
   $PVSStudioArguments = @(
     'credentials'
     '-u', $PVSStudioUsername
@@ -74,5 +76,5 @@ process {
 
   & "C:/Program Files (x86)/PVS-Studio/PVS-Studio_Cmd.exe" @PVSSetupArguments
 
-  Write-Output '::group::Activate PVS-Studio'
+  Write-Output '::endgroup::'
 }

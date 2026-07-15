@@ -34,42 +34,52 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  # windows:
-  #   name: Windows (PVS-Studio)
-  #   runs-on: windows-2025-vs2026
-  #   if: false && github.repository_owner == 'obsproject'
-  #   defaults:
-  #     run:
-  #       shell: pwsh -command ". '{0}'"
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-  #       with:
-  #         persist-credentials: false
-  #         submodules: recursive
-  #         fetch-depth: 0
+  windows:
+    name: Windows (PVS-Studio)
+    runs-on: windows-2025-vs2026
+    if: fromJSON(vars.ENABLE_PVS_STUDIO)
+    permissions:
+      contents: read          # Necessary for repository checkouts.
+      security-events: write  # Necessary to post CodeQL security scanning reports
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 1
 
-  #     - name: Set Up Environment
-  #       id: setup
-  #       uses: ./.github/actions/setup-environment
+      - name: Set Up Environment
+        id: setup
+        working-directory: ${{ format('{0}/pinned', github.workspace) }}
+        run: |
+          : Set Up Environment
+          if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-  #     - name: Setup PVS-Studio
-  #       id: pvs-setup
-  #       uses: ./.github/analyze-obs/setup-pvs-studio
-  #       with:
-  #         version: ${{ steps.setup.outputs.pvs-studio-version }}
-  #         checksum: ${{ steps.setup.outputs.pvs-studio-checksum }}
-  #         url: ${{ steps.setup.outputs.pvs-studio-url }}
-  #         user: ${{ secrets.PVS_NAME }}
-  #         license: ${{ secrets.PVS_KEY }}
+          jq -r '.configurePresets[]
+            | select(.name == "dependencies")
+            | .vendor["obsproject.com/obs-studio"].tools.pvs-studio
+            | to_entries
+            | map("\(.key)=\(.value|tostring)")
+            | .[]' "${PWD}/CMakePresets.json" >> "${GITHUB_OUTPUT}"
 
-  #     - name: Analyze OBS Studio
-  #       id: analyze
-  #       uses: ./.github/actions/analyze-obs/run-pvs-studio
-  #       with:
-  #         architecture: x64
-  #         config: Debug
-  #         upload-codeql: true
+      - name: Setup PVS-Studio
+        id: pvs-setup
+        uses: ./.github/analyze-obs/setup-pvs-studio
+        with:
+          version: ${{ steps.setup.outputs.version }}
+          checksum: ${{ steps.setup.outputs.hash }}
+          url: ${{ steps.setup.outputs.baseUrl }}
+          user: ${{ secrets.PVS_NAME }}
+          license: ${{ secrets.PVS_KEY }}
+
+      - name: Analyze OBS Studio
+        id: analyze
+        uses: ./.github/actions/analyze-obs/run-pvs-studio
+        with:
+          architecture: x64
+          config: Debug
+          upload-codeql: true
 
   macos:
     name: macOS (clang-analyze)

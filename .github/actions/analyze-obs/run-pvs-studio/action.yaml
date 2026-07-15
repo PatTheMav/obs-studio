@@ -4,13 +4,12 @@ inputs:
   architecture:
     description: Build architecture used for project build
     required: true
-  config:
-    description: Build configuration for project build
-    required: true
   upload-codeql:
     description: Enable automatic upload of SARIF report to CodeQL
-    required: false
     default: 'false'
+  github-token:
+    description: The GitHub token used to make authenticated API requests.
+    default: ${{ github.token }}
 runs:
   using: composite
   steps:
@@ -25,28 +24,18 @@ runs:
     - name: Build OBS Studio
       id: build
       uses: ./.github/actions/build-obs
-      env:
-        TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
-        TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
-        RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
-        RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
-        YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENTID }}
-        YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
-        YOUTUBE_SECRET: ${{ secrets.YOUTUBE_SECRET }}
-        YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_SECRET_HASH }}
       with:
-        config: ${{ inputs.config }}
+        config: Debug
         target: ${{ inputs.architecture }}
-        path: ${{ github.workspace }}
+        path: ${{ runner.temp }}
 
     - name: Invoke PVS-Studio
       id: analyze
       shell: pwsh -command ". '{0}'"
-      working-directory: ${{ inputs.workingDirectory }}
       env:
-        BUILD_SOLUTION: '${{ github.workspace }}/build_${{ inputs.architecture }}/obs-studio.sln?'
+        BUILD_SOLUTION: ${{ format('{0}/build_{1}/obs-studio-sln?', runner.temp, inputs.architecture) }}
         BUILD_ARCHITECTURE: ${{ inputs.architecture }}
-        BUILD_CONFIG: ${{ inputs.config }}
+        BUILD_CONFIG: Debug
       run: . ${env:GITHUB_ACTION_PATH}/Invoke-PVSStudio.ps1
 
     - name: Upload PVS-Studio Output
@@ -54,12 +43,12 @@ runs:
       with:
         name: 'pvs-analysis-log'
         path: |
-          ${{ runner.temp }}/analysis.plog
-          ${{ runner.temp }}/analysis.plog.sarif
+          ${{ format('{0}/analysis.plog', runner.temp) }}
+          ${{ format('{0}/analyis.plog.sarif', runner.temp) }}
 
     - name: Upload PVS-Studio CodeQL Report
       uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
       if: ${{ fromJSON(inputs.upload-codeql) }}
       with:
-        sarif_file: ${{ runner.temp }}/analysis.plog.sarif
+        sarif_file: ${{ format('{0}/analyis.plog.sarif', runner.temp) }}
         category: 'PVS-Studio (Windows)'
