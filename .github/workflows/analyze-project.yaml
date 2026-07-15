@@ -36,9 +36,6 @@ permissions: {}
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   windows:
     name: Windows (PVS-Studio)
