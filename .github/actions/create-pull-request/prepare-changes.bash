@@ -214,12 +214,7 @@ prepare-changes() {
     local base64_string
     base64_string="$(printf '%s' "x-access-token:${GH_TOKEN}" | base64)"
     echo "::add-mask::${base64_string}"
-    git config --local "http.https://${hostname}/.extraheader" "AUTHORIZATION: basic TEMP"
-
-    local git_output
-    git_output="$(git rev-parse --git-dir)"
-    sed -E -e "s/extraheader = AUTHORIZATION: basic TEMP/extrahader = AUTHORIZATION: basic ${base64_string}/g" \
-      >! "${git_output}/config"
+    git config --local "http.https://${hostname}/.extraheader" "AUTHORIZATION: basic ${base64_string}"
   fi
 
   local work_base_ref

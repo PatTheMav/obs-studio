@@ -12,67 +12,67 @@ defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
-  cache-cleanup:
-    name: Cache Cleanup
-    runs-on: ubuntu-26.04
-    permissions:
-      contents: read    # Necessary for repository checkouts.
-      actions: write    # Necessary to update and delete stale actions caches
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          submodules: recursive
-          fetch-depth: 1
+  # cache-cleanup:
+  #   name: Cache Cleanup
+  #   runs-on: ubuntu-26.04
+  #   permissions:
+  #     contents: read    # Necessary for repository checkouts.
+  #     actions: write    # Necessary to update and delete stale actions caches
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  #       with:
+  #         persist-credentials: false
+  #         submodules: recursive
+  #         fetch-depth: 1
 
-      - name: Remove Compilation Caches
-        uses: ./.github/actions/clean-cache
-        with:
-          name: '(macos|ubuntu-.*)-compilation-(x86_64|arm64)-.*'
-          ref: refs/heads/master
+  #     - name: Remove Compilation Caches
+  #       uses: ./.github/actions/clean-cache
+  #       with:
+  #         name: '(macos|ubuntu-.*)-compilation-(x86_64|arm64)-.*'
+  #         ref: refs/heads/master
 
-  build-project:
-    name: Build
-    uses: ./.github/workflows/build-project.yaml
-    needs: cache-cleanup
-    permissions:
-      contents: read          # Necessary for repository checkouts.
-    secrets:
-      macos-signing-identity: ${{ secrets.MACOS_SIGNING_IDENTITY }}
-      macos-signing-certificate: ${{ secrets.MACOS_SIGNING_CERT }}
-      macos-signing-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
-      macos-provisioning-profile: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
-      macos-notarization-user: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
-      macos-notarization-password: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
-      restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
-      restream-hash: ${{ secrets.RESTREAM_HASH }}
-      twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
-      twitch-hash: ${{ secrets.TWITCH_HASH }}
-      youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
-      youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
-      yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
-      yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
-      gpu-priority-val: ${{ secrets.GPU_PRIORITY_VAL }}
+  # build-project:
+  #   name: Build
+  #   uses: ./.github/workflows/build-project.yaml
+  #   needs: cache-cleanup
+  #   permissions:
+  #     contents: read          # Necessary for repository checkouts.
+  #   secrets:
+  #     macos-signing-identity: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+  #     macos-signing-certificate: ${{ secrets.MACOS_SIGNING_CERT }}
+  #     macos-signing-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+  #     macos-provisioning-profile: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
+  #     macos-notarization-user: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
+  #     macos-notarization-password: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+  #     restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
+  #     restream-hash: ${{ secrets.RESTREAM_HASH }}
+  #     twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
+  #     twitch-hash: ${{ secrets.TWITCH_HASH }}
+  #     youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
+  #     youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+  #     yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
+  #     yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
+  #     gpu-priority-val: ${{ secrets.GPU_PRIORITY_VAL }}
 
-  analyze-project:
-    name: Code Analysis
-    uses: ./.github/workflows/analyze-project.yaml
-    needs: cache-cleanup
-    permissions:
-      contents: read          # Necessary for repository checkouts.
-      security-events: write  # Necessary to post CodeQL security scanning reports
-    secrets:
-      restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
-      restream-hash: ${{ secrets.RESTREAM_HASH }}
-      twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
-      twitch-hash: ${{ secrets.TWITCH_HASH }}
-      youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
-      youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
-      yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
-      yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
-      pvs-license-name: ${{ secrets.PVS_LICENSE_NAME }}
-      pvs-license-key: ${{ secrets.PVS_LICENSE_KEY }}
+  # analyze-project:
+  #   name: Code Analysis
+  #   uses: ./.github/workflows/analyze-project.yaml
+  #   needs: cache-cleanup
+  #   permissions:
+  #     contents: read          # Necessary for repository checkouts.
+  #     security-events: write  # Necessary to post CodeQL security scanning reports
+  #   secrets:
+  #     restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
+  #     restream-hash: ${{ secrets.RESTREAM_HASH }}
+  #     twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
+  #     twitch-hash: ${{ secrets.TWITCH_HASH }}
+  #     youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
+  #     youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+  #     yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
+  #     yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
+  #     pvs-license-name: ${{ secrets.PVS_LICENSE_NAME }}
+  #     pvs-license-key: ${{ secrets.PVS_LICENSE_KEY }}
 
   services-availability:
     name: Check Service Availability
@@ -99,51 +99,51 @@ jobs:
           create-pull-request: true
           purge-age: ${{ vars.SERVICE_CHECK_PURGE_AGE }}
 
-  upload-language-files:
-    name: Upload Language Files
-    if: vars.ENABLE_L10N_UPDATE
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          submodules: recursive
-          fetch-depth: 0
+  # upload-language-files:
+  #   name: Upload Language Files
+  #   if: vars.ENABLE_L10N_UPDATE
+  #   runs-on: ubuntu-26.04
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  #       with:
+  #         persist-credentials: false
+  #         submodules: recursive
+  #         fetch-depth: 0
 
-      - name: Check Nightly Ref
-        id: ref-check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          : Check Nightly Ref
-          if [[ "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+  #     - name: Check Nightly Ref
+  #       id: ref-check
+  #       env:
+  #         GH_TOKEN: ${{ github.token }}
+  #       run: |
+  #         : Check Nightly Ref
+  #         if [[ "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-          declare gh_output
-          gh_output="$(gh run list --workflow schedule.yaml --limit 2 --json headSha --jq '.[1].headSha')"
+  #         declare gh_output
+  #         gh_output="$(gh run list --workflow schedule.yaml --limit 2 --json headSha --jq '.[1].headSha')"
 
-          {
-            if [[ "${GITHUB_SHA}" == "${gh_output}" ]]; then
-              echo "pass=false"
-            else
-              echo "pass=true"
-              echo "previous-sha=${gh_output}"
-            fi
-          } >> "${GITHUB_OUTPUT}"
+  #         {
+  #           if [[ "${GITHUB_SHA}" == "${gh_output}" ]]; then
+  #             echo "pass=false"
+  #           else
+  #             echo "pass=true"
+  #             echo "previous-sha=${gh_output}"
+  #           fi
+  #         } >> "${GITHUB_OUTPUT}"
 
-      - name: Check for Changed Files
-        if: fromJSON(steps.ref-check.outputs.pass)
-        uses: ./.github/actions/check-changes
-        id: checks
-        with:
-          base: ${{ steps.ref-check.outputs.previous-sha }}
-          pathspec: '**/en-US.ini'
+  #     - name: Check for Changed Files
+  #       if: fromJSON(steps.ref-check.outputs.pass)
+  #       uses: ./.github/actions/check-changes
+  #       id: checks
+  #       with:
+  #         base: ${{ steps.ref-check.outputs.previous-sha }}
+  #         pathspec: '**/en-US.ini'
 
-      - name: Upload US English Language Files
-        if: >-
-          fromJSON(steps.checks.outputs.has-changed-files)
-          && fromJSON(steps.ref-check.outputs.pass)
-        uses: obsproject/obs-crowdin-sync/upload@4b488c7ced03aa109d9f12529bd91c26c54b3e89
-        env:
-          CROWDIN_PAT: ${{ secrets.CROWDIN_SYNC_CROWDIN_PAT }}
-          GITHUB_EVENT_BEFORE: ${{ steps.ref-check.outputs.previous-sha }}
+  #     - name: Upload US English Language Files
+  #       if: >-
+  #         fromJSON(steps.checks.outputs.has-changed-files)
+  #         && fromJSON(steps.ref-check.outputs.pass)
+  #       uses: obsproject/obs-crowdin-sync/upload@4b488c7ced03aa109d9f12529bd91c26c54b3e89
+  #       env:
+  #         CROWDIN_PAT: ${{ secrets.CROWDIN_SYNC_CROWDIN_PAT }}
+  #         GITHUB_EVENT_BEFORE: ${{ steps.ref-check.outputs.previous-sha }}

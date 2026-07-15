@@ -43,52 +43,63 @@ runs:
         echo '::error::lint-obs/validate-services-data action requires a macOS-based or Linux-based runner.'
         exit 1
 
-    - name: Validate Services File JSON Schema
-      id: validate-services
-      if: fromJSON(inputs.run-schema-checks)
-      uses: ./.github/actions/lint-obs/validate-json-schema
-      with:
-        path: ${{ inputs.path }}
-        github-token: ${{ inputs.github-token }}
+    # - name: Validate Services File JSON Schema
+    #   id: validate-services
+    #   if: fromJSON(inputs.run-schema-checks)
+    #   uses: ./.github/actions/lint-obs/validate-json-schema
+    #   with:
+    #     path: ${{ inputs.path }}
+    #     github-token: ${{ inputs.github-token }}
 
-    - name: Restore Timestamp Cache
-      if: fromJSON(inputs.run-service-checks)
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-      with:
-        path: ${{ format('{0}/timestamps', runner.temp) }}
-        key: ${{ format('service-check-{0}', github.run_id) }}
-        restore-keys: service-check-
+    # - name: Restore Timestamp Cache
+    #   if: fromJSON(inputs.run-service-checks)
+    #   uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+    #   with:
+    #     path: ${{ format('{0}/timestamps', runner.temp) }}
+    #     key: ${{ format('service-check-{0}', github.run_id) }}
+    #     restore-keys: service-check-
 
-    - name: Install and Configure Python
+    # - name: Install and Configure Python
+    #   shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+    #   run: ${GITHUB_ACTION_PATH}/setup-action.bash
+
+    # - name: Check for defunct services
+    #   id: services-check
+    #   if: fromJSON(inputs.run-service-checks)
+    #   shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+    #   working-directory: ${{ inputs.working-directory }}
+    #   env:
+    #     API_KEY: ${{ inputs.api-token }}
+    #     API_SERVERS: ${{ inputs.api-servers }}
+    #     CACHE_DIR: ${{ format('{0}/timestamps', runner.temp) }}
+    #     GITHUB_TOKEN: ${{ inputs.github-token }}
+    #     REPOSITORY: ${{ github.repository }}
+    #     WORKFLOW_RUN_ID: ${{ github.run_id }}
+    #     PURGE_AGE: ${{ inputs.purge-age }}
+    #   run: |
+    #     : Check for defunct services
+    #     if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+    #     source "${RUNNER_TEMP}/services-validator-venv/bin/activate"
+    #     python3 -u "${GITHUB_ACTION_PATH}/check-services.py"
+
+    # - name: Upload Timestamp Cache
+    #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+    #   if: fromJSON(inputs.run-service-checks)
+    #   with:
+    #     name: timestamps
+    #     path: ${{ format('{0}/timestamps/*', runner.temp) }}
+
+    - name: DEBUG
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-      run: ${GITHUB_ACTION_PATH}/setup-action.bash
-
-    - name: Check for defunct services
       id: services-check
-      if: fromJSON(inputs.run-service-checks)
-      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-      working-directory: ${{ inputs.working-directory }}
-      env:
-        API_KEY: ${{ inputs.api-token }}
-        API_SERVERS: ${{ inputs.api-servers }}
-        CACHE_DIR: ${{ format('{0}/timestamps', runner.temp) }}
-        GITHUB_TOKEN: ${{ inputs.github-token }}
-        REPOSITORY: ${{ github.repository }}
-        WORKFLOW_RUN_ID: ${{ github.run_id }}
-        PURGE_AGE: ${{ inputs.purge-age }}
       run: |
-        : Check for defunct services
-        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
-
-        source "${RUNNER_TEMP}/services-validator-venv/bin/activate"
-        python3 -u "${GITHUB_ACTION_PATH}/check-services.py"
-
-    - name: Upload Timestamp Cache
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      if: fromJSON(inputs.run-service-checks)
-      with:
-        name: timestamps
-        path: ${{ format('{0}/timestamps/*', runner.temp) }}
+        echo "TEST" >> plugins/rtmp-services/data/package.json
+        echo "TEST-2" >> plugins/rtmp-services/data/services.json
+        {
+          echo "pr_message=TEST BODY"
+          echo "failures=5"
+        } >> "${GITHUB_OUTPUT}"
 
     - name: Create Pull Request
       uses: ./.github/actions/create-pull-request
