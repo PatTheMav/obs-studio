@@ -57,7 +57,6 @@ process {
   Write-Output '::group::Install PVS-Studio'
   $PVSSetupArguments = @(
     '/components="Core"'
-    '/verysilent'
     '/supressmsgboxes'
     '/norestart'
     '/nocloseapplications'
