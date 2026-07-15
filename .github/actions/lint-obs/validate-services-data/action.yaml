@@ -16,6 +16,9 @@ inputs:
   run-service-checks:
     description: A string value to indicate whether checks for defunct services should be run.
     default: 'false'
+  purge-age:
+    description: Duration in seconds after which a service with unresponsive servers is considered for removal.
+    default: '842400'
   create-pull-request:
     description: A string value to indicate whether a pull request with defunct services should be created.
     default: 'false'
@@ -72,6 +75,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         REPOSITORY: ${{ github.repository }}
         WORKFLOW_RUN_ID: ${{ github.run_id }}
+        PURGE_AGE: ${{ inputs.purge-age }}
       run: |
         : Check for defunct services
         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi

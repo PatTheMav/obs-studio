@@ -8,6 +8,8 @@ set -o pipefail
 : "${CI:?}"
 if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
+shopt -s extglob
+
 check-work-base() {
   if ! work_base_ref="$(git symbolic-ref --quiet --short HEAD)"; then
     if [[ -z "${BASE_REF}" ]]; then
@@ -27,7 +29,6 @@ create-pull-request() {
 
   # Target branch is either a new branch or deviates from existing target branch.
   # Force push the target branch to the remote.
-  shopt -s extglob
   if [[ "${OUTCOME}" == @(new|deviated) ]]; then
     git push --force-with-lease origin "${BRANCH}:refs/heads/${BRANCH}"
   fi

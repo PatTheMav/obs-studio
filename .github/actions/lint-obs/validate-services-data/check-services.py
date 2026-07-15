@@ -13,7 +13,7 @@ from io import BytesIO
 from typing import List, Dict
 from collections import defaultdict
 
-MINIMUM_PURGE_AGE = 9.75 * 24 * 60 * 60  # slightly less than 10 days
+MINIMUM_PURGE_AGE = int(os.environ.get("PURGE_AGE", "0")) or (9.75 * 24 * 60 * 60)  # slightly less than 10 days
 TIMEOUT = 10
 SKIPPED_SERVICES = {"SHOWROOM", "Dacast"}
 SERVICES_FILE = "plugins/rtmp-services/data/services.json"
@@ -215,7 +215,7 @@ async def process_services(session: aiohttp.ClientSession, check_servers: List[s
         else:
             logging.info("Fetched cache file from last run artifact.")
     else:
-        logging.info("Successfully loaded cache file:", CACHE_FILE)
+        logging.info(f"Successfully loaded cache file: {CACHE_FILE}")
 
     start_time = int(time.time())
     affected_services = dict()
@@ -319,7 +319,7 @@ async def process_services(session: aiohttp.ClientSession, check_servers: List[s
         logging.error(f"Could not write cache file: {e}")
         return 1
     else:
-        logging.info("Successfully wrote cache file:", CACHE_FILE)
+        logging.info(f"Successfully wrote cache file: {CACHE_FILE}")
 
     if removed_servers:
         # increment package version and save that as well

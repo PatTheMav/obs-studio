@@ -43,12 +43,12 @@ runs:
       with:
         name: 'pvs-analysis-log'
         path: |
-          ${{ format('{0}/analysis.plog', runner.temp) }}
-          ${{ format('{0}/analyis.plog.sarif', runner.temp) }}
+          ${{ format('{0}/pvs-analysis.plog', runner.temp) }}
+          ${{ format('{0}/pvs-analysis.plog.sarif', runner.temp) }}
 
     - name: Upload PVS-Studio CodeQL Report
       uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
       if: ${{ fromJSON(inputs.upload-codeql) }}
       with:
-        sarif_file: ${{ format('{0}/analyis.plog.sarif', runner.temp) }}
+        sarif_file: ${{ format('{0}/pvs-analysis.plog.sarif', runner.temp) }}
         category: 'PVS-Studio (Windows)'

@@ -8,6 +8,9 @@ permissions: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+defaults:
+  run:
+    shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
   cache-cleanup:
     name: Cache Cleanup
@@ -26,7 +29,7 @@ jobs:
       - name: Remove Compilation Caches
         uses: ./.github/actions/clean-cache
         with:
-          name: '*-compilation-*'
+          name: '(macos|ubuntu-.*)-compilation-(x86_64|arm64)-.*'
           ref: refs/heads/master
 
   build-project:
@@ -80,7 +83,8 @@ jobs:
       checks: write           # Necessary to create error annotations
       pull-requests: write    # Necessary to create pull requests
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -93,3 +97,53 @@ jobs:
           run-schema-checks: false
           run-service-checks: true
           create-pull-request: true
+          purge-age: ${{ vars.SERVICE_CHECK_PURGE_AGE }}
+
+  upload-language-files:
+    name: Upload Language Files
+    if: vars.ENABLE_L10N_UPDATE
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Check Nightly Ref
+        id: ref-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          : Check Nightly Ref
+          if [[ "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+          declare gh_output
+          gh_output="$(gh run list --workflow schedule.yaml --limit 2 --json headSha --jq '.[1].headSha')"
+
+          {
+            if [[ "${GITHUB_SHA}" == "${gh_output}" ]]; then
+              echo "pass=false"
+            else
+              echo "pass=true"
+              echo "previous-sha=${gh_output}"
+            fi
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Check for Changed Files
+        if: fromJSON(steps.ref-check.outputs.pass)
+        uses: ./.github/actions/check-changes
+        id: checks
+        with:
+          base: ${{ steps.ref-check.outputs.previous-sha }}
+          pathspec: '**/en-US.ini'
+
+      - name: Upload US English Language Files
+        if: >-
+          fromJSON(steps.checks.outputs.has-changed-files)
+          && fromJSON(steps.ref-check.outputs.pass)
+        uses: obsproject/obs-crowdin-sync/upload@4b488c7ced03aa109d9f12529bd91c26c54b3e89
+        env:
+          CROWDIN_PAT: ${{ secrets.CROWDIN_SYNC_CROWDIN_PAT }}
+          GITHUB_EVENT_BEFORE: ${{ steps.ref-check.outputs.previous-sha }}

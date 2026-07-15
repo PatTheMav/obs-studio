@@ -26,8 +26,8 @@ clean-caches() {
 
   while IFS="|" read -r _ cache_key cache_ref; do
     if [[ -n "${cache_key}" ]]; then
-      if result=gh api -x DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${cache_key}" \
-        --jq '.total_count' 2>/dev/null; then
+      if result="$(gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${cache_key}" \
+        --jq '.total_count' 2>/dev/null)"; then
         echo "Deleted cache entry '${cache_key}' for git ref '${cache_ref}'."
 
         deleted_amount=$(( deleted_amount + result ))

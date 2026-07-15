@@ -36,7 +36,7 @@ process {
     '--disableLicenseExpirationCheck'
     '--platform', $env:BUILD_ARCHITECTURE
     '--configuration', $env:BUILD_CONFIG
-    '--target', $env:BUILD_SOLUTION
+    '--target', $(Get-Item $env:BUILD_SOLUTION).FullName
     '--output', "${env:RUNNER_TEMP}\pvs-analysis.plog"
     '--rulesConfig', "${env:GITHUB_ACTION_PATH}\obs.pvsconfig"
   )

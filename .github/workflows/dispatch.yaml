@@ -14,6 +14,9 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+defaults:
+  run:
+    shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
   analyze-project:
     name: Code Analysis
