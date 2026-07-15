@@ -1,4 +1,4 @@
-name: Sign Windows Project
+name: Code Sign Windows
 on:
   workflow_call:
     secrets:

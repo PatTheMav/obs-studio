@@ -26,8 +26,8 @@ jobs:
       - name: Remove Compilation Caches
         uses: ./.github/actions/clean-cache
         with:
-          name: '.*-compilation-*'
-          ref: /refs/heads/master
+          name: '*-compilation-*'
+          ref: refs/heads/master
 
   build-project:
     name: Build
@@ -70,3 +70,26 @@ jobs:
       yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
       pvs-license-name: ${{ secrets.PVS_LICENSE_NAME }}
       pvs-license-key: ${{ secrets.PVS_LICENSE_KEY }}
+
+  services-availability:
+    name: Check Service Availability
+    if: vars.ENABLE_SERVICE_CHECKS
+    runs-on: macos-26
+    permissions:
+      contents: write         # Necessary to push commits to repository
+      checks: write           # Necessary to create error annotations
+      pull-requests: write    # Necessary to create pull requests
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Check Services
+        uses: ./.github/actions/lint-obs/validate-services-data
+        with:
+          api-token: ${{ secrets.SERVICE_CHECK_API_KEY }}
+          api-servers: ${{ secrets.SERVICE_CHECK_SERVERS }}
+          run-schema-checks: false
+          run-service-checks: true
+          create-pull-request: true

@@ -1,4 +1,4 @@
-name: Run Code And Format Linters
+name: Code Format Check
 on:
   workflow_call:
 permissions:
