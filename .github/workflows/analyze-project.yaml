@@ -83,7 +83,6 @@ jobs:
         uses: ./.github/actions/analyze-obs/run-pvs-studio
         with:
           architecture: x64
-          config: Debug
           upload-codeql: true
 
   macos:

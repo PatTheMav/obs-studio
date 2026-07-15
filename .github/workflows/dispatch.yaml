@@ -11,6 +11,9 @@ on:
           - codeql
 permissions:
   contents: read    # Necessary for repository checkouts.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   analyze-project:
     name: Code Analysis

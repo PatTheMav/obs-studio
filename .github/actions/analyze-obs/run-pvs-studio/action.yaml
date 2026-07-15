@@ -33,7 +33,7 @@ runs:
       id: analyze
       shell: pwsh -command ". '{0}'"
       env:
-        BUILD_SOLUTION: ${{ format('{0}/build_{1}/obs-studio-sln?', runner.temp, inputs.architecture) }}
+        BUILD_SOLUTION: ${{ format('{0}/build_{1}/obs-studio.sln?', runner.temp, inputs.architecture) }}
         BUILD_ARCHITECTURE: ${{ inputs.architecture }}
         BUILD_CONFIG: Debug
       run: . ${env:GITHUB_ACTION_PATH}/Invoke-PVSStudio.ps1
