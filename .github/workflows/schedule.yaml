@@ -1,0 +1,72 @@
+name: Schedule
+run-name: Scheduled Repository Actions
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: 17 0 * * *
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cache-cleanup:
+    name: Cache Cleanup
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read    # Necessary for repository checkouts.
+      actions: write    # Necessary to update and delete stale actions caches
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Remove Compilation Caches
+        uses: ./.github/actions/clean-cache
+        with:
+          name: '.*-compilation-*'
+          ref: /refs/heads/master
+
+  build-project:
+    name: Build
+    uses: ./.github/workflows/build-project.yaml
+    needs: cache-cleanup
+    permissions:
+      contents: read          # Necessary for repository checkouts.
+    secrets:
+      macos-signing-identity: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      macos-signing-certificate: ${{ secrets.MACOS_SIGNING_CERT }}
+      macos-signing-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+      macos-provisioning-profile: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
+      macos-notarization-user: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
+      macos-notarization-password: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+      restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
+      restream-hash: ${{ secrets.RESTREAM_HASH }}
+      twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
+      twitch-hash: ${{ secrets.TWITCH_HASH }}
+      youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
+      youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+      yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
+      yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
+      gpu-priority-val: ${{ secrets.GPU_PRIORITY_VAL }}
+
+  analyze-project:
+    name: Code Analysis
+    uses: ./.github/workflows/analyze-project.yaml
+    needs: cache-cleanup
+    permissions:
+      contents: read          # Necessary for repository checkouts.
+      security-events: write  # Necessary to post CodeQL security scanning reports
+    secrets:
+      restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
+      restream-hash: ${{ secrets.RESTREAM_HASH }}
+      twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
+      twitch-hash: ${{ secrets.TWITCH_HASH }}
+      youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
+      youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
+      yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
+      yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
+      pvs-license-name: ${{ secrets.PVS_LICENSE_NAME }}
+      pvs-license-key: ${{ secrets.PVS_LICENSE_KEY }}
