@@ -1,0 +1,27 @@
+name: Clean Cache
+description: Cleans GitHub Actions cache entries for specified git refs and names
+inputs:
+  ref:
+    description: Specific git reference of caches to clean
+    default: 'refs/heads/master'
+  name:
+    description: Specific name or name pattern for caches to clean
+    required: true
+  github-token:
+    description: The GitHub token used to make authenticated API requests.
+    default: ${{ github.token }}
+outputs:
+  caches-cleaned:
+    description: A boolean value indicating whether any caches have been cleaned.
+    value: ${{ steps.clean.outputs.cleaned }}
+runs:
+  using: composite
+  steps:
+    - name: Clean Cache
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      id: clean
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GIT_REF: ${{ inputs.ref }}
+        CACHE_NAME: ${{ inputs.name }}
+      run: ${GITHUB_ACTION_PATH}/clean-caches.bash
