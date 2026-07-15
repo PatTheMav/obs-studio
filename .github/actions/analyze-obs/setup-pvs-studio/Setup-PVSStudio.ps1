@@ -22,8 +22,8 @@ begin {
 
   $UrlRegex = '^https:\/\/files.pvs-studio.com/PVS-Studio_setup.exe$'
 
-  if (!(PVSStudioURL -match $UrlRegex)) {
-    Write-Output "::error:Invalid PVS-Studio download url: '${PVSStudioURL}'."
+  if (!($PVSStudioURL -match $UrlRegex)) {
+    Write-Output "::error::Invalid PVS-Studio download url: '${PVSStudioURL}'."
     throw
   }
 
@@ -40,7 +40,7 @@ process {
 
   $Result = Invoke-WebRequest @WebRequestArguments
 
-  if (null -ne $Result -and $Result.StatusCode -ne 200) {
+  if ($null -ne $Result -and $Result.StatusCode -ne 200) {
     Write-Output "::error::Unable to download PVS-Studio from '${PVSStudioURL}'."
     throw
   }
@@ -48,7 +48,7 @@ process {
   $Checksum = (Get-FileHash -Path $OutputPath -Algorithm SHA256).Hash.ToLower()
   $File = $OutputPath | Get-Item
 
-  if ($Checksum -ne $PVSStudioChecksum {
+  if ($Checksum -ne $PVSStudioChecksum) {
     Write-Output "::error::$($File.Name) checksum mismatch: ${Checksum} (expected: ${PVSStudioChecksum})."
     throw
   }
@@ -70,11 +70,11 @@ process {
   Write-Output '::group::Activate PVS-Studio'
   $PVSStudioArguments = @(
     'credentials'
-    '-u', $PVSStudioUsername
-    '-n', $PVSStudioLicense
+    '--userName', $PVSStudioUsername
+    '--licenseKey', $PVSStudioLicense
   )
 
-  & "C:/Program Files (x86)/PVS-Studio/PVS-Studio_Cmd.exe" @PVSSetupArguments
+  & "C:/Program Files (x86)/PVS-Studio/PVS-Studio_Cmd.exe" @PVSStudioArguments
 
   Write-Output '::endgroup::'
 }

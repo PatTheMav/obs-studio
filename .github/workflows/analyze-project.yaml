@@ -51,21 +51,20 @@ jobs:
 
       - name: Set Up Environment
         id: setup
-        working-directory: ${{ format('{0}/pinned', github.workspace) }}
         run: |
           : Set Up Environment
           if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
           jq -r '.configurePresets[]
             | select(.name == "dependencies")
-            | .vendor["obsproject.com/obs-studio"].tools.pvs-studio
+            | .vendor["obsproject.com/obs-studio"].tools.["pvs-studio"]
             | to_entries
             | map("\(.key)=\(.value|tostring)")
             | .[]' "${PWD}/CMakePresets.json" >> "${GITHUB_OUTPUT}"
 
       - name: Setup PVS-Studio
         id: pvs-setup
-        uses: ./.github/analyze-obs/setup-pvs-studio
+        uses: ./.github/actions/analyze-obs/setup-pvs-studio
         with:
           version: ${{ steps.setup.outputs.version }}
           checksum: ${{ steps.setup.outputs.hash }}

@@ -51,8 +51,10 @@ select-git-ref() {
         # Use the SHA of the most recent commit on ref before the current
         # push to compare against.
         if [[ "${GITHUB_EVENT_FORCED:-false}" != 'true' ]]; then
-          echo "Force push detected. Using ref before current one '${GITHUB_REF_BEFORE}'."
+          echo "Normal push detected. Using most recent ref before current push '${GITHUB_REF_BEFORE}'."
           GIT_BASE_REF="${GITHUB_REF_BEFORE}"
+        else
+          echo "Force push detected. Using ref before current one 'HEAD~1'."
         fi
         ;;
       *) ;;
