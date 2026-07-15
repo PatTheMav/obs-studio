@@ -12,8 +12,7 @@ check-git-remote() {
   local remote_url
   remote_url="$(git config --local --get 'remote.origin.url')"
 
-  local -a BASH_REMATCH
-  local https_pattern='^https:\/\/([^\/]+)\/([^\/]+)\/(.+)\.git$'
+  local https_pattern='^https:\/\/([^\/]+)\/([^\/]+)\/(.+(\.git)?)$'
   if [[ "${remote_url}" =~ ${https_pattern} ]]; then
     hostname="${BASH_REMATCH[1]}"
     repository="${BASH_REMATCH[2]}/${BASH_REMATCH[3]}"
@@ -213,9 +212,14 @@ prepare-changes() {
 
   if [[ "${protocol}" == 'https' ]]; then
     local base64_string
-    base64_string="$(base64 <<< "x-access-token:${GH_TOKEN}")"
+    base64_string="$(printf '%s' "x-access-token:${GH_TOKEN}" | base64)"
     echo "::add-mask::${base64_string}"
-    git config --local "http.https://${hostname}/.extraheader" "AUTHORIZATION: basic ${base64_string}"
+    git config --local "http.https://${hostname}/.extraheader" "AUTHORIZATION: basic TEMP"
+
+    local git_output
+    git_output="$(git rev-parse --git-dir)"
+    sed -E -e "s/extraheader = AUTHORIZATION: basic TEMP/extrahader = AUTHORIZATION: basic ${base64_string}/g" \
+      >! "${git_output}/config"
   fi
 
   local work_base_ref
