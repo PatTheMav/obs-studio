@@ -57,13 +57,14 @@ process {
   Write-Output '::group::Install PVS-Studio'
   $PVSSetupArguments = @(
     '/components="Core"'
+    '/silent'
     '/supressmsgboxes'
     '/norestart'
     '/nocloseapplications'
     '/skipNetFrameworkInstallation'
   )
 
-  & $OutputPath @PVSSetupArguments
+  & $OutputPath @PVSSetupArguments | Out-Default
   Write-Output '::endgroup::'
 
   Write-Output '::group::Activate PVS-Studio'

@@ -28,3 +28,5 @@ jobs:
       youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
       yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
       yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
+      pvs-license-name: ${{ secrets.PVS_LICENSE_NAME }}
+      pvs-license-key: ${{ secrets.PVS_LICENSE_KEY }}

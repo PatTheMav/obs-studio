@@ -26,6 +26,12 @@ on:
       yotube-client-secret-hash:
         description: The hash value required to decrypt the Youtube.com client secret.
         required: false
+      pvs-license-name:
+        description: PVS license holder name
+        required: false
+      pvs-license-key:
+        description: PVS license key name
+        required: false
 permissions: {}
 defaults:
   run:
@@ -69,8 +75,8 @@ jobs:
           version: ${{ steps.setup.outputs.version }}
           checksum: ${{ steps.setup.outputs.hash }}
           url: ${{ steps.setup.outputs.baseUrl }}
-          user: ${{ secrets.PVS_NAME }}
-          license: ${{ secrets.PVS_KEY }}
+          user: ${{ secrets.pvs-license-name }}
+          license: ${{ secrets.pvs-license-key }}
 
       - name: Analyze OBS Studio
         id: analyze
