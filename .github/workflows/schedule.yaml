@@ -78,6 +78,7 @@ jobs:
     name: Check Service Availability
     if: vars.ENABLE_SERVICE_CHECKS
     runs-on: macos-26
+    environment: nightly
     permissions:
       contents: write         # Necessary to push commits to repository
       checks: write           # Necessary to create error annotations
