@@ -37,33 +37,47 @@ create-pull-request() {
 
   # PR branch actually deviates from target branch, pull request should be created.
   if [[ "${DEVIATED:-false}" == 'true' ]]; then
-    local pull_request_url
-    if ! pull_request_url="$(gh pr create \
-      --base "${base_ref}" \
-      --head "${BRANCH}" \
-      --title "${TITLE}" \
-      --body "${BODY}" &> /dev/null)"; then
+    local pull_request_url=''
 
-      # Pull request creation failed, check if pull request for the current author,
-      # source branch, and target branch already exists.
-      if pull_request_url="$(gh pr list \
+    pull_request_url="$(gh pr list \
         --base "${base_ref}" \
         --head "${BRANCH}" \
         --limit 1 \
-        --json url --jq '.[].url')"; then
-          # Existing pull request found, update content.
-          gh pr edit "${pull_request_url##*\/}" \
-            --base "${base_ref}" \
-            --title "${TITLE}" \
-            --body "${BODY}" &> /dev/null
+        --json url --jq '.[].url')"
 
-          pull_request_result='updated'
+    if [[ -n "${pull_request_url}" ]]; then
+      # Existing pull request found, update content.
+      gh pr edit "${pull_request_url##*\/}" \
+        --base "${base_ref}" \
+        --title "${TITLE}" \
+        --body "${BODY}"
+
+      pull_request_result='updated'
+    else
+      # No existing pull request found, create new one.
+      local -i failed=0
+
+      if ! gh pr create \
+      --base "${base_ref}" \
+      --head "${BRANCH}" \
+      --title "${TITLE}" \
+      --body "${BODY}"; then
+        failed=1
+      fi
+
+      if (( ! failed )); then
+        # Pull request creation suceeded, get pull request URL.
+        pull_request_url="$(gh pr list \
+        --base "${base_ref}" \
+        --head "${BRANCH}" \
+        --limit 1 \
+        --json url --jq '.[].url')"
+
+        pull_request_result='created'
       else
         echo '::error::Unable to create or edit pull request.'
         return 1
       fi
-    else
-      pull_request_result='created'
     fi
 
     {

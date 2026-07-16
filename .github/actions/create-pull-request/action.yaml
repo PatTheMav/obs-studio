@@ -49,7 +49,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       id: prepare
       env:
-        GH_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         BASE_REF: ${{ inputs.base-ref }}
         BRANCH: ${{ inputs.branch }}
         AUTHOR: ${{ inputs.author }}
@@ -62,7 +62,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       id: create
       env:
-        GH_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         OUTCOME: ${{ steps.prepare.outputs.outcome }}
         BASE_REF_SHA: ${{ steps.prepare.outputs.base-ref-sha }}
         HEAD_REF_SHA: ${{ steps.prepare.outputs.head-ref-sha }}
