@@ -49,7 +49,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       id: prepare
       env:
-        GH_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         BASE_REF: ${{ inputs.base-ref }}
         BRANCH: ${{ inputs.branch }}
         AUTHOR: ${{ inputs.author }}
@@ -57,12 +57,17 @@ runs:
         COMMIT_MESSAGE: ${{ inputs.commit-message   }}
       run: ${GITHUB_ACTION_PATH}/prepare-changes.bash
 
+    # - name: Setup upterm session
+    #   uses: owenthereal/action-upterm@47652056242288ccbebd30f836e9885d09a75365
+    #   with:
+    #     limit-access-to-actor: true # Restrict to the user who triggered the workflow
+
     - name: Create Pull Request
       shell: bash --noprofile --norc -eo pipefail {0}
       working-directory: ${{ inputs.working-directory }}
       id: create
       env:
-        GH_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.github-token }}
         OUTCOME: ${{ steps.prepare.outputs.outcome }}
         BASE_REF_SHA: ${{ steps.prepare.outputs.base-ref-sha }}
         HEAD_REF_SHA: ${{ steps.prepare.outputs.head-ref-sha }}
