@@ -26,7 +26,7 @@ jobs:
 
   build-project:
     name: Build
-    if: ${{ !cancelled() }}
+    if: ${{ ! cancelled() }}
     needs: lint-project
     uses: ./.github/workflows/build-project.yaml
     secrets: inherit            # zizmor: ignore[secrets-inherit]
@@ -37,8 +37,11 @@ jobs:
     name: Update Documentation
     runs-on: ubuntu-26.04
     if: >-
-      fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
-      && contains(fromJSON('["master", "main"]'), github.ref_name)
+      ${{
+        ! cancelled()
+        && fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
+        && contains(fromJSON('["master", "main"]'), github.ref_name)
+      }}
     needs: build-project
     outputs:
       artifact-name: ${{ steps.generate.outputs.artifact-name }}

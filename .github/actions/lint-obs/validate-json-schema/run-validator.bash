@@ -14,7 +14,7 @@ run-validator() {
   local -a json_files=()
 
   local output
-  if ! output="$(jq --raw-output '.[]' <<< "${JSON_FILES}")"; then
+  if ! output="$(jq --raw-output '.[]' 2> /dev/null <<< "${JSON_FILES}")"; then
     output="$(compgen -G "${JSON_FILES}")"
   fi
 

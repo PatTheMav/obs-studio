@@ -92,6 +92,7 @@ jobs:
           matrix.name == 'macos'
           && fromJSON(vars.ENABLE_MACOS_NOTARIZATION || 'false')
           && github.event_name == 'push'
+          && github.ref_type == 'tag'
         }}
       ENABLE_PACKAGING: >-
         ${{ case(

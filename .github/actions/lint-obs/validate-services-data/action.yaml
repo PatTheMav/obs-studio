@@ -101,6 +101,6 @@ runs:
         branch: 'automated/clean-services'
         commit-message: 'rtmp-services: Remove defunct servers/services'
         title: 'rtmp-services: Remove defunct servers/services'
-        body: ${{ steps.services-check.outputs.pr_message }}
+        body: ${{ fromJSON(steps.services-check.outputs.pr_message) }}
         delete-unused: true
         github-token: ${{ inputs.github-token }}

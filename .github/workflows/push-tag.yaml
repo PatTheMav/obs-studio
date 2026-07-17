@@ -52,9 +52,7 @@ jobs:
   deploy-documentation:
     name: Deploy Documentation To Cloudflare
     runs-on: ubuntu-slim
-    if: >-
-      fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
-      && vars.CF_PAGES_PROJECT != ''
+    if: fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
     needs: update-documentation
     environment:
       name: cf-pages-deploy

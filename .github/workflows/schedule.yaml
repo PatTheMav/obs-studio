@@ -72,6 +72,7 @@ jobs:
       - name: Check Services
         uses: ./.github/actions/lint-obs/validate-services-data
         with:
+          path: 'plugins/rtmp-services/data/*.json'
           api-token: ${{ secrets.SERVICE_CHECK_API_KEY }}
           api-servers: ${{ secrets.SERVICE_CHECK_SERVERS }}
           run-schema-checks: false
