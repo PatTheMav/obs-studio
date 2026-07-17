@@ -30,7 +30,7 @@ setup-keychain() {
     print '::group::Keychain setup'
     local keychain_password
     keychain_password="$(print ${RANDOM} | shasum | head --bytes=32)"
-    print "::addmask::${keychain_password}"
+    print "::add-mask::${keychain_password}"
 
     security create-keychain -p ${keychain_password} ${keychain_path}
     security set-keychain-settings -lut 21600 ${keychain_path}
@@ -55,8 +55,8 @@ setup-keychain() {
       login-keychain
     print '::endgroup::'
 
-    local team_id="${${CODESIGN_IDENT##*\(}%%\)*}"
-    print "::addmask::${team_id}"
+    local team_id="${${SIGNING_IDENTITY##*\(}%%\)*}"
+    print "::add-mask::${team_id}"
 
     {
       print 'have-codesign-ident=true'

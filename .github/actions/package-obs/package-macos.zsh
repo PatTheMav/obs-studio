@@ -69,10 +69,10 @@ codesign-disk-image() {
 
 notarize-disk-image() {
   if [[ "${BUILD_CODESIGNING:-false}" == 'true' && "${BUILD_NOTARIZE:-false}" == 'true' ]] {
-    if ! [[ "${CODESIGN_IDENT}" != '-' && \
+    if ! [[ "${CODESIGN_IDENT:--}" != '-' && \
          -n "${CODESIGN_TEAM}" && \
-         -n "${CODESIGN_IDENT_USER}" && \
-         -n "${CODESIGN_IDENT_PASS}" ]] \
+         -n "${NOTARIZATION_USER}" && \
+         -n "${NOTARIZATION_PASS}" ]] \
     {
       print '::error::Notarization requires Apple ID and application password.'
       return 1
@@ -82,12 +82,12 @@ notarize-disk-image() {
 
     local storage_identifier
     storage_identifier="$(print -- "${RANDOM}" | shasum | head --bytes=32)"
-    print "::addmask::${storage_identifier}"
+    print "::add-mask::${storage_identifier}"
 
     xcrun notarytool store-credentials ${storage_identifier} \
-      --apple-id ${CODESIGN_IDENT_USER} \
+      --apple-id ${NOTARIZATION_USER} \
       --team-id ${CODESIGN_TEAM} \
-      --password ${CODESIGN_IDENT_PASS}
+      --password ${NOTARIZATION_PASS}
 
     xcrun notarytool submit ${disk_image} --keychain-profile ${storage_identifier} --wait
 

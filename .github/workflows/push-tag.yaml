@@ -6,11 +6,11 @@ on:
       - '**.md'
     tags:
       - '*'
-permissions:
-  contents: read    # Necessary for repository checkouts.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+permissions:
+  contents: read                # Necessary for repository checkouts.
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
@@ -18,15 +18,15 @@ jobs:
   build-project:
     name: Build
     uses: ./.github/workflows/build-project.yaml
+    secrets: inherit            # zizmor: ignore[secrets-inherit]
     with:
       environment: build
-    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   update-documentation:
     name: Update Documentation
-    needs: build-project
-    if: fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
     runs-on: ubuntu-slim
+    if: fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
+    needs: build-project
     outputs:
       artifact-name: ${{ steps.generate.outputs.artifact-name }}
     steps:
@@ -37,30 +37,31 @@ jobs:
           fetch-depth: 0
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           base: ${{ github.event.before }}
           pathspec: ':!cmake* :!*CMakeLists.txt'
 
       - name: Generate Documentation
-        uses: ./.github/actions/generate-docs
         id: generate
+        uses: ./.github/actions/generate-docs
         with:
           disable-link-extensions: true
 
   deploy-documentation:
     name: Deploy Documentation To Cloudflare
+    runs-on: ubuntu-slim
     if: >-
       fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
       && vars.CF_PAGES_PROJECT != ''
-    runs-on: ubuntu-slim
     needs: update-documentation
     environment:
       name: cf-pages-deploy
       deployment: false
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - name: Download Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ needs.update-documentation.outputs.artifact-name }}
           path: docs
@@ -89,15 +90,15 @@ jobs:
 
   sign-windows-build:
     name: Windows Signing
-    uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@a4a11c3dcdd7f479c8c4d1eb6ed8991fbc54dc6d
     if: ${{ fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false') }}
     needs: build-project
+    uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@a4a11c3dcdd7f479c8c4d1eb6ed8991fbc54dc6d
+    secrets: inherit            # zizmor: ignore[secrets-inherit]
     permissions:
-      contents: read        # Necessary to keep workflow base permissions.
-      attestations: write   # Necessary to generate an attestation for the code signed build.
+      contents: read            # Necessary to keep workflow base permissions.
+      attestations: write       # Necessary to generate an attestation for the code signed build.
     with:
       environment: windows-signing
-    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   create-release:
     name: Create Release

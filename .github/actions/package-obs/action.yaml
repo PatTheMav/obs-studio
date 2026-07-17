@@ -19,15 +19,18 @@ inputs:
   codesign-ident:
     description: Developer ID for application codesigning (macOS only)
     default: '-'
-  codesign-user:
-    description: Apple ID username for notarization (macOS only)
-    default: ''
-  codesign-pass:
-    description: Apple ID password for notarization (macOS only)
+  codesign-team:
+    description: Developer team ID for application codesigning (macOS only)
     default: ''
   notarize:
     description: Enable notarization (macOS only)
     default: 'false'
+  notarization-user:
+    description: Apple ID username for notarization (macOS only)
+    default: ''
+  notarization-password:
+    description: Apple ID password for notarization (macOS only)
+    default: ''
   path:
     description: Source for intermediary build artifacts and destination of packages.
     default: ${{ runner.temp }}
@@ -48,9 +51,10 @@ runs:
         OUTPUT_NAME: ${{ inputs.output-name }}
         BUILD_CODESIGNING: ${{ inputs.codesign }}
         CODESIGN_IDENT: ${{ inputs.codesign-ident }}
-        CODESIGN_IDENT_USER: ${{ inputs.codesign-user }}
-        CODESIGN_IDENT_PASS: ${{ inputs.codesign-pass }}
+        CODESIGN_TEAM: ${{ inputs.codesign-team }}
         BUILD_NOTARIZE: ${{ inputs.notarize }}
+        NOTARIZATION_USER: ${{ inputs.notarization-user }}
+        NOTARIZATION_PASS: ${{ inputs.notarization-password }}
         OUTPUT_PATH: ${{ inputs.path }}
       run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/package-macos.zsh
 

@@ -2,7 +2,7 @@ name: Code Format Check
 on:
   workflow_call:
 permissions:
-  contents: read    # Necessary for repository checkouts.
+  contents: read                # Necessary for repository checkouts.
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
@@ -25,8 +25,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           filter: 'ACM'
           pathspec: '*.c *.h *.cpp *.hpp *.m *.mm'
@@ -50,8 +50,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           filter: 'ACM'
           pathspec: '*.swift'
@@ -75,8 +75,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           pathspec: '*.cmake *CMakeLists.txt'
           filter: 'ACM'
@@ -100,8 +100,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           pathspec: '.github/**/*.yaml .github/**/*.yml'
           filter: 'ACM'
@@ -125,8 +125,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           pathspec: 'build-aux/com.obsproject.Studio.json'
           filter: 'ACM'
@@ -148,8 +148,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           pathspec: 'frontend/forms/*.ui'
 
@@ -166,8 +166,8 @@ jobs:
     if: github.base_ref == 'master' || github.ref_name == 'master'
     runs-on: ubuntu-26.04
     permissions:
-      contents: read    # Necessary to keep workflow-level permission
-      checks: write     # Necessary to produce annotations
+      contents: read            # Necessary to keep workflow-level permission
+      checks: write             # Necessary to produce annotations
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -176,8 +176,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           base: |-
             ${{ case(
@@ -198,8 +198,8 @@ jobs:
     if: github.base_ref == 'master' || github.ref_name == 'master'
     runs-on: ubuntu-26.04
     permissions:
-      contents: read    # Necessary to keep workflow-level permission
-      checks: write     # Necessary to produce annotations
+      contents: read            # Necessary to keep workflow-level permission
+      checks: write             # Necessary to produce annotations
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -208,8 +208,8 @@ jobs:
           persist-credentials: false
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           base: |-
             ${{ case(

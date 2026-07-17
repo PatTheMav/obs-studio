@@ -8,24 +8,34 @@ on:
         type: string
     secrets:
       PVS_LICENSE_NAME:
+        description: PVS-Studio license name.
         required: false
       PVS_LICENSE_KEY:
+        description: PVS-Studio license key.
         required: false
       RESTREAM_CLIENTID:
+        description: OAuth client ID for Restream.io connection.
         required: false
       RESTREAM_HASH:
+        description: OAuth client ID hash for Restream.io connection.
         required: false
       TWITCH_CLIENTID:
+        description: OAuth client ID for Twitch.tv connection.
         required: false
       TWITCH_HASH:
+        description: OAuth client ID hash for Twitch.tv connection.
         required: false
       YOUTUBE_CLIENTID:
+        description: OAuth client ID for YouTube.com connection.
         required: false
       YOUTUBE_CLIENTID_HASH:
+        description: OAuth client ID hash for YouTube.com connection.
         required: false
       YOUTUBE_SECRET:
+        description: OAuth client secret for YouTube.com connection.
         required: false
       YOUTUBE_SECRET_HASH:
+        description: OAuth client secret hash for YouTube.com connection.
         required: false
       GPU_PRIORITY_VAL:
         required: false
@@ -36,14 +46,14 @@ defaults:
 jobs:
   windows:
     name: Windows (PVS-Studio)
-    runs-on: windows-2025-vs2026
     if: fromJSON(vars.ENABLE_PVS_STUDIO)
+    runs-on: windows-2025-vs2026
     environment:
       name: ${{ inputs.environment }}
       deployment: false
     permissions:
-      contents: read          # Necessary for repository checkouts.
-      security-events: write  # Necessary to post CodeQL security scanning reports
+      contents: read            # Necessary for repository checkouts.
+      security-events: write    # Necessary to post CodeQL security scanning reports
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -80,13 +90,13 @@ jobs:
         uses: ./.github/actions/analyze-obs/run-pvs-studio
         env:
           RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENT_ID }}
-          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH || '0'}}
           TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
-          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH }}
+          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH || '0' }}
           YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH || '0' }}
           YOUTUBE_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH || '0' }}
           GPU_PRIORITY_VAL: ${{ secrets.GPU_PRIORITY_VAL || '0'}}
         with:
           architecture: x64
@@ -99,12 +109,12 @@ jobs:
       name: ${{ inputs.environment }}
       deployment: false
     permissions:
-      contents: read          # Necessary for repository checkouts.
-      security-events: write  # Necessary to post CodeQL security scanning reports
+      contents: read            # Necessary for repository checkouts.
+      security-events: write    # Necessary to post CodeQL security scanning reports
     env:
       XCODE_VERSION: '26.6'
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
@@ -116,13 +126,13 @@ jobs:
         uses: ./.github/actions/analyze-obs/run-clang-analyze
         env:
           RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENT_ID }}
-          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH || '0' }}
           TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
-          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH }}
+          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH || '0' }}
           YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH || '0' }}
           YOUTUBE_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH || '0' }}
         with:
           architecture: arm64
           upload-codeql: true

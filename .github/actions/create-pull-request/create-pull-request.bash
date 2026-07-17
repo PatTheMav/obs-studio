@@ -37,8 +37,9 @@ create-pull-request() {
 
   # PR branch actually deviates from target branch, pull request should be created.
   if [[ "${DEVIATED:-false}" == 'true' ]]; then
-    local pull_request_url=''
+    echo -e "${BODY}" > "${RUNNER_TEMP}/pr_body.txt"
 
+    local pull_request_url=''
     pull_request_url="$(gh pr list \
         --base "${base_ref}" \
         --head "${BRANCH}" \
@@ -50,7 +51,7 @@ create-pull-request() {
       gh pr edit "${pull_request_url##*\/}" \
         --base "${base_ref}" \
         --title "${TITLE}" \
-        --body "${BODY}"
+        --body-file "${RUNNER_TEMP}/pr_body.txt"
 
       pull_request_result='updated'
     else
@@ -61,7 +62,7 @@ create-pull-request() {
       --base "${base_ref}" \
       --head "${BRANCH}" \
       --title "${TITLE}" \
-      --body "${BODY}"; then
+      --body-file "${RUNNER_TEMP}/pr_body.txt"; then
         failed=1
       fi
 

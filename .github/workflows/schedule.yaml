@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
   schedule:
     - cron: 17 0 * * *
-permissions: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+permissions: {}
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
@@ -16,8 +16,8 @@ jobs:
     name: Cache Cleanup
     runs-on: ubuntu-26.04
     permissions:
-      contents: read    # Necessary for repository checkouts.
-      actions: write    # Necessary to update and delete stale actions caches
+      contents: read            # Necessary for repository checkouts.
+      actions: write            # Necessary to update and delete stale actions caches
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -34,29 +34,29 @@ jobs:
 
   build-project:
     name: Build
-    uses: ./.github/workflows/build-project.yaml
     needs: cache-cleanup
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit            # zizmor: ignore[secrets-inherit]
     permissions:
-      contents: read          # Necessary for repository checkouts.
+      contents: read            # Necessary for repository checkouts.
     with:
       environment: build
-    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   analyze-project:
     name: Code Analysis
-    uses: ./.github/workflows/analyze-project.yaml
     needs: cache-cleanup
+    uses: ./.github/workflows/analyze-project.yaml
+    secrets: inherit            # zizmor: ignore[secrets-inherit]
     permissions:
-      contents: read          # Necessary for repository checkouts.
-      security-events: write  # Necessary to post CodeQL security scanning reports
+      contents: read            # Necessary for repository checkouts.
+      security-events: write    # Necessary to post CodeQL security scanning reports
     with:
       environment: nightly
-    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   services-availability:
     name: Check Service Availability
-    if: vars.ENABLE_SERVICE_CHECKS
     runs-on: macos-26
+    if: vars.ENABLE_SERVICE_CHECKS
     environment: nightly
     permissions:
       contents: write         # Necessary to push commits to repository
@@ -81,8 +81,8 @@ jobs:
 
   upload-language-files:
     name: Upload Language Files
-    if: vars.ENABLE_L10N_UPDATE
     runs-on: ubuntu-26.04
+    if: vars.ENABLE_L10N_UPDATE
     environment: nightly
     steps:
       - name: Checkout
@@ -113,9 +113,9 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
       - name: Check for Changed Files
+        id: checks
         if: fromJSON(steps.ref-check.outputs.pass)
         uses: ./.github/actions/check-changes
-        id: checks
         with:
           base: ${{ steps.ref-check.outputs.previous-sha }}
           pathspec: '**/en-US.ini'
