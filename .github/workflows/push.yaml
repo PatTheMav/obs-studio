@@ -8,11 +8,11 @@ on:
       - master
       - main
       - 'release/**'
-permissions:
-  contents: read    # Necessary for repository checkouts.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ contains(github.ref, 'release/') }}
+permissions:
+  contents: read                # Necessary for repository checkouts.
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
@@ -21,25 +21,25 @@ jobs:
     name: Format
     uses: ./.github/workflows/lint-project.yaml
     permissions:
-      contents: read    # Necessary to keep workflow-level permission
-      checks: write     # Necessary to produce annotations
+      contents: read            # Necessary to keep workflow-level permission
+      checks: write             # Necessary to produce annotations
 
   build-project:
     name: Build
-    uses: ./.github/workflows/build-project.yaml
+    if: ${{ !cancelled() }}
     needs: lint-project
-    if: always()
+    uses: ./.github/workflows/build-project.yaml
+    secrets: inherit
     with:
       environment: build
-    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   update-documentation:
     name: Update Documentation
-    needs: build-project
+    runs-on: ubuntu-26.04
     if: >-
       fromJSON(vars.ENABLE_DOCUMENTATION_UPDATE || 'false')
       && contains(fromJSON('["master", "main"]'), github.ref_name)
-    runs-on: ubuntu-slim
+    needs: build-project
     outputs:
       artifact-name: ${{ steps.generate.outputs.artifact-name }}
     steps:
@@ -50,15 +50,15 @@ jobs:
           fetch-depth: 0
 
       - name: Check for Changed Files
-        uses: ./.github/actions/check-changes
         id: checks
+        uses: ./.github/actions/check-changes
         with:
           base: ${{ github.event.before }}
           pathspec: ':!cmake* :!*CMakeLists.txt'
 
       - name: Generate Documentation
-        uses: ./.github/actions/generate-docs
         id: generate
+        uses: ./.github/actions/generate-docs
         if: fromJSON(steps.checks.outputs.has-changed-files)
         with:
           disable-link-extensions: false

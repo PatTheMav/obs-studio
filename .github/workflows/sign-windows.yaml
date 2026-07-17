@@ -8,26 +8,29 @@ on:
         type: string
     secrets:
       GCP_IDENTITY_POOL:
+        description: Google Cloud Platform identity pool.
         required: true
       GCP_SERVICE_ACCOUNT_NAME:
+        description: Google Cloud Platform service account name.
         required: true
 permissions:
-  contents: read    # Necessary for repository checkouts.
+  contents: read                # Necessary for repository checkouts.
 defaults:
   run:
     shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
 jobs:
   create-windows-update:
     name: Create Signed Windows Update
-    strategy:
-      matrix:
-        architecture: [x64, arm64]
     runs-on: windows-2025-vs2026
     environment:
       name: ${{ inputs.environment }}
       deployment: false
+    strategy:
+      matrix:
+        architecture: [x64, arm64]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
           path: pinned
@@ -140,8 +143,8 @@ jobs:
           path: ${{ format('{0}/*-pbds.zip', steps.code-sign.outputs.path) }}
 
       - name: Upload Installer
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: matrix.architecture == 'x64'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ format('obs-studio-windows-{0}-{1}-installer', matrix.architecture, github.ref_name) }}
           compression-level: 0

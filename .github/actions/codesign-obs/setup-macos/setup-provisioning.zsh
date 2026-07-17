@@ -29,12 +29,12 @@ setup-notarization() {
       -o ${RUNNER_TEMP}/build_profile.plist
 
     local uuid
-    uuid="$(plutil -extract UUID raw ${RUNNNER_TEMP}/build_profile.plist)"
-    print "::addmask::${uuid}"
+    uuid="$(plutil -extract UUID raw ${RUNNER_TEMP}/build_profile.plist)"
+    print "::add-mask::${uuid}"
 
     local team_id
     team_id="$(plutil -extract TeamIdentifier.0 raw -expect string ${RUNNER_TEMP}/build_profile.plist)"
-    print "::addmask::${team_id}"
+    print "::add-mask::${team_id}"
 
     if [[ ${team_id} != "${CODESIGN_TEAM:-}" ]] {
       print '::notice::Code Signing team in provisioning profile does not match certificate.'

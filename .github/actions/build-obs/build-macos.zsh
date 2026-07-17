@@ -48,7 +48,7 @@ build-macos() {
 
   if [[ "${BUILD_CODESIGNING:-false}" == 'true' ]] && (( ! ${+CODESIGN_TEAM} )) {
     CODESIGN_TEAM="${${CODESIGN_IDENT##*\(}%%\)*}"
-    print "::addmask::${CODESIGN_TEAM}"
+    print "::add-mask::${CODESIGN_TEAM}"
   }
 
   print '::group::Configure obs-studio'

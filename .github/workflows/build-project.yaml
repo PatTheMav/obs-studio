@@ -8,20 +8,46 @@ on:
         type: string
     secrets:
       RESTREAM_CLIENTID:
+        description: OAuth client ID for Restream.io connection.
         required: false
       RESTREAM_HASH:
+        description: OAuth client ID hash for Restream.io connection.
         required: false
       TWITCH_CLIENTID:
+        description: OAuth client ID for Twitch.tv connection.
         required: false
       TWITCH_HASH:
+        description: OAuth client ID hash for Twitch.tv connection.
         required: false
       YOUTUBE_CLIENTID:
+        description: OAuth client ID for YouTube.com connection.
         required: false
       YOUTUBE_CLIENTID_HASH:
+        description: OAuth client ID hash for YouTube.com connection.
         required: false
       YOUTUBE_SECRET:
+        description: OAuth client secret for YouTube.com connection.
         required: false
       YOUTUBE_SECRET_HASH:
+        description: OAuth client secret hash for YouTube.com connection.
+        required: false
+      MACOS_CODE_SIGN_IDENTITY:
+        description: Apple Developer identity for macOS code signing.
+        required: false
+      MACOS_CODE_SIGN_CERT:
+        description: Apple Developer certificate for macOS code signing.
+        required: false
+      MACOS_CODE_SIGN_CERT_PASSWORD:
+        description: Apple Developer certificate password for macOS code signing.
+        required: false
+      MACOS_PROVISIONING_PROFILE:
+        description: Apple Developer provisioning profile for macOS code signing.
+        required: false
+      MACOS_NOTARIZATION_ID:
+        description: Apple Id for macOS notarization.
+        required: false
+      MACOS_NOTARIZATION_PASSWORD:
+        description: Apple Id app password for macOS notarization.
         required: false
       GPU_PRIORITY_VAL:
         required: false
@@ -33,6 +59,10 @@ defaults:
 jobs:
   build-obs:
     name: OBS Studio
+    runs-on: ${{ matrix.os }}
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     strategy:
       fail-fast: false
       matrix:
@@ -55,18 +85,8 @@ jobs:
             architecture: arm64
           - os: ubuntu-24.04
             architecture: arm64
-    runs-on: ${{ matrix.os }}
-    environment:
-      name: ${{ inputs.environment }}
-      deployment: false
     env:
       IS_TAG_PUSH: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-      ENABLE_MACOS_CODE_SIGNING: >-
-        ${{
-          matrix.name == 'macos'
-          && fromJSON(vars.ENABLE_MACOS_CODE_SIGNING || 'false')
-          && contains(fromJSON('["push", "workflow_dispatch", "schedule"]'), github.event_name)
-        }}
       ENABLE_MACOS_NOTARIZATION: >-
         ${{
           matrix.name == 'macos'
@@ -101,8 +121,8 @@ jobs:
 
       - name: Restore Compilation Cache
         id: compilation-cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: matrix.name != 'windows'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ format('{0}/{1}', runner.temp, matrix.cache-dir) }}
           key: >-
@@ -120,15 +140,15 @@ jobs:
 
       - name: Set Up Code Signing
         id: codesign
+        if: matrix.name == 'macos'
         uses: ./.github/actions/codesign-obs/setup-macos
-        if: fromJSON(env.ENABLE_MACOS_CODE_SIGNING)
         with:
-          identity: ${{ secrets.macos-signing-identity }}
-          cert: ${{ secrets.macos-signing-certificate }}
-          cert-password: ${{ secrets.macos-signing-password }}
-          provisioning-profile: ${{ secrets.macos-provisioning-profile }}
-          apple-id: ${{ secrets.macos-notarization-user }}
-          apple-secret: ${{ secrets.macos-notarization-password }}
+          identity: ${{ secrets.MACOS_CODE_SIGN_IDENTITY }}
+          cert: ${{ secrets.MACOS_CODE_SIGN_CERT }}
+          cert-password: ${{ secrets.MACOS_CODE_SIGN_CERT_PASSWORD }}
+          provisioning-profile: ${{ secrets.MACOS_PROVISIONING_PROFILE }}
+          apple-id: ${{ secrets.MACOS_NOTARIZATION_ID }}
+          apple-secret: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
 
       - name: Build OBS Studio
         id: build
@@ -151,12 +171,8 @@ jobs:
               'RelWithDebInfo'
             ) }}
           target: ${{ matrix.architecture }}
-          codesign: >-
-            ${{
-              fromJSON(env.ENABLE_MACOS_CODE_SIGNING)
-              && fromJSON(steps.codesign.outputs.can-codesign)
-            }}
-          codesign-ident: ${{ steps.codesign.outputs.identity || '' }}
+          codesign: ${{ case(matrix.name == 'macos', true, false) }}
+          codesign-ident: ${{ steps.codesign.outputs.identity || '-' }}
           codesign-team: ${{ steps.codesign.outputs.team  || '' }}
           provisioning-profile-id: ${{ steps.codesign.outputs.profile-uuid  || '' }}
           xcode-version: ${{ env.XCODE_VERSION || '26.6' }}
@@ -164,13 +180,13 @@ jobs:
 
       - name: Package OBS Studio
         id: package
-        uses: ./.github/actions/package-obs
         if: fromJSON(env.ENABLE_PACKAGING)
+        uses: ./.github/actions/package-obs
         with:
           config: >-
             ${{ case(
-              fromJSON(env.IS_TAG_PUSH) && fromJSON(steps.semver.outputs.is-valid-semver),
-              'Release',
+              fromJSON(env.IS_TAG_PUSH)
+              && fromJSON(steps.semver.outputs.is-valid-semver), 'Release',
               'RelWithDebInfo'
             ) }}
           target: ${{ matrix.architecture }}
@@ -180,23 +196,15 @@ jobs:
               'obs-studio-{0}-{1}-{2}',
               matrix.name, matrix.architecture, steps.short-sha.outputs.sha
             ) }}
-          codesign: >-
-            ${{
-              fromJSON(env.ENABLE_MACOS_CODE_SIGNING)
-              && fromJSON(steps.codesign.outputs.can-codesign)
-            }}
-          codesign-ident: ${{ steps.codesign.outputs.identity || '' }}
-          codesign-user: ${{ secrets.macos-notarization-user  || '' }}
-          codesign-pass: ${{ secrets.macos-notarization-password  || '' }}
-          notarize: >-
-            ${{
-              fromJSON(env.ENABLE_MACOS_CODE_SIGNING)
-              && fromJSON(steps.codesign.outputs.can-notarize)
-            }}
+          codesign: ${{ case(matrix.name == 'macos', true, false) }}
+          codesign-ident: ${{ steps.codesign.outputs.identity || '-' }}
+          notarize: ${{ matrix.name == 'macos' && fromJSON(steps.codesign.outputs.can-notarize) }}
+          notarization-user: ${{ secrets.macos-notarization-user  || '' }}
+          notarization-password: ${{ secrets.macos-notarization-password  || '' }}
 
       - name: Upload Application
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: fromJSON(fromJSON(env.ENABLE_PACKAGING))
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           archive: ${{ !contains(fromJSON('["macos", "windows"]'), matrix.name) }}
           name: >-
@@ -211,11 +219,11 @@ jobs:
             ) }}
 
       - name: Upload Debug Symbols
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: >-
           matrix.name != 'windows'
           && fromJSON(env.IS_TAG_PUSH)
           && fromJSON(steps.semver.outputs.is-valid-semver)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           archive: ${{ matrix.name != 'macos' }}
           name: >-
@@ -231,11 +239,11 @@ jobs:
             ) }}
 
       - name: Upload Developer Library
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: >-
           contains(fromJSON('["macos", "windows"]'), matrix.name)
           && fromJSON(env.IS_TAG_PUSH)
           && fromJSON(steps.semver.outputs.is-valid-semver)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           archive: false
           name: >-
@@ -251,11 +259,11 @@ jobs:
             ) }}
 
       - name: Upload Source Tarball
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: >-
           matrix.name == 'ubuntu-26.04'
           && fromJSON(env.IS_TAG_PUSH)
           && fromJSON(steps.semver.outputs.is-valid-semver)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           archive: false
           name: >-
@@ -270,11 +278,11 @@ jobs:
             ) }}
 
       - name: Save Compilation Cache
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: >-
           matrix.name != 'windows'
           && github.event_name != 'pull_request'
           && steps.compilation-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ format('{0}/{1}', runner.temp, matrix.cache-dir) }}
           key: >-
@@ -292,6 +300,9 @@ jobs:
   flatpak-build:
     name: OBS Studio (Flatpak, x86_64)
     runs-on: ubuntu-26.04
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08@sha256:364e5ede018e821ba430849690649ac7ec43d082c29ba4be3d357c517262ea1f
       options: --privileged
@@ -305,9 +316,6 @@ jobs:
     defaults:
       run:
         shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-    environment:
-      name: ${{ inputs.environment }}
-      deployment: false
     env:
       FLATPAK_BUILD_SHARE_PATH: flatpak_app/files/share
       BUILD_BUNDLE: >-
