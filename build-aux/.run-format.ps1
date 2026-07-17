@@ -336,7 +336,7 @@ begin {
                     $RegexpPattern = '^::(.+)\sfile=(.+),line=([0-9]+),title=(.+)::.+:[0-9]+:\s(.+)$'
                     $Indices = @(2,3,1,4,5)
                     $LinterArguments = @(
-                        '--no-online-audits'
+                        '--offline'
                         '--persona=auditor'
                         '--format=github'
                         '--no-progress'

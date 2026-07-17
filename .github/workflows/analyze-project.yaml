@@ -6,6 +6,29 @@ on:
         description: Deployment environment to use for jobs
         required: true
         type: string
+    secrets:
+      PVS_LICENSE_NAME:
+        required: false
+      PVS_LICENSE_KEY:
+        required: false
+      RESTREAM_CLIENTID:
+        required: false
+      RESTREAM_HASH:
+        required: false
+      TWITCH_CLIENTID:
+        required: false
+      TWITCH_HASH:
+        required: false
+      YOUTUBE_CLIENTID:
+        required: false
+      YOUTUBE_CLIENTID_HASH:
+        required: false
+      YOUTUBE_SECRET:
+        required: false
+      YOUTUBE_SECRET_HASH:
+        required: false
+      GPU_PRIORITY_VAL:
+        required: false
 permissions: {}
 defaults:
   run:
@@ -49,8 +72,8 @@ jobs:
           version: ${{ steps.setup.outputs.version }}
           checksum: ${{ steps.setup.outputs.hash }}
           url: ${{ steps.setup.outputs.baseUrl }}
-          user: ${{ secrets.pvs-license-name }}
-          license: ${{ secrets.pvs-license-key }}
+          user: ${{ secrets.PVS_LICENSE_NAME }}
+          license: ${{ secrets.PVS_LICENSE_KEY }}
 
       - name: Analyze OBS Studio
         id: analyze

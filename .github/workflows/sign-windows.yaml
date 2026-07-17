@@ -6,6 +6,11 @@ on:
         description: Deployment environment to use for jobs
         required: true
         type: string
+    secrets:
+      GCP_IDENTITY_POOL:
+        required: true
+      GCP_SERVICE_ACCOUNT_NAME:
+        required: true
 permissions:
   contents: read    # Necessary for repository checkouts.
 defaults:

@@ -6,6 +6,25 @@ on:
         description: Deployment environment to use for jobs
         required: true
         type: string
+    secrets:
+      RESTREAM_CLIENTID:
+        required: false
+      RESTREAM_HASH:
+        required: false
+      TWITCH_CLIENTID:
+        required: false
+      TWITCH_HASH:
+        required: false
+      YOUTUBE_CLIENTID:
+        required: false
+      YOUTUBE_CLIENTID_HASH:
+        required: false
+      YOUTUBE_SECRET:
+        required: false
+      YOUTUBE_SECRET_HASH:
+        required: false
+      GPU_PRIORITY_VAL:
+        required: false
 permissions:
   contents: read    # Necessary for repository checkouts.
 defaults:
@@ -116,13 +135,13 @@ jobs:
         uses: ./.github/actions/build-obs
         env:
           RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENT_ID }}
-          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH || '0' }}
           TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
-          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH }}
+          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH || '0' }}
           YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH || '0' }}
           YOUTUBE_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH || '0' }}
           GPU_PRIORITY_VAL: ${{ secrets.GPU_PRIORITY_VAL || '0'}}
         with:
           config: >-

@@ -208,7 +208,7 @@ invoke_linter() {
     zizmor)
       regexp='^::(.+)[[:space:]]file=(.+),line=([0-9]+),title=(.+)::.+:[0-9]+:[[:space:]](.+)$'
       indices=(2 3 1 4 5)
-      lint_arguments=(--no-online-audits --persona=auditor --format=github --no-progress --quiet)
+      lint_arguments=(--offline --persona=auditor --format=github --no-progress --quiet)
       ;;
     xmllint)
       regexp='^([^:]+):([0-9]+):[[:space:]]+.+:[[:space:]](.+):[[:space:]](.+)$'
