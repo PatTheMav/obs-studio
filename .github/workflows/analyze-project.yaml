@@ -1,37 +1,11 @@
 name: Analyze Project
 on:
   workflow_call:
-    secrets:
-      restream-client-id:
-        description: The OAuth client-id used for Restream.io API connections.
-        required: false
-      restream-hash:
-        description: The hash value required to decrypt the Restream.io client id.
-        required: false
-      twitch-client-id:
-        description: The OAuth client-id used for Twitch.tv API connections.
-        required: false
-      twitch-hash:
-        description: The hash value required to decrypt the Twitch.tv client id.
-        required: false
-      youtube-client-id:
-        description: The OAuth client-id used for Youtube.com API connections.
-        required: false
-      youtube-client-hash:
-        description: The hash value required to decrypt the Youtube.com client id.
-        required: false
-      yotube-client-secret:
-        description: The OAuth client secret used for Youtube.com API connections.
-        required: false
-      yotube-client-secret-hash:
-        description: The hash value required to decrypt the Youtube.com client secret.
-        required: false
-      pvs-license-name:
-        description: PVS license holder name
-        required: false
-      pvs-license-key:
-        description: PVS license key name
-        required: false
+    inputs:
+      environment:
+        description: Deployment environment to use for jobs
+        required: true
+        type: string
 permissions: {}
 defaults:
   run:
@@ -41,6 +15,9 @@ jobs:
     name: Windows (PVS-Studio)
     runs-on: windows-2025-vs2026
     if: fromJSON(vars.ENABLE_PVS_STUDIO)
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     permissions:
       contents: read          # Necessary for repository checkouts.
       security-events: write  # Necessary to post CodeQL security scanning reports
@@ -78,6 +55,16 @@ jobs:
       - name: Analyze OBS Studio
         id: analyze
         uses: ./.github/actions/analyze-obs/run-pvs-studio
+        env:
+          RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENT_ID }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH }}
+          TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH }}
+          YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH }}
+          YOUTUBE_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH }}
+          GPU_PRIORITY_VAL: ${{ secrets.GPU_PRIORITY_VAL || '0'}}
         with:
           architecture: x64
           upload-codeql: true
@@ -85,6 +72,9 @@ jobs:
   macos:
     name: macOS (clang-analyze)
     runs-on: macos-26
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     permissions:
       contents: read          # Necessary for repository checkouts.
       security-events: write  # Necessary to post CodeQL security scanning reports
@@ -102,14 +92,14 @@ jobs:
         id: analyze
         uses: ./.github/actions/analyze-obs/run-clang-analyze
         env:
-          RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
-          RESTREAM_HASH: ${{ secrets.restream-hash }}
-          TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
-          TWITCH_HASH: ${{ secrets.twitch-hash }}
-          YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
-          YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
+          RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENT_ID }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH }}
+          TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH }}
+          YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH }}
+          YOUTUBE_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH }}
         with:
           architecture: arm64
           upload-codeql: true

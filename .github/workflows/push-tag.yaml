@@ -18,22 +18,9 @@ jobs:
   build-project:
     name: Build
     uses: ./.github/workflows/build-project.yaml
-    secrets:
-      macos-signing-identity: ${{ secrets.MACOS_SIGNING_IDENTITY }}
-      macos-signing-certificate: ${{ secrets.MACOS_SIGNING_CERT }}
-      macos-signing-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
-      macos-provisioning-profile: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
-      macos-notarization-user: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
-      macos-notarization-password: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
-      restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
-      restream-hash: ${{ secrets.RESTREAM_HASH }}
-      twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
-      twitch-hash: ${{ secrets.TWITCH_HASH }}
-      youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
-      youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
-      yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
-      yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
-      gpu-priority-val: ${{ secrets.GPU_PRIORITY_VAL }}
+    with:
+      environment: build
+    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   update-documentation:
     name: Update Documentation
@@ -101,22 +88,16 @@ jobs:
             --commit-hash=${{ github.sha }}
 
   sign-windows-build:
-    runs-on: ubuntu-26.04
     name: Windows Signing
-    steps:
-      - run: echo "Hello"
-
-  # sign-windows-build:
-  #   name: Windows Signing
-  #   uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@a4a11c3dcdd7f479c8c4d1eb6ed8991fbc54dc6d
-  #   if: ${{ fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false') }}
-  #   needs: build-project
-  #   permissions:
-  #     contents: read        # Necessary to keep workflow base permissions.
-  #     attestations: write   # Necessary to generate an attestation for the code signed build.
-  #   secrets:
-  #     gcp-identity-pool: ${{ secrets.GCP_IDENTITY_POOL }}
-  #     gcp-service-account-name: ${{ secrets.GCP_SERVICE_ACCOUNT_NAME }}
+    uses: obsproject/obs-studio/.github/workflows/sign-windows.yaml@a4a11c3dcdd7f479c8c4d1eb6ed8991fbc54dc6d
+    if: ${{ fromJSON(vars.ENABLE_WINDOWS_CODE_SIGNING || 'false') }}
+    needs: build-project
+    permissions:
+      contents: read        # Necessary to keep workflow base permissions.
+      attestations: write   # Necessary to generate an attestation for the code signed build.
+    with:
+      environment: windows-signing
+    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   create-release:
     name: Create Release

@@ -1,11 +1,11 @@
 name: Code Sign Windows
 on:
   workflow_call:
-    secrets:
-      gcp-identity-pool:
+    inputs:
+      environment:
+        description: Deployment environment to use for jobs
         required: true
-      gcp-service-account-name:
-        required: true
+        type: string
 permissions:
   contents: read    # Necessary for repository checkouts.
 defaults:
@@ -19,7 +19,7 @@ jobs:
         architecture: [x64, arm64]
     runs-on: windows-2025-vs2026
     environment:
-      name: bouf
+      name: ${{ inputs.environment }}
       deployment: false
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -86,8 +86,8 @@ jobs:
       - name: Set Up Windows Code Signing
         uses: ./pinned/.github/actions/codesign-obs/setup-windows
         with:
-          gcp-identity-provider: ${{ secrets.gcp-identity-pool }}
-          gcp-account-name: ${{ secrets.gcp-service-account-name }}
+          gcp-identity-provider: ${{ secrets.GCP_IDENTITY_POOL }}
+          gcp-account-name: ${{ secrets.GCP_SERVICE_ACCOUNT_NAME }}
 
       - name: Download Asset
         id: download

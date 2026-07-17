@@ -1,52 +1,11 @@
 name: Build Project
 on:
   workflow_call:
-    secrets:
-      macos-signing-identity:
-        description: The Apple Developer identity used for code signing on macOS.
-        required: false
-      macos-signing-certificate:
-        description: The base64-encoded Apple Developer certificate used for code signing on macOS.
-        required: false
-      macos-signing-password:
-        description: The password required to unlock the Apple Developer certificate.
-        required: false
-      macos-provisioning-profile:
-        description: The provisioning profile used for code signing on macOS.
-        required: false
-      macos-notarization-user:
-        description: The Apple ID used for notarization on macOS.
-        required: false
-      macos-notarization-password:
-        description: The application password created for notarization on macOS.
-        required: false
-      restream-client-id:
-        description: The OAuth client-id used for Restream.io API connections.
-        required: false
-      restream-hash:
-        description: The hash value required to decrypt the Restream.io client id.
-        required: false
-      twitch-client-id:
-        description: The OAuth client-id used for Twitch.tv API connections.
-        required: false
-      twitch-hash:
-        description: The hash value required to decrypt the Twitch.tv client id.
-        required: false
-      youtube-client-id:
-        description: The OAuth client-id used for Youtube.com API connections.
-        required: false
-      youtube-client-hash:
-        description: The hash value required to decrypt the Youtube.com client id.
-        required: false
-      yotube-client-secret:
-        description: The OAuth client secret used for Youtube.com API connections.
-        required: false
-      yotube-client-secret-hash:
-        description: The hash value required to decrypt the Youtube.com client secret.
-        required: false
-      gpu-priority-val:
-        description: Custom GPU priority value for libobs.
-        required: false
+    inputs:
+      environment:
+        description: Deployment environment to use for jobs
+        required: true
+        type: string
 permissions:
   contents: read    # Necessary for repository checkouts.
 defaults:
@@ -78,6 +37,9 @@ jobs:
           - os: ubuntu-24.04
             architecture: arm64
     runs-on: ${{ matrix.os }}
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     env:
       IS_TAG_PUSH: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
       ENABLE_MACOS_CODE_SIGNING: >-
@@ -153,14 +115,15 @@ jobs:
         id: build
         uses: ./.github/actions/build-obs
         env:
-          RESTREAM_CLIENTID: ${{ secrets.restream-client-id }}
-          RESTREAM_HASH: ${{ secrets.restream-hash }}
-          TWITCH_CLIENTID: ${{ secrets.twitch-client-id }}
-          TWITCH_HASH: ${{ secrets.twitch-hash }}
-          YOUTUBE_CLIENTID: ${{ secrets.youtube-client-id }}
-          YOUTUBE_CLIENTID_HASH: ${{ secrets.youtube-hash }}
-          YOUTUBE_SECRET: ${{ secrets.youtube-client-secret }}
-          YOUTUBE_SECRET_HASH: ${{ secrets.youtube-client-secret-hash }}
+          RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENT_ID }}
+          RESTREAM_HASH: ${{ secrets.RESTREAM_CLIENT_HASH }}
+          TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_HASH: ${{ secrets.TWITCH_CLIENT_HASH }}
+          YOUTUBE_CLIENTID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENTID_HASH: ${{ secrets.YOUTUBE_CLIENT_HASH }}
+          YOUTUBE_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_SECRET_HASH: ${{ secrets.YOUTUBE_CLIENT_SECRET_HASH }}
+          GPU_PRIORITY_VAL: ${{ secrets.GPU_PRIORITY_VAL || '0'}}
         with:
           config: >-
             ${{ case(
@@ -323,6 +286,9 @@ jobs:
     defaults:
       run:
         shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
     env:
       FLATPAK_BUILD_SHARE_PATH: flatpak_app/files/share
       BUILD_BUNDLE: >-

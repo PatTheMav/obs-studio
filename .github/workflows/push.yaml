@@ -29,22 +29,9 @@ jobs:
     uses: ./.github/workflows/build-project.yaml
     needs: lint-project
     if: always()
-    secrets:
-      macos-signing-identity: ${{ secrets.MACOS_SIGNING_IDENTITY }}
-      macos-signing-certificate: ${{ secrets.MACOS_SIGNING_CERT }}
-      macos-signing-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
-      macos-provisioning-profile: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
-      macos-notarization-user: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
-      macos-notarization-password: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
-      restream-client-id: ${{ secrets.RESTREAM_CLIENTID }}
-      restream-hash: ${{ secrets.RESTREAM_HASH }}
-      twitch-client-id: ${{ secrets.TWITCH_CLIENT_ID }}
-      twitch-hash: ${{ secrets.TWITCH_HASH }}
-      youtube-client-id: ${{ secrets.YOUTUBE_CLIENTID }}
-      youtube-client-hash: ${{ secrets.YOUTUBE_CLIENTID_HASH }}
-      yotube-client-secret: ${{ secrets.YOUTUBE_SECRET }}
-      yotube-client-secret-hash: ${{ secrets.YOUTUBE_SECRET_HASH }}
-      gpu-priority-val: ${{ secrets.GPU_PRIORITY_VAL }}
+    with:
+      environment: build
+    secrets: inherit          # zizmor: ignore[secrets-inherit]
 
   update-documentation:
     name: Update Documentation
