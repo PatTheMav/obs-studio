@@ -78,6 +78,12 @@
                   "baseUrl": "https://github.com/sparkle-project/Sparkle/releases/download",
                   "label": "Sparkle 2",
                   "hash": "1cb340cbbef04c6c0d162078610c25e2221031d794a3449d89f2f56f4df77c95"
+              },
+              "pvs-studio": {
+                "version": "7.43",
+                "baseUrl": "https://files.pvs-studio.com/PVS-Studio_setup.exe",
+                "label": "PVS-Studio",
+                "hash": "04973bf660ee4f6e3c888c27d2a3db055a6d7792d5d078f548e4f635e0411412"
               }
             }
           }
