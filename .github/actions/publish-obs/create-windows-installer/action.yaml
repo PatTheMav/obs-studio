@@ -1,0 +1,115 @@
+name: Create Windows Installer
+description: >
+  Creates and code signs an NSIS-based installation program for Windows platforms. It also strips and separates all
+  program database ('.pdb') files and also produces a new compressed archive of the build.
+inputs:
+  path:
+    description: The path to a compressed archive containing an OBS Studio build.
+    required: true
+  architecture:
+    description: The build architecture to generate an NSIS-based installation program for.
+    required: true
+  version:
+    description: The version string to generate an NSIS-based installation program for.
+    required: true
+outputs:
+  installer-path:
+    description: The path to the generated NSIS-based installation program.
+    value: ${{ steps.generate.outputs.installer-path }}
+  pdb-path:
+    description: The path to the generated compressed archive of the stripped program database files.
+    value: ${{ steps.generate.outputs.pdb-zip-path }}
+  archive-path:
+    description: The path to the generated compressed archive of the OBS Studio build.
+    value: ${{ steps.generate.outputs.build-zip-path }}
+runs:
+  using: composite
+  steps:
+    - name: Check Runner Operating System
+      if: runner.os != 'Windows'
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      run: |
+        : Check Runner Operating System
+        echo '::error::publish-obs/create-windows-installer action requires a Windows runner.'
+        exit 1
+
+    - name: Get BOUF Version Data
+      id: setup
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      run: |
+        : Get BOUF Version Data
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+        jq -r '.configurePresets[]
+          | select(.name == "dependencies")
+          | .vendor["obsproject.com/obs-studio"].tools.bouf
+          | to_entries
+          | map("\(.key)=\(.value|tostring)")
+          | .[]' "${PWD}/CMakePresets.json" >> "${GITHUB_OUTPUT}"
+
+    - name: Setup BOUF
+      id: setup-bouf
+      uses: ./.github/actions/publish-obs/setup-bouf
+      with:
+        version: ${{ steps.setup.outputs.version }}
+        checksum: ${{ steps.setup.outputs.hash }}
+        nsis-checksum: ${{ steps.setup.outputs.nsis-hash }}
+        url: ${{ steps.setup.outputs.baseUrl }}
+
+    - name: Install Dependencies
+      shell: pwsh -command ". '{0}'"
+      run: |
+        # Install Dependencies
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+        $ErrorActionPreference = 'Stop'
+
+        $WingetInstallArguments = @(
+          '--silent'
+          '--accept-package-agreements'
+          '--accept-source-agreements'
+          '--disable-interactivity'
+          '--exact'
+        )
+
+        winget install @WingetInstallArguments --version 3.12 --id NSIS.NSIS
+
+    - name: Extract Asset
+      id: extract
+      env:
+        RELEASE_ASSET: ${{ inputs.path }}
+      shell: pwsh -command ". '{0}'"
+      run: |
+        # Extract Asset
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+
+        New-Item -Type Directory -Path "${env:RUNNER_TEMP}/obs-installer-build"
+        Expand-Archive -Path ${env:RELEASE_ASSET} -DestinationPath "${env:RUNNER_TEMP}/obs-installer-build"
+        Remove-Item ${env:RELEASE_ASSET}
+
+    - name: Create NSIS Installer
+      id: generate
+      shell: pwsh -command ". '{0}'"
+      env:
+        BOUF_PATH: ${{ steps.setup-bouf.outputs.path }}
+        ARCHITECTURE: ${{ inputs.architecture }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        # Run BOUF
+        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
+        $ErrorActionPreference = 'Stop'
+
+        $BoufArgs = @(
+          '--config',       "${env:GITHUB_ACTION_PATH}/config_${env:ARCHITECTURE}.toml",
+          '--version',      $env:VERSION
+          '--input',        "${env:RUNNER_TEMP}/obs-installer-build"
+          '--output',       "${env:RUNNER_TEMP}/output"
+          '--packaging-only'
+        )
+
+        & $env:BOUF_PATH @BoufArgs
+
+        $(
+          "installer-path=$(("${env:RUNNER_TEMP}/output/*.exe" | Get-Item).FullName)"
+          "pdb-zip-path=$(("${env:RUNNER_TEMP}/output/*-${env:ARCHITECTURE}.zip" | Get-Item).FullName)"
+          "build-zip-path=$(("${env:RUNNER_TEMP}/output/*-${env:ARCHITECTURE}-pdbs.zip" | Get-Item).FullName)"
+        ) >> $env:GITHUB_OUTPUT
