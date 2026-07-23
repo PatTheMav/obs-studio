@@ -157,7 +157,7 @@ if(CMAKE_COMPILE_WARNING_AS_ERROR)
 endif()
 
 # Set custom compilation cache path if requested
-if($ENV{XCODE_CAS_PATH})
+if(DEFINED ENV{XCODE_CAS_PATH})
   set(CMAKE_XCODE_ATTRIBUTE_COMPILATION_CACHE_CAS_PATH $ENV{XCODE_CAS_PATH})
 endif()
 
