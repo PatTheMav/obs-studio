@@ -203,6 +203,11 @@ setup-pull-branch() {
 
 
 prepare-changes() {
+  if [[ "${RUNNER_OS}" == 'Linux' ]] && ! command -v uuidgen > /dev/null; then
+    sudo apt-get update
+    sudo apt-get install uuid-runtime
+  fi
+
   local hostname
   local protocol
   local repository
@@ -212,7 +217,7 @@ prepare-changes() {
 
   if [[ "${protocol}" == 'https' ]]; then
     local base64_string
-    base64_string="$(printf '%s' "x-access-token:${GH_TOKEN}" | base64)"
+    base64_string="$(printf '%s' "x-access-token:${GH_TOKEN}" | base64 -w 0)"
     echo "::add-mask::${base64_string}"
     git config --local "http.https://${hostname}/.extraheader" "AUTHORIZATION: basic ${base64_string}"
   fi

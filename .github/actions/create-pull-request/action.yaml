@@ -6,12 +6,10 @@ inputs:
     default: ''
   author:
     description: The name and email address to use as the author of the local changes.
-    default: >
-      ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
+    default: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
   committer:
     description: The name and email address to use as the committer of the local changes.
-    default: >
-      github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+    default: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
   branch:
     description: The source branch name to use for the pull request.
     default: ci-pull-request
@@ -61,7 +59,7 @@ runs:
         BRANCH: ${{ inputs.branch }}
         AUTHOR: ${{ inputs.author }}
         COMMITTER: ${{ inputs.committer }}
-        COMMIT_MESSAGE: ${{ inputs.commit-message   }}
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
       run: ${GITHUB_ACTION_PATH}/prepare-changes.bash
 
     - name: Create Pull Request
