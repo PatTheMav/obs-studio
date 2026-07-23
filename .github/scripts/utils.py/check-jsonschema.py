@@ -46,7 +46,7 @@ def validate_json_files(
     violations = []
     for violation in sorted(validator.iter_errors(json_data), key=str):
         logger.info(
-            f"⚠️ Schema violation in file '{json_file_name}':\n{violation}\n----\n"
+            f"  ⚠  Schema violation in file '{json_file_name}':\n{violation}\n----\n"
         )
 
         if len(violation.absolute_path):
@@ -91,7 +91,7 @@ def main() -> int:
         try:
             (schema_file, schema_data) = discover_schema_file(json_file)
         except OSError as e:
-            logger.error(f"❌ Failed to discover schema for file '{json_file}': {e}")
+            logger.error(f"  ✖  Failed to discover schema for file '{json_file}': {e}")
             return 2
 
         if schema_file and schema_file not in schema_mappings.keys():
@@ -108,7 +108,7 @@ def main() -> int:
                 new_errors = validate_json_files(schema_entry["schema_data"], json_file)
             except (InvalidInputError, OSError) as e:
                 logger.error(
-                    f"❌ Failed to create JSON source map for file '{json_file}': {e}"
+                    f"  ✖  Failed to create JSON source map for file '{json_file}': {e}"
                 )
                 return 2
 
@@ -119,7 +119,7 @@ def main() -> int:
             with open("validation_errors.json", "w") as results_file:
                 json.dump(validation_errors, results_file)
         except OSError as e:
-            logger.error(f"❌ Failed to write validation results file: {e}")
+            logger.error(f"  ✖  Failed to write validation results file: {e}")
             return 2
 
         return 1
