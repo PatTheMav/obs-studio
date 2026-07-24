@@ -26,7 +26,7 @@ static inline const char *get_table_string_(lua_State *script, int idx, const ch
 {
 	const char *str = "";
 
-	lua_pushstring(script, name);
+					lua_pushstring(script, name);
 	lua_gettable(script, idx - 1);
 	if (!lua_isstring(script, -1))
 		warn("%s: no item '%s' of type %s", func, name, "string");

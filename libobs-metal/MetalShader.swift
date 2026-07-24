@@ -33,10 +33,7 @@ class MetalShader {
         var defaultValues: [UInt8]?
         fileprivate var hasUpdates: Bool
 
-        init(
-            name: String, gsType: gs_shader_param_type, textureSlot: Int, samplerState: MTLSamplerState?,
-            byteOffset: Int
-        ) {
+        init(name: String, gsType: gs_shader_param_type, textureSlot: Int, samplerState: MTLSamplerState?, byteOffset: Int) {
             self.name = name
             self.gsType = gsType
 

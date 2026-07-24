@@ -22,7 +22,7 @@ jobs:
     uses: ./.github/workflows/lint-project.yaml
     permissions:
       contents: read            # Necessary to keep workflow-level permission
-      checks: write             # Necessary to produce annotations
+      checks: write
 
   build-project:
     name: Build

@@ -3,7 +3,7 @@
  <class>OBSAdvAudio</class>
  <widget class="QDialog" name="OBSAdvAudio">
   <property name="geometry">
-   <rect>
+   <rectB>
     <x>0</x>
     <y>0</y>
     <width>1100</width>

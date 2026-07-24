@@ -198,9 +198,7 @@ public func device_blend_function(device: UnsafeRawPointer, src: gs_blend_type, 
 /// > Important: Calling this function can trigger the creation of an entirely new render pipeline state, which is a
 /// costly operation.
 @_cdecl("device_blend_function_separate")
-public func device_blend_function_separate(
-    device: UnsafeRawPointer, src_c: gs_blend_type, dest_c: gs_blend_type, src_a: gs_blend_type, dest_a: gs_blend_type
-) {
+public func device_blend_function_separate(device: UnsafeRawPointer, src_c: gs_blend_type, dest_c: gs_blend_type, src_a: gs_blend_type, dest_a: gs_blend_type) {
     let device: MetalDevice = unretained(device)
 
     let pipelineDescriptor = device.renderState.pipelineDescriptor

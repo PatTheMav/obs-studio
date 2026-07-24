@@ -28,7 +28,7 @@ public:
 	struct Def {
 		std::string service;
 		Type type;
-		bool externalOAuth;
+bool externalOAuth;
 		bool usesBroadcastFlow;
 	};
 
