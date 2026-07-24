@@ -83,7 +83,8 @@ jobs:
   code-sign-builds:
     name: Code Sign Builds
     needs: build-project
-    uses: patthemav/obs-studio/.github/workflows/code-sign-project.yaml@cfdb13e34f77d96a957dc02095151e06d7168302
+    uses: ./.github/workflows/code-sign-project.yaml
+    #uses: obsproject/obs-studio/.github/workflows/code-sign-project.yaml@5ba86aeda364ac9be092398588d3ae9c4c75c93e
     secrets: inherit            # zizmor: ignore[secrets-inherit]
     permissions:
       contents: read            # Necessary to keep workflow base permissions.
