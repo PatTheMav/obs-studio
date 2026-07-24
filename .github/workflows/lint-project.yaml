@@ -179,12 +179,6 @@ jobs:
         id: checks
         uses: ./.github/actions/check-changes
         with:
-          base: |-
-            ${{ case(
-              github.ref_name == 'master', github.event.before,
-              github.base_ref == 'master', 'HEAD',
-              'HEAD'
-            ) }}
           pathspec: 'plugins/win-capture/data/*.json'
 
       - name: Run JSON Validation
@@ -212,12 +206,6 @@ jobs:
         id: checks
         uses: ./.github/actions/check-changes
         with:
-          base: |-
-            ${{ case(
-              github.ref_name == 'master', github.event.before,
-              github.base_ref == 'master', 'HEAD',
-              'HEAD'
-            ) }}
           pathspec: 'plugins/rtmp-services/data/*.json'
 
       - name: Run Services Validation
