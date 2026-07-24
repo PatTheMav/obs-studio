@@ -251,9 +251,6 @@ function(set_target_properties_obs target)
                    INFOPLIST_KEY_NSHumanReadableCopyright "(c) 2012-${CURRENT_YEAR} Lain Bailey"
       )
     endif()
-
-    set_property(GLOBAL APPEND PROPERTY _OBS_FRAMEWORKS ${target})
-    set_property(GLOBAL APPEND PROPERTY _OBS_DEPENDENCIES ${target})
   elseif(target_type STREQUAL MODULE_LIBRARY)
     if(target STREQUAL obspython)
       set_target_xcode_properties(

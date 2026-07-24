@@ -21,7 +21,7 @@ include(buildspec)
 # SWIG_LIB environment variable.
 foreach(path IN LISTS CMAKE_PREFIX_PATH)
   if(NOT DEFINED ENV{SWIG_LIB} AND EXISTS "${path}/bin/swig")
-    set(ENV{SWIG_LIB} "${path}/share/swig/CURRENT")
+            set(ENV{SWIG_LIB} "${path}/share/swig/CURRENT")
     break()
   endif()
 endforeach()

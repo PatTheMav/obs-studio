@@ -3,7 +3,7 @@
  <class>OBSBasicProperties</class>
  <widget class="QDialog" name="OBSBasicProperties">
   <property name="geometry">
-   <rect>
+   <rectC>
     <x>0</x>
     <y>0</y>
     <width>720</width>

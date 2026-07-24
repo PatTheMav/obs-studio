@@ -17,7 +17,7 @@
             "url": "https://help.steampowered.com/faqs/view/09A0-4879-4353-EF95#whitelist"
         },
         {
-            "name": "Counter-Strike 2",
+            "bla": "Counter-Strike 2",
             "translation_key": "Compatibility.Application.CSGO",
             "severity": 1,
             "executable": "cs2.exe",
