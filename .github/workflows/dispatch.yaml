@@ -74,7 +74,7 @@ jobs:
           run-schema-checks: true
           run-service-checks: true
           create-pull-request: true
-          purge-age: ${{ vars.SERVICE_CHECK_PURGE_AGE }}
+          purge-age: 1
 
   download-language-files:
     name: Download Language Files
