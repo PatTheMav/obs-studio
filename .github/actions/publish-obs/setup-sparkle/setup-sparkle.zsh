@@ -35,7 +35,7 @@ setup-sparkle() {
 
   local shasum_result="$(shasum --algorithm 256 ${RUNNER_TEMP}/${sparkle_url:t})"
   local -a checksum
-  read -A checksum -r <<< "${shasum_result}"
+  read -r -A checksum <<< "${shasum_result}"
 
   if [[ ${SPARKLE_CHECKSUM} != ${checksum[1]} ]] {
     print "::error::${sparkle_url:t} checksum mismatch: ${checksum[1]} (expected: ${SPARKLE_CHECKSUM})."

@@ -17,15 +17,16 @@ if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 : ${CI:?}
 
 create-legacy-appcast() {
-  local -a appcasts=(${destination}/appcasts/*_v2.xml)
+  local -a appcasts=(${RUNNER_TEMP}/appcasts/*_v2.xml)
 
-  if (( ! ${#appcast} )) {
+  if (( ! ${#appcasts} )) {
     print '::error::No appcasts found.'
     return 1
   }
 
-  mkdir -p "${destination}/appcasts/stable"
+  mkdir -p "${RUNNER_TEMP}/appcasts/stable"
 
+  local appcast
   local legacy
   for appcast (${appcasts}) {
     legacy="${appcast//.xml/-legacy.xml}"

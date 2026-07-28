@@ -52,7 +52,25 @@ The action will automatically detect the feed URL and download the specified amo
 ## Developer Notes
 
 * The action will create its own temporary working directory in the directory specified by `runner.temp`.
-* The Sparkle download URL and checksum are extracted from the `CMakePresets.json` file in the project root.
+* The Sparkle download URL and checksum are extracted from the `CMakePresets.json` file in the project root:
+
+```typescript
+  .configurePresets[]
+  // Select the preset with the "dependencies" name
+  | select(.name == "dependencies")
+  // Select the "bouf" key from the "tools" object
+  | .vendor["obsproject.com/obs-studio"].tools.sparkle
+  // Convert each {"some_key": "some_value"} pair into an array of
+  // {"key": "some_key", "value": "some_value"} elements
+  | to_entries
+  // Convert each array element into a "some_key=some_value" string.
+  | map("\(.key)=\(.value|tostring)")
+  // Print each array item as separate output line for use as GitHub Actions output.
+  | .[]
+```
+
+This allows `jq` to output key-value pairs directly in the format required by GitHub Actions.
+
 * The base image can be any OBS Studio macOS disk image present on the GitHub Actions runner's disk.
 * Appcast generation can take a while and depends on the performance of the provided GitHub Actions runner.
 

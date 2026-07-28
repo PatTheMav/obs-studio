@@ -1,6 +1,6 @@
-# generate-windows-update
+# create-windows-installer
 
-The generate-windows-update action generates proprietary update files to use with OBS Studio's automatic updater on Windows.
+The create-windows-installer action creates and code signs an NSIS-based installation program for Windows platforms. It also strips and separates all program database (`.pdb`) files and also produces a new compressed archive of the build.
 
 ## Documentation
 
@@ -8,13 +8,17 @@ The generate-windows-update action generates proprietary update files to use wit
 
 | Input | Description | Default |
 |:-----:|-------------|---------|
-| `architecture` | The CPU architecture to generate updater files for. See Notes. | `REQUIRED`|
-| `channel` | The update channel to generate updater files for. See Notes. | `stable` |
-| `working-directory` | A path to an OBS Studio checkout. | `github.workspace` |
+| `path` | The path to a compressed archive containing an OBS Studio build. | `REQUIRED` |
+| `architecture` | The build architecture to generate an NSIS-based installation program for. | `REQUIRED` |
+| `version` | The version string to generate an NSIS-based installation program for. | `REQUIRED` |
 
 ### Outputs
 
-This action has no outputs.
+| Output | Description |
+|:------:|-------------|
+| `installer-path` | The path to the generated NSIS-based installation program. |
+| `pdb-path` | The path to the generated compressed archive of the stripped program database files. |
+| `archive-path` | The path to the generated compressed archive of the OBS Studio build. |
 
 ## Common Usage
 
@@ -27,11 +31,11 @@ The action requires Windows code signing credentials to be set up on the GitHub 
           gcp-identity-provider: ${{ secrets.gcp-identity-string }}
           gcp-account-name: ${{ secrets.gcp-account-name }}
 
-      - name: Generate Windows Updater Files
-        uses: ./.github/actions/publish-obs/generate-windows-update
+      - name: Create Windows Installer
+        id: installer
+        uses: ./.github/actions/publish-obs/create-windows-installer
         with:
-          architecture: arm64
-          channel: stable
+          path: ${{ format('{0}/builds', runner.temp) }}
 ```
 
 ## Notes
@@ -39,12 +43,9 @@ The action requires Windows code signing credentials to be set up on the GitHub 
 > [!IMPORTANT]
 > The action requires a Windows GitHub Actions runner.
 
-* The action needs to be run with a git tag reference.
-* The action will fetch all recent builds available in a remote storage location to generate update files.
-* The action will replace the "latest" build in a remote bucket with the workflow asset available for the current event and also add it to existing builds.
-* Release notes are generated based on the body and subject lines on the tag reference.
-* The generated updater files are not automatically uploaded to remote storage, but will be uploaded as a workflow artifact instead.
-
+* Running the action with the  `arm64` architecture is unsupported because the creation script depends on a custom DLL with NSIS plugins that is not available for any architectures but `x64` at the moment.
+* The compressed archive of the OBS Studio build to generate an installation program for needs to be download separately.
+* The action will _not_ code sign the provided build, it will only code sign the installation program.
 
 ## Developer Notes
 

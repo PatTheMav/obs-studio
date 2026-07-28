@@ -32,19 +32,17 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Check Runner Operating System
-      if: runner.os != 'macOS'
-      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-      run: |
-        : Check Runner Operating System
-        echo '::error::publish-obs/sparkle-appcast action requires a macOS runner.'
-        exit 1
+    - name: Check Runner
+      uses: ./.github/actions/check-runner
+      with:
+        os: macOS
+        custom-error: publish-obs/setup-sparkle action requires a macOS runner.
 
     - name: Get Sparkle Version Data
       id: setup
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
-        : Get Sparkle Version Data
+        # Get Sparkle Version Data
         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
         jq -r '.configurePresets[]
@@ -66,10 +64,10 @@ runs:
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       run: |
-        : Setup Action
+        # Setup Action
         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-        brew install --quiet coreutils pandoc
+        brew install --quiet pandoc
 
         mkdir -p "${RUNNER_TEMP}/appcasts"
         mkdir -p "${RUNNER_TEMP}/appcast_builds"
@@ -81,6 +79,7 @@ runs:
         platform: macos
         architecture: ${{ inputs.architecture }}
         path: ${{ runner.temp }}
+        verify: true
 
     - name: Download Versions
       id: builds
@@ -98,7 +97,7 @@ runs:
       env:
         CHANNEL: ${{ inputs.channel }}
       run: |
-        : Prepare Release Notes
+        # Prepare Release Notes
         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
         declare tag_subject
@@ -117,24 +116,24 @@ runs:
           --from=rst \
           --to=html \
           --output="${RUNNER_TEMP}/appcasts/notes_${CHANNEL}.html" \
-          "${notes_file}"
+          "${RUNNER_TEMP}/appcast_notes.rst"
 
     - name: Generate Appcast
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
-        FEED_URL: ${{ steps.builds.outputs.feedUrl }}
+        FEED_URL: ${{ steps.builds.outputs.feed-url }}
         ARCHITECTURE: ${{ inputs.architecture }}
         CHANNEL: ${{ inputs.channel }}
-        NUM_DELTAS: ${{ inputs.num-deltas }}
+        DELTA_COUNT: ${{ inputs.num-deltas }}
         ROLLOUT_INTERVAL: ${{ inputs.rollout-interval }}
         SIGNING_KEY: ${{ inputs.signing-key }}
-        SPARKLE_PATH: ${{ inputs.sparkle-path }}
+        SPARKLE_PATH: ${{ steps.setup-sparkle.outputs.path }}
       run: zsh --errexit --pipefail --no-rcs ${GITHUB_ACTION_PATH}/generate-appcast.zsh
 
     - name: Adjust Appcast
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
-        FEED_URL: ${{ steps.builds.outputs.feedUrl }}
+        FEED_URL: ${{ steps.builds.outputs.feed-url }}
         ARCHITECTURE: ${{ inputs.architecture }}
         CUSTOM_TITLE: ${{ inputs.custom-title }}
         CUSTOM_LINK: ${{ inputs.custom-link }}

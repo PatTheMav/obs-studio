@@ -32,6 +32,8 @@ generate-appcast() {
   if [[ ${CHANNEL} == 'stable' && -n ${ROLLOUT_INTERVAL} ]] {
     local -i interval=0
     local -a match=()
+    local mbegin
+    local mend
     if [[ ${ROLLOUT_INTERVAL} == (#b)(<->##) ]] {
       interval=${match[1]}
 

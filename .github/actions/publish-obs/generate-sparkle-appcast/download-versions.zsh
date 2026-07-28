@@ -35,7 +35,7 @@ get-feed-url() {
 
   local info_plist="${mount_point}/OBS.app/Contents/Info.plist"
 
-  if [[ -r ${info_plist} ]] {
+  if [[ ! -r ${info_plist} ]] {
     print '::error::No Info.plist found in specified base image.'
     return 1
   }
@@ -43,7 +43,9 @@ get-feed-url() {
   typeset -g feed_url="$(plutil -extract SUFeedURL raw - < ${info_plist})"
 
   local arch_regex='.+/updates_([^_]+).+\.xml'
-  local -a match
+  local -a match=()
+  local mbegin
+  local mend
   if [[ ${feed_url} =~ ${arch_regex} ]] {
     typeset -g architecture=${match[1]//x86/x86_64}
   } else {
@@ -56,6 +58,14 @@ get-feed-url() {
 }
 
 download-from-feed() {
+
+  echo "Downloading Sparkle feed from '${feed_url}'..."
+  curl \
+    --silent \
+    --location \
+    --output-dir ${RUNNER_TEMP} \
+    --remote-name ${feed_url}
+
   # The Xpath Xplained:
   #
   # //rss/channel/item              - Select every <item> node, under a
@@ -73,11 +83,13 @@ download-from-feed() {
   #                                   these matching <item> nodes
 
   local xmllint_result="$(xmllint \
-    -xpath "//rss/channel/item[*[local-name()='channel'][text()='${SPARKLE_CHANNEL}}']]/enclosure/@url" \
-    ${feed_url:t})"
+    -xpath "//rss/channel/item[*[local-name()='channel'][text()='${CHANNEL}']]/enclosure/@url" \
+    ${RUNNER_TEMP}/${feed_url:t})"
 
   local -i deltas=0
   local -a match=()
+  local mbegin
+  local mend
   if [[ ${NUM_DELTAS} == (#b)(<->##) ]] {
     deltas=${match[1]}
 
@@ -101,6 +113,7 @@ download-from-feed() {
 
     if [[ ${line} =~ url=\"(.+)\"$ ]] {
       feed_item_url="${match[1]}"
+      echo "Downloading prior OBS Version at '${feed_item_url}'..."
       curl \
         --silent \
         --location \
@@ -114,17 +127,17 @@ download-from-feed() {
 download-versions() {
   local -a image_candidates=(${BASE_IMAGE}(N))
 
-  if (( ! ${#image_location} )) {
+  if (( ! ${#image_candidates} )) {
     print "::error::No disk images found at '${BASE_IMAGE}'."
     exit 1
   }
 
-  local base_image=${image_location[1]}
+  local base_image=${image_candidates[1]}
 
   local feed_url
   local architecture
   get-feed-url
-  print "feedUrl=${feed_url}" >> ${GITHUB_OUTPUT}
+  print "feed-url=${feed_url}" >> ${GITHUB_OUTPUT}
   print "architecture=${architecture}" >> ${GITHUB_OUTPUT}
 
   download-from-feed

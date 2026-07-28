@@ -13,37 +13,43 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Check Runner Operating System
-      if: runner.os != 'Windows'
+    - name: Check Runner
+      uses: ./.github/actions/check-runner
+      with:
+        os: Windows
+        custom-error: publish-obs/generate-windows-update action requires a Windows runner.
+
+    - name: Install BOUF Dependencies
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+      env:
+        DEPENDENCIES: |-
+          NSIS.NSIS 3.12
+          Rclone.Rclone 1.74.4
+          JohnMacFarlane.Pandoc 3.9.0.2
       run: |
-        : Check Runner Operating System
-        echo '::error::publish-obs/generate-windows-update action requires a Windows runner.'
-        exit 1
+        # Install BOUF Dependencies
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-    - name: Install Dependencies
-      shell: pwsh -command ". '{0}'"
-      run: |
-        # Install Dependencies
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        $ErrorActionPreference = 'Stop'
-
-        $WingetInstallArguments = @(
-          '--silent'
-          '--accept-package-agreements'
-          '--accept-source-agreements'
-          '--disable-interactivity'
-          '--exact'
+        declare winget_path
+        winget_path="$(cygpath --unix "${LOCALAPPDATA}/Microsoft/WindowsApps/winget.exe")"
+        declare -a winget_arguments=(
+          --silent --accept-package-agreements --accept-source-agreements
+          --disable-interactivity --exact
         )
 
-        winget install @WingetInstallArguments --version 1.74.4 --id Rclone.Rclone
-        winget install @WingetInstallArguments --version 3.9.0.2 --id JohnMacFarlane.Pandoc
+        echo '::group::Installing BOUF dependencies via winget'
+        declare dependency
+        declare version
+        while read -r dependency version; do
+          "${winget_path}" install "${winget_arguments[@]}" --version "${version}" --id "${dependency}"
+        done <<< "${DEPENDENCIES}"
+        echo '::endgroup::'
 
     - name: Get BOUF Version Data
       id: setup
       shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       run: |
-        : Get BOUF Version Data
+        # Get BOUF Version Data
         if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
         jq -r '.configurePresets[]
@@ -68,121 +74,128 @@ runs:
       with:
         platform: windows
         architecture: ${{ inputs.architecture }}
-        pattern: '-signed'
         verify: true
         path: ${{ runner.temp }}
 
     - name: Extract Asset
-      id: extract
-      shell: pwsh -command ". '{0}'"
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         RELEASE_ASSET: ${{ steps.download.outputs.path }}
       run: |
         # Extract Asset
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        Expand-Archive -Path $env:RELEASE_ASSET -DestinationPath "${env:RUNNER_TEMP}/current"
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-    - name: Download Versions
-      shell: pwsh -command ". '{0}'"
-      env:
-        ARCHITECTURE: ${{ inputs.architecture }}
-        RCLONE_TRANSFERS: 100
-        RCLONE_FAST_LIST: true
-        RCLONE_EXCLUDE: ${{ format('{pbs/**,**/{0}/**}', github.ref_name) }}
-        RCLONE_GCS_ENV_AUTH: 'true'
-        RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
-      run: |
-        # Download Versions
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
-        & rclone copy ":gcs:obs-builds/${env:ARCHITECTURE}" "${env:RUNNER_TEMP}/previous"
+        mkdir -p "${RUNNER_TEMP}/current"
+        cd "${RUNNER_TEMP}/current"
+        unzip "${RELEASE_ASSET}"
+
+    # - name: Download Versions
+    #   shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+    #   env:
+    #     ARCHITECTURE: ${{ inputs.architecture }}
+    #     RCLONE_TRANSFERS: 100
+    #     RCLONE_FAST_LIST: true
+    #     RCLONE_EXCLUDE: ${{ format('{{pdbs/**,**/{0}/**}}', github.ref_name) }}
+    #     RCLONE_GCS_ENV_AUTH: 'true'
+    #     RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
+    #   run: |
+    #     # Download Versions
+    #     if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+    #     rclone copy ":gcs:obs-builds/${ARCHITECTURE}" "${RUNNER_TEMP}/previous"
 
     - name: Prepare Release Notes
       id: release-notes
-      shell: pwsh -command ". '{0}'"
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.working-directory }}
       run: |
-        # Release notes are just the tag body on Windows
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
+        # Prepare Release Notes
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-        $ReleaseNotesFile = "${env:RUNNER_TEMP}/bouf_notes.rst"
+        declare tag_subject
+        tag_subject="$(git tag -l --format='%(contents:subject)' "${GITHUB_REF_NAME}")"
+        declare tag_body
+        tag_body="$(git tag -l --format='%(contents:body)' "${GITHUB_REF_NAME}")"
 
-        $TagSubject = & git tag -l --format='%(contents:subject)' $env:GITHUB_REF_NAME
-        $TagBody = & git tag -l --format='%(contents:body)' $env:GITHUB_REF_NAME
-        $ReleaseNotes = @"
-          ${TagSubject}
-          ###################################################
+        release_notes="${RUNNER_TEMP}/bouf_notes.rst"
+        {
+          echo "${tag_subject}"
+          echo "###################################################"
+          echo ""
+          echo "${tag_body}"
+        } > "${release_notes}"
 
-          ${TagBody}
-        "@
-
-        $ReleaseNotes >> ${ReleaseNotesFile}
-        "path=${ReleaseNotesFile}" >> $env:GITHUB_OUTPUT
+        release_notes="$(cygpath --windows "${release_notes}")"
+        echo "path=${release_notes}" >> "${GITHUB_OUTPUT}"
+        echo "Generated release notes at ${release_notes}."
 
     - name: Run BOUF
-      shell: pwsh -command ". '{0}'"
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       env:
         BOUF_PATH: ${{ steps.setup-bouf.outputs.path }}
         UPDATE_CHANNEL: ${{ inputs.channel }}
         RELEASE_NOTES_FILE: ${{ steps.release-notes.outputs.path }}
+      working-directory: ${{ steps.setup-bouf.outputs.path }}
       run: |
         # Run BOUF
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-        $BoufArgs = @(
-          '--config',       "${env:GITHUB_ACTION_PATH}/config.toml",
-          '--version',      $env:GITHUB_REF_NAME
-          '--branch',       $env:UPDATE_CHANNEL
-          '--notes-file',   "${env:RELEASE_NOTES_FILE}"
-          '--input',        "${env:RUNNER_TEMP}/current"
-          '--previous",     "${env:RUNNER_TEMP}/previous"
-          '--output',       "${env:RUNNER_TEMP}/output"
-          '--updater-data-only'
+        declare pandoc_path
+        pandoc_path="$(cygpath --unix "${LOCALAPPDATA}/Programs/Pandoc")"
+        export PATH="${pandoc_path}:${PATH}"
+        BOUF_PATH="$(cygpath --unix "${BOUF_PATH}")"
+
+        mkdir -p "${RUNNER_TEMP}/previous"
+
+        declare -a bouf_args=(
+          --config "${GITHUB_ACTION_PATH}/config.toml"
+          --version "${GITHUB_REF_NAME}"
+          --branch "${UPDATE_CHANNEL}"
+          --notes-file "${RELEASE_NOTES_FILE}"
+          --input "${RUNNER_TEMP}/current"
+          --previous "${RUNNER_TEMP}/previous"
+          --output "${RUNNER_TEMP}/output"
+          --updater-data-only
         )
 
-        & $env:BOUF_PATH @BoufArgs
+        if [[ -n "${RUNNER_DEBUG:-}" ]]; then
+          bouf_args+=(--verbose)
+        fi
 
-    - name: Sync Latest Build
-      shell: pwsh -command ". '{0}'"
-      env:
-        ARCHITECTURE: ${{ inputs.architecture }}
-        UPDATE_CHANNEL: ${{ inputs.channel }}
-        RCLONE_TRANSFERS: 100
-        RCLONE_INCLUDE: ${{ format('**/{0}/**', github.ref_name) }}
-        RCLONE_GCS_ENV_AUTH: 'true'
-        RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
-      run: |
-        # Sync Latest Build
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
-        $RcloneArguments = @(
-          'sync'
-          '--delete-excluded'
-          "${env:RUNNER_TEMP}/previous"
-          ":gcs:obs-latest/${env:ARCHITECTURE}/${env:UPDATE_CHANNEL}"
-        )
+        ${BOUF_PATH}/bin/bouf.exe "${bouf_args[@]}"
 
-        & rclone @RcloneArguments
+    # - name: Sync Latest Build
+    #   shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+    #   env:
+    #     ARCHITECTURE: ${{ inputs.architecture }}
+    #     UPDATE_CHANNEL: ${{ inputs.channel }}
+    #     RCLONE_TRANSFERS: 100
+    #     RCLONE_INCLUDE: ${{ format('**/{0}/**', github.ref_name) }}
+    #     RCLONE_GCS_ENV_AUTH: 'true'
+    #     RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
+    #   run: |
+    #     # Sync Latest Build
+    #     if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
 
-    - name: Upload Latest Build
-      shell: pwsh -command ". '{0}'"
-      env:
-        ARCHITECTURE: ${{ inputs.architecture }}
-        RCLONE_TRANSFERS: 100
-        RCLONE_GCS_ENV_AUTH: 'true'
-        RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
-      run: |
-        # Upload Latest Build
-        if ($null -ne $env:RUNNER_DEBUG) { Set-PSDebug -Trace 1 }
-        ErrorActionPreference = 'Stop'
+    #     rclone sync --delete-excluded "${RUNNER_TEMP}/previous" \
+    #       ":gcs:obs-latest/${ARCHITECTURE}/${UPDATE_CHANNEL}"
 
-        & rclone copy "${env:RUNNER_TEMP}/previous" ":gcs:obs-builds/${env:ARCHITECTURE}"
+    # - name: Upload Latest Build
+    #   shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
+    #   env:
+    #     ARCHITECTURE: ${{ inputs.architecture }}
+    #     RCLONE_TRANSFERS: 100
+    #     RCLONE_GCS_ENV_AUTH: 'true'
+    #     RCLONE_GCS_BUCKET_POLICY_ONLY: 'true'
+    #   run: |
+    #     # Upload Latest Build
+    #     if [[ -n "${RUNNER_DEBUG:-}" ]]; then set -x; fi
+
+    #     rclone copy "${RUNNER_TEMP}/previous" ":gcs:obs-builds/${ARCHITECTURE}"
 
     - name: Upload Update Files
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: windows-updater-files-${{ inputs.architecture }}
+        name: ${{ format('windows-updater-files-{0}', inputs.architecture) }}
         compression-level: 0
-        path: ${{ runner.temp }}/output
+        path: ${{ format('{0}/output', runner.temp) }}

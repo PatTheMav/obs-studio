@@ -19,11 +19,12 @@ if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 adjust-appcast() {
   local -a appcasts=(${RUNNER_TEMP}/appcasts/*_v2.xml(N))
 
-  if (( ! ${#appcast} )) {
+  if (( ! ${#appcasts} )) {
     print '::error::No appcasts found.'
     return 1
   }
 
+  local appcast
   local adjusted
   for appcast (${appcasts}) {
     adjusted="${appcast//.xml/-adjusted.xml}"

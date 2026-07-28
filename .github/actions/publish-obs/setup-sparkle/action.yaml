@@ -18,13 +18,11 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Check Runner Operating System
-      if: runner.os != 'macOS'
-      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-      run: |
-        : Check Runner Operating System
-        echo '::error::publish-obs/setup-sparkle action requires a macOS runner.'
-        return 1
+    - name: Check Runner
+      uses: ./.github/actions/check-runner
+      with:
+        os: macOS
+        custom-error: publish-obs/setup-sparkle action requires a macOS runner.
 
     - name: Setup Sparkle
       id: setup

@@ -21,21 +21,19 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Check Runner Operating System
-      if: runner.os != 'Windows'
-      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
-      run: |
-        : Check Runner Operating System
-        echo '::error::publish-obs/setup-bouf action requires a Windows runner.'
-        exit 1
+    - name: Check Runner
+      uses: ./.github/actions/check-runner
+      with:
+        os: Windows
+        custom-error: publish-obs/setup-bouf action requires a Windows runner.
 
     - name: Setup BOUF
       id: setup
-      shell: pwsh -command ". '{0}'"
+      shell: bash --noprofile --norc -eo errexit -eo pipefail -eo nounset {0}
       working-directory: ${{ inputs.workingDirectory }}
       env:
         BOUF_URL: ${{ inputs.url }}
         BOUF_VERSION: ${{ inputs.version }}
         BOUF_CHECKSUM: ${{ inputs.checksum }}
         BOUF_NSIS_CHECKSUM: ${{ inputs.nsis-checksum }}
-      run: . ${env.GITHUB_ACTION_PATH}/Setup-Bouf.ps1
+      run: ${GITHUB_ACTION_PATH}/setup-bouf.bash
