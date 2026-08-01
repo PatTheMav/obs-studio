@@ -15,8 +15,8 @@ clean-caches() {
       .actions_caches.[]
       | select(.ref | test(\"${GIT_REF}\"))
       | select(.key | test(\"${CACHE_NAME}\"))
-      | {id, key, ref}
-      | join(\"|\")
+      | {id, key: (.key | sub(\" \";\"%20\";\"g\")), ref}
+      | join (\" \")
   ")"
 
   local cache_key
@@ -24,15 +24,15 @@ clean-caches() {
   local -i deleted_amount=0
   local -i result=0
 
-  while IFS="|" read -r _ cache_key cache_ref; do
+  while read -r _ cache_key cache_ref; do
     if [[ -n "${cache_key}" ]]; then
       if result="$(gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${cache_key}" \
         --jq '.total_count' 2>/dev/null)"; then
-        echo "Deleted cache entry '${cache_key}' for git ref '${cache_ref}'."
+        echo "Deleted cache entry '${cache_key//'%20'/ }' for git ref '${cache_ref}'."
 
         deleted_amount=$(( deleted_amount + result ))
       else
-        echo "::warning::Unable to delete cache entry '${cache_key}'."
+        echo "::warning::Unable to delete cache entry '${cache_key//'%20'/ }'."
       fi
     fi
   done <<< "${gh_output}"
